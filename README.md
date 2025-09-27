@@ -1,3 +1,8 @@
+## Respaldos y documentación
+
+En la carpeta `postman` encontrarás la colección de endpoints exportada desde Postman para pruebas y documentación de la API.
+
+En la carpeta `mongo-backup` se incluyen respaldos de las colecciones principales de MongoDB Compass (por ejemplo, `documents.json`, `users.json`) para restauración o referencia.
 # CloudDocs Copilot Backend (MVP)
 
 API REST para la gestión de usuarios, documentos y carpetas en la nube.
