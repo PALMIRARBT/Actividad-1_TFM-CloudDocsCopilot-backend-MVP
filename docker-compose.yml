@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/clouddocs
+      - JWT_SECRET=your_super_secure_jwt_secret_here
+      - JWT_EXPIRE=7d
+      - MAX_FILE_SIZE=10485760
+      - UPLOAD_PATH=./uploads
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=clouddocs
+    restart: unless-stopped
+
+volumes:
+  uploads:
+  mongo_data:
