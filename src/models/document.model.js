@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const documentSchema = new mongoose.Schema({
   filename: String,
@@ -10,4 +10,4 @@ const documentSchema = new mongoose.Schema({
   sharedWith: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 });
 
-export default mongoose.model('Document', documentSchema);
+module.exports = mongoose.model('Document', documentSchema);

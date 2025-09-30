@@ -1,15 +1,15 @@
 
-import express from 'express';
-import multer from 'multer';
-import authMiddleware from '../middlewares/auth.middleware.js';
-import { share, remove, upload, list, download } from '../controllers/document.controller.js';
+const express = require('express');
+const multer = require('multer');
+const authMiddleware = require('../middlewares/auth.middleware.js');
+const documentController = require('../controllers/document.controller.js');
 const router = express.Router();
-const upload = multer({ dest: 'storage/' });
+const uploader = multer({ dest: 'storage/' });
 
-router.post('/:id/share', authMiddleware, share);
-router.delete('/:id', authMiddleware, remove);
-router.post('/upload', authMiddleware, upload.single('file'), upload);
-router.get('/', authMiddleware, list);
-router.get('/download/:id', authMiddleware, download);
+router.post('/:id/share', authMiddleware, documentController.share);
+router.delete('/:id', authMiddleware, documentController.remove);
+router.post('/upload', authMiddleware, uploader.single('file'), documentController.upload);
+router.get('/', authMiddleware, documentController.list);
+router.get('/download/:id', authMiddleware, documentController.download);
 
-export default router;
+module.exports = router;

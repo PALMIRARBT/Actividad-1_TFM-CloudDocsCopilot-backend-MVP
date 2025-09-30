@@ -1,6 +1,6 @@
-import { registerUser, loginUser, updateUser } from '../services/auth.service.js';
+const authService = require('../services/auth.service.js');
 
-export async function register(req, res) {
+async function register(req, res) {
   try {
     const user = await registerUser(req.body);
     res.status(201).json({ message: 'User registered', user });
@@ -9,7 +9,7 @@ export async function register(req, res) {
   }
 }
 
-export async function login(req, res) {
+async function login(req, res) {
   try {
     const result = await loginUser(req.body);
     res.json(result);
@@ -19,7 +19,7 @@ export async function login(req, res) {
   }
 }
 
-export async function update(req, res) {
+async function update(req, res) {
   try {
     const user = await updateUser(req.params.id, req.body);
     res.json({ message: 'Usuario actualizado', user });
@@ -28,3 +28,5 @@ export async function update(req, res) {
     res.status(status).json({ error: err.message });
   }
 }
+
+module.exports = { register, login, update };

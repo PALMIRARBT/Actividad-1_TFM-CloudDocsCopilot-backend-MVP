@@ -1,8 +1,8 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/clouddocs';
 
-export async function connectMongo() {
+async function connectMongo() {
   try {
     await mongoose.connect(MONGO_URI);
     console.log('[database] MongoDB connected');
@@ -12,4 +12,4 @@ export async function connectMongo() {
   }
 }
 
-export default mongoose;
+module.exports = { connectMongo, mongoose };

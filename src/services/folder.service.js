@@ -1,9 +1,11 @@
-import Folder from '../models/folder.model.js';
+const Folder = require('../models/folder.model.js');
 
-export function createFolder({ name, owner }) {
+function createFolder({ name, owner }) {
   return Folder.create({ name, owner });
 }
 
-export function listFolders(owner) {
+function listFolders(owner) {
   return Folder.find({ owner }).populate('documents');
 }
+
+module.exports = { createFolder, listFolders };

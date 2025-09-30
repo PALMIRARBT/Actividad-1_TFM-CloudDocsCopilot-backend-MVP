@@ -1,10 +1,10 @@
-import express from 'express';
-import { create, list } from '../controllers/folder.controller.js';
-import authMiddleware from '../middlewares/auth.middleware.js';
+const express = require('express');
+const folderController = require('../controllers/folder.controller.js');
+const authMiddleware = require('../middlewares/auth.middleware.js');
 
 const router = express.Router();
 
-router.post('/', authMiddleware, create);
-router.get('/', authMiddleware, list);
+router.post('/', authMiddleware, folderController.create);
+router.get('/', authMiddleware, folderController.list);
 
-export default router;
+module.exports = router;

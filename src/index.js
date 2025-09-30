@@ -1,9 +1,9 @@
-import express from 'express';
-import { connectMongo } from './configurations/database-config/mongo.js';
-import cors from 'cors';
-import authRoutes from './routes/auth.routes.js';
-import documentRoutes from './routes/document.routes.js';
-import folderRoutes from './routes/folder.routes.js';
+const express = require('express');
+const { connectMongo } = require('./configurations/database-config/mongoDB.js');
+const cors = require('cors');
+const authRoutes = require('./routes/auth.routes.js');
+const documentRoutes = require('./routes/document.routes.js');
+const folderRoutes = require('./routes/folder.routes.js');
 
 const app = express();
 app.use(cors());
@@ -18,6 +18,7 @@ app.get('/api', (req, res) => {
 });
 
 const PORT = process.env.PORT || 4000;
+
 async function start() {
   try {
     await connectMongo();

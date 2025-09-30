@@ -1,30 +1,46 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import User from '../models/user.model.js';
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/user.model.js');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+// Variables de entorno configurables
+const {
+  JWT_SECRET = 'change_me_dev',
+  JWT_EXPIRES_IN = '1d',
+  BCRYPT_SALT_ROUNDS = '10'
+} = process.env;
 
-export async function registerUser({ name, email, password }) {
-  const hashed = await bcrypt.hash(password, 10);
+async function registerUser({ name, email, password }) {
+  const saltRounds = Number.parseInt(BCRYPT_SALT_ROUNDS, 10) || 10;
+  const hashed = await bcrypt.hash(password, saltRounds);
   const user = await User.create({ name, email, password: hashed });
   return user;
 }
 
-export async function loginUser({ email, password }) {
+async function loginUser({ email, password }) {
   const user = await User.findOne({ email });
   if (!user) throw new Error('User not found');
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) throw new Error('Invalid password');
-  const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+  if (!JWT_SECRET || JWT_SECRET === 'change_me_dev') {
+    console.warn('[auth] JWT_SECRET está usando el valor por defecto; cambia esto en producción');
+  }
+  const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
   return { token, user };
 }
 
-export async function updateUser(id, { name, email, password }) {
+async function updateUser(id, { name, email, password }) {
   const update = { name, email };
   if (password) {
-    update.password = await bcrypt.hash(password, 10);
+    const saltRounds = Number.parseInt(BCRYPT_SALT_ROUNDS, 10) || 10;
+    update.password = await bcrypt.hash(password, saltRounds);
   }
   const user = await User.findByIdAndUpdate(id, update, { new: true });
   if (!user) throw new Error('Usuario no encontrado');
   return user;
 }
+
+module.exports = {
+  registerUser,
+  loginUser,
+  updateUser
+};

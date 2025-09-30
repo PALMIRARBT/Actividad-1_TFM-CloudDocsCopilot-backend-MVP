@@ -1,8 +1,8 @@
-import Document from '../models/document.model.js';
-import Folder from '../models/folder.model.js';
-import fs from 'fs';
+const Document = require('../models/document.model.js');
+const Folder = require('../models/folder.model.js');
+const fs = require('fs');
 
-export async function shareDocument(id, userIds) {
+async function shareDocument(id, userIds) {
   const doc = await Document.findByIdAndUpdate(
     id,
     { $addToSet: { sharedWith: { $each: userIds } } },
@@ -12,7 +12,7 @@ export async function shareDocument(id, userIds) {
   return doc;
 }
 
-export async function deleteDocument(id) {
+async function deleteDocument(id) {
   const doc = await Document.findByIdAndDelete(id);
   if (!doc) throw new Error('Documento no encontrado');
   const filePath = `storage/${doc.filename}`;
@@ -20,7 +20,7 @@ export async function deleteDocument(id) {
   return doc;
 }
 
-export async function uploadDocument({ file, userId, folderId }) {
+async function uploadDocument({ file, userId, folderId }) {
   const doc = await Document.create({
     filename: file.filename,
     originalname: file.originalname,
@@ -34,10 +34,18 @@ export async function uploadDocument({ file, userId, folderId }) {
   return doc;
 }
 
-export function listDocuments(userId) {
+function listDocuments(userId) {
   return Document.find({ uploadedBy: userId }).populate('folder');
 }
 
-export async function findDocumentById(id) {
+async function findDocumentById(id) {
   return Document.findById(id);
 }
+
+module.exports = {
+  shareDocument,
+  deleteDocument,
+  uploadDocument,
+  listDocuments,
+  findDocumentById
+};

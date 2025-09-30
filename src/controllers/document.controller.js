@@ -1,8 +1,8 @@
-import { shareDocument, deleteDocument, uploadDocument, listDocuments, findDocumentById } from '../services/document.service.js';
+const documentService = require('../services/document.service.js');
 
-export async function share(req, res) {
+async function share(req, res) {
   try {
-    const doc = await shareDocument(req.params.id, req.body.userIds);
+  const doc = await documentService.shareDocument(req.params.id, req.body.userIds);
     res.json({ message: 'Documento compartido', doc });
   } catch (err) {
     const status = err.message === 'Documento no encontrado' ? 404 : 400;
@@ -10,9 +10,9 @@ export async function share(req, res) {
   }
 }
 
-export async function remove(req, res) {
+async function remove(req, res) {
   try {
-    await deleteDocument(req.params.id);
+  await documentService.deleteDocument(req.params.id);
     res.json({ message: 'Documento eliminado correctamente' });
   } catch (err) {
     const status = err.message === 'Documento no encontrado' ? 404 : 500;
@@ -20,23 +20,23 @@ export async function remove(req, res) {
   }
 }
 
-export async function upload(req, res) {
+async function upload(req, res) {
   try {
-    const doc = await uploadDocument({ file: req.file, userId: req.user.id, folderId: req.body.folderId });
+  const doc = await documentService.uploadDocument({ file: req.file, userId: req.user.id, folderId: req.body.folderId });
     res.status(201).json(doc);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 }
 
-export async function list(req, res) {
-  const docs = await listDocuments(req.user.id);
+async function list(req, res) {
+  const docs = await documentService.listDocuments(req.user.id);
   res.json(docs);
 }
 
-export async function download(req, res) {
+async function download(req, res) {
   try {
-    const doc = await findDocumentById(req.params.id);
+  const doc = await documentService.findDocumentById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Documento no encontrado' });
     const filePath = `storage/${doc.filename}`;
     res.download(filePath, doc.originalname);
@@ -44,3 +44,5 @@ export async function download(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+module.exports = { share, remove, upload, list, download };
