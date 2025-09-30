@@ -1,8 +1,8 @@
 
 import express from 'express';
 import multer from 'multer';
-import Document from '../models/document.js';
-import Folder from '../models/folder.js';
+import Document from '../models/document.model.js';
+import Folder from '../models/folder.model.js';
 import authMiddleware from '../services/authMiddleware.js';
 import fs from 'fs';
 const router = express.Router();
