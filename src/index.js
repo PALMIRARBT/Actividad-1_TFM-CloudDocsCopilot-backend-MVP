@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const { connectMongo } = require('./configurations/database-config/mongoDB.js');
 const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+const openapiSpec = require('./docs/openapi.json');
 const authRoutes = require('./routes/auth.routes.js');
 const documentRoutes = require('./routes/document.routes.js');
 const folderRoutes = require('./routes/folder.routes.js');
@@ -19,6 +21,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/folders', folderRoutes);
 app.use('/api/users', userRoutes);
+
+// Documentación Swagger/OpenAPI
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec, { explorer: true }));
+app.get('/api/docs.json', (_req, res) => res.json(openapiSpec));
 
 app.get('/api', (req, res) => {
   res.json({ message: 'API running' });

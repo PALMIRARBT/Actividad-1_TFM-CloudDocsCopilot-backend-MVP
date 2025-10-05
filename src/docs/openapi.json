@@ -1,0 +1,175 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "CloudDocs Copilot Backend API",
+    "version": "1.0.0",
+    "description": "API REST para gestión de autenticación, usuarios, documentos y carpetas."
+  },
+  "servers": [
+    { "url": "/" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "role": { "type": "string", "enum": ["user", "admin"] },
+          "active": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Folder": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "owner": { "type": "string" },
+          "documents": { "type": "array", "items": { "type": "string" } },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Document": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "filename": { "type": "string" },
+          "originalname": { "type": "string" },
+          "url": { "type": "string" },
+          "uploadedBy": { "type": "string" },
+          "folder": { "type": "string" },
+          "sharedWith": { "type": "array", "items": { "type": "string" } },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "error": { "type": "string" }
+        }
+      }
+    }
+  },
+  "security": [{ "bearerAuth": [] }],
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "summary": "Registrar usuario",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Usuario registrado" },
+          "400": { "description": "Solicitud inválida", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        },
+        "security": []
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Login y obtención de JWT",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Autenticación correcta" },
+          "401": { "description": "Credenciales inválidas", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        },
+        "security": []
+      }
+    },
+    "/api/users": {
+      "get": {
+        "summary": "Listar usuarios (admin)",
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/api/users/{id}/activate": {
+      "patch": { "summary": "Activar usuario (admin)", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } }
+    },
+    "/api/users/{id}/deactivate": {
+      "patch": { "summary": "Desactivar usuario (admin)", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } }
+    },
+    "/api/users/{id}": {
+      "put": { "summary": "Actualizar usuario", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "name": { "type": "string" }, "email": { "type": "string", "format": "email" } } } } } }, "responses": { "200": { "description": "OK" } } },
+      "delete": { "summary": "Eliminar usuario (admin)", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } }
+    },
+    "/api/users/{id}/password": {
+      "patch": { "summary": "Cambiar contraseña", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["currentPassword", "newPassword"], "properties": { "currentPassword": { "type": "string" }, "newPassword": { "type": "string" } } } } } }, "responses": { "200": { "description": "OK" } } }
+    },
+    "/api/folders": {
+      "get": { "summary": "Listar carpetas", "responses": { "200": { "description": "OK" } } },
+      "post": { "summary": "Crear carpeta", "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" } } } } } }, "responses": { "201": { "description": "Creado" }, "409": { "description": "Nombre duplicado" } } }
+    },
+    "/api/folders/{id}": {
+      "patch": { "summary": "Renombrar carpeta", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" } } } } } }, "responses": { "200": { "description": "OK" } } },
+      "delete": { "summary": "Eliminar carpeta (usar ?force=true para forzar)", "parameters": [ { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, { "name": "force", "in": "query", "schema": { "type": "boolean" } } ], "responses": { "200": { "description": "OK" } } }
+    },
+    "/api/documents": {
+      "get": { "summary": "Listar documentos", "responses": { "200": { "description": "OK" } } }
+    },
+    "/api/documents/upload": {
+      "post": {
+        "summary": "Subir documento",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": { "type": "object", "properties": { "file": { "type": "string", "format": "binary" }, "folderId": { "type": "string" } } }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Creado" }, "400": { "description": "Solicitud inválida" } }
+      }
+    },
+    "/api/documents/{id}": {
+      "delete": { "summary": "Eliminar documento", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" } } }
+    },
+    "/api/documents/{id}/share": {
+      "post": { "summary": "Compartir documento", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["userIds"], "properties": { "userIds": { "type": "array", "items": { "type": "string" } } } } } } }, "responses": { "200": { "description": "OK" } } }
+    },
+    "/api/documents/download/{id}": {
+      "get": { "summary": "Descargar documento", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "OK" }, "404": { "description": "No encontrado" } } }
+    }
+  }
+}
