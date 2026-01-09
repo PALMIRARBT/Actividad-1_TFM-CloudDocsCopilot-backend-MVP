@@ -74,9 +74,12 @@ export async function shareDocument({ id, userId, userIds }: ShareDocumentDto): 
   const filteredIds = uniqueIds.filter(id => String(id) !== String(userId));
   if (filteredIds.length === 0) throw new HttpError(400, 'Cannot share document with yourself as the owner');
 
+  // Convertir strings a ObjectIds para prevenir inyección NoSQL
+  const filteredObjectIds = filteredIds.map(id => new mongoose.Types.ObjectId(id));
+
   // Opcionalmente, filtra solo usuarios existentes
-  const existingUsers = await User.find({ _id: { $in: filteredIds } }, { _id: 1 }).lean();
-  const existingIds = existingUsers.map(u => String(u._id));
+  const existingUsers = await User.find({ _id: { $in: filteredObjectIds } }, { _id: 1 }).lean();
+  const existingIds = existingUsers.map(u => u._id);
   if (existingIds.length === 0) throw new HttpError(400, 'No valid users found to share with');
 
   const updated = await DocumentModel.findByIdAndUpdate(
@@ -329,11 +332,23 @@ export async function getUserRecentDocuments({
   organizationId,
   limit = 10
 }: GetRecentDocumentsDto): Promise<IDocument[]> {
+  // Validar que los IDs sean ObjectIds válidos para prevenir inyección NoSQL
+  if (!isValidObjectId(userId)) {
+    throw new HttpError(400, 'Invalid user ID');
+  }
+  if (!isValidObjectId(organizationId)) {
+    throw new HttpError(400, 'Invalid organization ID');
+  }
+
+  // Convertir a ObjectId para asegurar tipos seguros en la query
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  const orgObjectId = new mongoose.Types.ObjectId(organizationId);
+
   const documents = await DocumentModel.find({
-    organization: { $eq: organizationId },
+    organization: orgObjectId,
     $or: [
-      { uploadedBy: userId },
-      { sharedWith: userId }
+      { uploadedBy: userObjectId },
+      { sharedWith: userObjectId }
     ]
   })
   .sort({ createdAt: -1 })

@@ -199,21 +199,25 @@ export async function getFolderContents({ folderId, userId }: GetFolderContentsD
   const folder = await Folder.findById(folderId);
   if (!folder) throw new HttpError(404, 'Folder not found');
   
+  // Convertir IDs a ObjectIds para prevenir inyección NoSQL
+  const folderObjectId = new mongoose.Types.ObjectId(folderId);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  
   // Obtener subcarpetas donde el usuario tiene acceso
   const subfolders = await Folder.find({
-    parent: folderId,
+    parent: folderObjectId,
     $or: [
-      { owner: userId },
-      { 'permissions.userId': userId }
+      { owner: userObjectId },
+      { 'permissions.userId': userObjectId }
     ]
   }).sort({ name: 1 });
   
   // Obtener documentos de la carpeta
   const documents = await DocumentModel.find({
-    folder: folderId,
+    folder: folderObjectId,
     $or: [
-      { uploadedBy: userId },
-      { sharedWith: userId }
+      { uploadedBy: userObjectId },
+      { sharedWith: userObjectId }
     ]
   })
   .sort({ createdAt: -1 })
@@ -233,12 +237,16 @@ export async function getFolderContents({ folderId, userId }: GetFolderContentsD
  * @returns Árbol jerárquico de carpetas
  */
 export async function getUserFolderTree({ userId, organizationId }: GetUserFolderTreeDto): Promise<IFolder | null> {
+  // Convertir IDs a ObjectIds para prevenir inyección NoSQL
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  const orgObjectId = new mongoose.Types.ObjectId(organizationId);
+  
   // Obtener todas las carpetas donde el usuario tiene acceso
   const folders = await Folder.find({
-    organization: organizationId,
+    organization: orgObjectId,
     $or: [
-      { owner: userId },
-      { 'permissions.userId': userId }
+      { owner: userObjectId },
+      { 'permissions.userId': userObjectId }
     ]
   })
   .sort({ path: 1 })

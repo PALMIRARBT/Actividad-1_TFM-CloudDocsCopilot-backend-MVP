@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Organization from '../models/organization.model';
 import User from '../models/user.model';
 import Folder from '../models/folder.model';
@@ -283,9 +284,14 @@ export async function getOrganizationStorageStats(organizationId: string): Promi
     throw new HttpError(404, 'Organization not found');
   }
 
+  // Convertir members a ObjectIds para prevenir inyección NoSQL
+  const memberObjectIds = organization.members.map((id: any) => 
+    new mongoose.Types.ObjectId(id)
+  );
+
   // Obtener usuarios de la organización
   const users = await User.find({
-    _id: { $in: organization.members },
+    _id: { $in: memberObjectIds },
   }).select('name email storageUsed');
 
   // Contar documentos y folders de la organización

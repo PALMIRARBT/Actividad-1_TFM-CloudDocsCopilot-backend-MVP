@@ -1,15 +1,27 @@
-# Security Fixes - Path Traversal Vulnerabilities
+# Security Fixes - Vulnerabilidades de Seguridad
 
 ## 📋 Resumen
 
 **Fecha:** Enero 9, 2026  
-**Severidad:** Alta (High)  
-**Vulnerabilidad:** Uncontrolled data used in path expression (CodeQL)  
 **Estado:** ✅ Corregido y Validado (295/295 tests passing)
+
+### Vulnerabilidades Corregidas
+
+1. **Path Traversal (CWE-22)**
+   - Severidad: Alta (High)
+   - Alert: "Uncontrolled data used in path expression"
+   - Estado: ✅ Corregido
+
+2. **NoSQL Injection (CWE-943)**
+   - Severidad: Alta (High)
+   - Alert: "Database query built from user-controlled sources"
+   - Estado: ✅ Corregido
 
 ---
 
-## 🔍 Problema Identificado
+## 🔒 1. Path Traversal Vulnerabilities
+
+### Problema Identificado
 
 CodeQL detectó múltiples vulnerabilidades de **Path Traversal** donde datos no controlados provenientes de la base de datos se usaban directamente en operaciones de sistema de archivos sin sanitización adecuada.
 
@@ -465,24 +477,322 @@ folder.path = "/org/../../../etc/passwd"
 
 ## 📝 Conclusión
 
-✅ **Todas las vulnerabilidades de Path Traversal han sido corregidas**
+---
 
-**Métodos de Mitigación:**
-- Sanitización de `org.slug` en todos los servicios
-- Sanitización de componentes de path en operaciones de filesystem
-- Uso de `sanitizePathOrThrow()` para nombres de archivo
-- Sanitización defensiva de `userId`
-- Validación de paths en múltiples capas
+## 🔒 2. NoSQL Injection Vulnerabilities
 
-**Validación:**
-- 295/295 tests passing (100%)
-- 21 tests específicos de seguridad passing
-- Sin regresiones en funcionalidad existente
+### Problema Identificado
 
-**Impacto:**
-- **Severidad:** Alta → **Resuelta**
-- **Riesgo:** Acceso a filesystem no autorizado → **Mitigado**
-- **Compliance:** Cumple con OWASP y CWE estándares
+CodeQL detectó vulnerabilidades de **NoSQL Injection** donde datos controlados por el usuario (IDs, arrays de IDs) se pasaban directamente a queries de MongoDB sin validación ni conversión de tipos, permitiendo potenciales ataques de inyección.
+
+### Datos No Controlados Identificados
+
+1. **`userId`** - ID de usuario desde parámetros de funciones
+2. **`organizationId`** - ID de organización desde parámetros
+3. **`folderId`** - ID de carpeta desde parámetros
+4. **`userIds`** - Array de IDs de usuarios para compartir documentos
+5. **`organization.members`** - Array de IDs desde base de datos
+
+### Riesgo
+
+Un atacante podría:
+- Pasar objetos en lugar de strings (`{ $ne: null }`) para bypassear queries
+- Inyectar operadores MongoDB (`$gt`, `$lt`, `$regex`, etc.)
+- Acceder a documentos no autorizados
+- Manipular queries para revelar información sensible
+
+**Ejemplo de Ataque:**
+```javascript
+// Llamada normal
+getUserRecentDocuments({ userId: "507f1f77bcf86cd799439011", organizationId: "..." })
+
+// Ataque de inyección NoSQL
+getUserRecentDocuments({ 
+  userId: { $ne: null },  // ❌ Retornaría documentos de TODOS los usuarios
+  organizationId: "..." 
+})
+```
+
+### Soluciones Aplicadas
+
+#### 1. Validación + Conversión a ObjectId
+
+**Problema:**
+```typescript
+// ❌ ANTES - Sin validación de tipos
+const documents = await DocumentModel.find({
+  organization: { $eq: organizationId },  // organizationId podría ser objeto malicioso
+  $or: [
+    { uploadedBy: userId },  // userId podría ser { $ne: null }
+    { sharedWith: userId }
+  ]
+});
+```
+
+**Solución:**
+```typescript
+// ✅ DESPUÉS - Validación + conversión segura
+if (!isValidObjectId(userId)) {
+  throw new HttpError(400, 'Invalid user ID');
+}
+if (!isValidObjectId(organizationId)) {
+  throw new HttpError(400, 'Invalid organization ID');
+}
+
+const userObjectId = new mongoose.Types.ObjectId(userId);
+const orgObjectId = new mongoose.Types.ObjectId(organizationId);
+
+const documents = await DocumentModel.find({
+  organization: orgObjectId,  // Tipo seguro: ObjectId
+  $or: [
+    { uploadedBy: userObjectId },
+    { sharedWith: userObjectId }
+  ]
+});
+```
+
+**Razón:** 
+- `isValidObjectId()` valida que sea un string hexadecimal válido
+- `mongoose.Types.ObjectId()` convierte a tipo ObjectId nativo
+- Impide que objetos maliciosos lleguen a la query
+
+---
+
+#### 2. Conversión de Arrays a ObjectIds
+
+**Problema:**
+```typescript
+// ❌ ANTES - Array sin validación
+const existingUsers = await User.find({ 
+  _id: { $in: filteredIds }  // filteredIds podría contener objetos maliciosos
+});
+```
+
+**Solución:**
+```typescript
+// ✅ DESPUÉS - Convertir cada elemento
+const filteredObjectIds = filteredIds.map(id => new mongoose.Types.ObjectId(id));
+
+const existingUsers = await User.find({ 
+  _id: { $in: filteredObjectIds }  // Array de ObjectIds seguros
+});
+```
+
+---
+
+#### 3. Conversión de Referencias desde Base de Datos
+
+**Problema:**
+```typescript
+// ❌ ANTES - Usar directamente datos de BD
+const users = await User.find({
+  _id: { $in: organization.members }  // organization.members podría estar corrompido
+});
+```
+
+**Solución:**
+```typescript
+// ✅ DESPUÉS - Convertir a ObjectIds
+const memberObjectIds = organization.members.map((id: any) => 
+  new mongoose.Types.ObjectId(id)
+);
+
+const users = await User.find({
+  _id: { $in: memberObjectIds }
+});
+```
+
+**Razón:** Incluso datos de la BD son "no confiables" para prevenir ataques donde un atacante manipuló previamente la base de datos.
+
+---
+
+### Archivos Modificados
+
+#### `src/services/document.service.ts`
+
+**1. `getUserRecentDocuments()`**
+```typescript
+// ✅ Validación + conversión de IDs
+if (!isValidObjectId(userId)) {
+  throw new HttpError(400, 'Invalid user ID');
+}
+if (!isValidObjectId(organizationId)) {
+  throw new HttpError(400, 'Invalid organization ID');
+}
+
+const userObjectId = new mongoose.Types.ObjectId(userId);
+const orgObjectId = new mongoose.Types.ObjectId(organizationId);
+
+const documents = await DocumentModel.find({
+  organization: orgObjectId,  // ObjectId seguro
+  $or: [
+    { uploadedBy: userObjectId },
+    { sharedWith: userObjectId }
+  ]
+});
+```
+
+**2. `shareDocument()`**
+```typescript
+// ✅ Conversión de array de IDs
+const filteredObjectIds = filteredIds.map(id => new mongoose.Types.ObjectId(id));
+
+const existingUsers = await User.find({ 
+  _id: { $in: filteredObjectIds }  // Array seguro
+}, { _id: 1 }).lean();
+
+const existingIds = existingUsers.map(u => u._id);  // Ya son ObjectIds
+
+const updated = await DocumentModel.findByIdAndUpdate(
+  id,
+  { $addToSet: { sharedWith: { $each: existingIds } } },
+  { new: true }
+);
+```
+
+---
+
+#### `src/services/organization.service.ts`
+
+**`getOrganizationStats()`**
+```typescript
+// ✅ Import de mongoose añadido
+import mongoose from 'mongoose';
+
+// ✅ Conversión de members array
+const memberObjectIds = organization.members.map((id: any) => 
+  new mongoose.Types.ObjectId(id)
+);
+
+const users = await User.find({
+  _id: { $in: memberObjectIds }  // Array de ObjectIds seguros
+}).select('name email storageUsed');
+```
+
+---
+
+#### `src/services/folder.service.ts`
+
+**1. `getFolderContents()`**
+```typescript
+// ✅ Conversión de IDs de parámetros
+const folderObjectId = new mongoose.Types.ObjectId(folderId);
+const userObjectId = new mongoose.Types.ObjectId(userId);
+
+// Subcarpetas
+const subfolders = await Folder.find({
+  parent: folderObjectId,  // ObjectId seguro
+  $or: [
+    { owner: userObjectId },
+    { 'permissions.userId': userObjectId }
+  ]
+});
+
+// Documentos
+const documents = await DocumentModel.find({
+  folder: folderObjectId,
+  $or: [
+    { uploadedBy: userObjectId },
+    { sharedWith: userObjectId }
+  ]
+});
+```
+
+**2. `getUserFolderTree()`**
+```typescript
+// ✅ Conversión de IDs
+const userObjectId = new mongoose.Types.ObjectId(userId);
+const orgObjectId = new mongoose.Types.ObjectId(organizationId);
+
+const folders = await Folder.find({
+  organization: orgObjectId,  // ObjectId seguro
+  $or: [
+    { owner: userObjectId },
+    { 'permissions.userId': userObjectId }
+  ]
+});
+```
+
+---
+
+### Patrón de Defensa
+
+**Defense in Depth (Defensa en Profundidad):**
+
+1. **Validación de Entrada** - `isValidObjectId()` verifica formato
+2. **Conversión de Tipos** - `new mongoose.Types.ObjectId()` asegura tipo correcto
+3. **Validación en Modelo** - Mongoose valida tipos en schema
+4. **Sanitización de Strings** - No permitir operadores como strings
+
+**Funciones Afectadas:**
+- `getUserRecentDocuments()` - document.service.ts
+- `shareDocument()` - document.service.ts
+- `getOrganizationStats()` - organization.service.ts
+- `getFolderContents()` - folder.service.ts
+- `getUserFolderTree()` - folder.service.ts
+
+---
+
+## ✅ Validación Final
+
+### Tests Ejecutados
+
+```bash
+npm test
+```
+
+**Resultado:**
+```
+Test Suites: 17 passed, 17 total
+Tests:       295 passed, 295 total
+Time:        50.126 s
+✅ ALL TESTS PASSING
+```
+
+### Vulnerabilidades Mitigadas
+
+| Vulnerabilidad | Severidad | Estado | Archivos |
+|---------------|-----------|--------|----------|
+| Path Traversal (CWE-22) | Alta | ✅ Corregido | 4 archivos, 10 funciones |
+| NoSQL Injection (CWE-943) | Alta | ✅ Corregido | 3 archivos, 5 funciones |
+
+### Cobertura de Seguridad
+
+✅ **Path Traversal:**
+- Sanitización de `org.slug` (16 ocurrencias)
+- Sanitización de `folder.path` (16 ocurrencias)
+- Sanitización de operaciones filesystem (20+ ocurrencias)
+- URLs con slugs sanitizados
+- Database paths sanitizados
+
+✅ **NoSQL Injection:**
+- Validación de todos los IDs antes de queries
+- Conversión a ObjectId de todos los parámetros
+- Arrays de IDs convertidos a ObjectIds
+- Referencias de BD convertidas defensivamente
+
+---
+
+## 🎯 Impacto Final
+
+**Antes:**
+- ❌ 2 vulnerabilidades High severity
+- ❌ 15+ funciones vulnerables
+- ❌ Path traversal posible
+- ❌ NoSQL injection posible
+
+**Después:**
+- ✅ 0 vulnerabilidades conocidas
+- ✅ 15+ funciones protegidas
+- ✅ Defense-in-depth implementado
+- ✅ 100% tests passing
+- ✅ Sin regresiones funcionales
+
+**Compliance:**
+- ✅ OWASP A01:2021 - Broken Access Control (Mitigado)
+- ✅ OWASP A03:2021 - Injection (Mitigado)
+- ✅ CWE-22 - Path Traversal (Corregido)
+- ✅ CWE-943 - NoSQL Injection (Corregido)
 
 ---
 
