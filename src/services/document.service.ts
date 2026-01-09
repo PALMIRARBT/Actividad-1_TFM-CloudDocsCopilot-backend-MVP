@@ -425,15 +425,23 @@ export async function uploadDocument({
   const documentPath = `${folder.path}/${sanitizedFilename}`;
   
   const storageRoot = path.join(process.cwd(), 'storage');
+  
+  // Sanitizar org.slug y folder.path para prevenir path traversal
+  const safeSlug = organization.slug.replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
+  const folderPathComponents = folder.path.split('/').filter(p => p).map(component => 
+    component.replace(/[^a-z0-9_.-]/gi, '-')
+  );
+  
   const physicalPath = path.join(
     storageRoot, 
-    organization.slug,
-    ...folder.path.split('/').filter(p => p),
+    safeSlug,
+    ...folderPathComponents,
     sanitizedFilename
   );
 
   // Mover archivo desde uploads/ a la estructura organizada
-  const tempPath = path.join(process.cwd(), 'uploads', sanitizedFilename);
+  // Usar file.filename original que fue generado por multer (ya es seguro)
+  const tempPath = path.join(process.cwd(), 'uploads', file.filename);
   
   // Asegurar que el directorio existe
   const dirPath = path.dirname(physicalPath);
@@ -458,7 +466,7 @@ export async function uploadDocument({
     folder: folderId,
     organization: organizationId,
     path: documentPath,
-    url: `/storage/${organization.slug}${documentPath}`
+    url: `/storage/${safeSlug}${documentPath}`
   };
 
   const doc = await DocumentModel.create(docData);
