@@ -6,7 +6,7 @@ import {
   validateOrganizationLimits
 } from '../middlewares/organization.middleware';
 import * as organizationController from '../controllers/organization.controller';
-import { csrfProtectionMiddleware } from '../app';
+import { csrfProtectionMiddleware } from '../middlewares/csrf.middleware';
 
 const router = Router();
 

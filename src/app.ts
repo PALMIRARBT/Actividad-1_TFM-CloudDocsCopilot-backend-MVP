@@ -4,7 +4,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
 import cookieParser from 'cookie-parser';
-import { doubleCsrf } from 'csrf-csrf';
 import swaggerUi from 'swagger-ui-express';
 import openapiSpec from './docs/openapi.json';
 import authRoutes from './routes/auth.routes';
@@ -16,6 +15,7 @@ import HttpError from './models/error.model';
 import { errorHandler } from './middlewares/error.middleware';
 import { generalRateLimiter } from './middlewares/rate-limit.middleware';
 import { getCorsOptions } from './configurations/cors-config';
+import { csrfProtectionMiddleware, generateCsrfToken } from './middlewares/csrf.middleware';
 
 const app = express();
 
@@ -59,31 +59,9 @@ app.use(cors(getCorsOptions()));
 app.use(cookieParser());
 app.use(express.json());
 
-// Protección CSRF: Double Submit Cookie
-const csrfProtection = doubleCsrf({
-  getSecret: () => process.env.CSRF_SECRET || 'default-csrf-secret-change-in-production',
-  cookieName: '__Host-psifi.x-csrf-token',
-  cookieOptions: {
-    sameSite: 'strict',
-    path: '/',
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-  },
-  size: 64,
-  ignoredMethods: process.env.NODE_ENV === 'test' 
-    ? ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
-    : ['GET', 'HEAD', 'OPTIONS'],
-  getSessionIdentifier: (req: Request) => req.ip || 'anonymous',
-});
-
-const doubleCsrfProtection = csrfProtection.doubleCsrfProtection;
-
-// Exportar el middleware CSRF para usarlo en las rutas
-export const csrfProtectionMiddleware = doubleCsrfProtection;
-
 // Aplicar protección CSRF INMEDIATAMENTE después de cookieParser y body parser
 // Esto protege TODAS las rutas que usan cookies (desactivado en tests vía ignoredMethods)
-app.use(doubleCsrfProtection);
+app.use(csrfProtectionMiddleware);
 
 // Protección contra inyección NoSQL
 // Sanitiza los datos de entrada eliminando caracteres especiales de MongoDB ($, .)
@@ -100,7 +78,7 @@ app.use(generalRateLimiter);
 
 // Endpoint: CSRF token
 app.get('/api/csrf-token', (req: Request, res: Response) => {
-  const token = csrfProtection.generateCsrfToken(req, res);
+  const token = generateCsrfToken(req, res);
   res.json({ token });
 });
 

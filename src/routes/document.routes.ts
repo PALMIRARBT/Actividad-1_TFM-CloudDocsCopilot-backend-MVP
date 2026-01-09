@@ -4,7 +4,7 @@ import { validateOrganizationMembership } from '../middlewares/organization.midd
 import * as documentController from '../controllers/document.controller';
 import { upload } from '../middlewares/upload.middleware';
 import { uploadRateLimiter } from '../middlewares/rate-limit.middleware';
-import { csrfProtectionMiddleware } from '../app';
+import { csrfProtectionMiddleware } from '../middlewares/csrf.middleware';
 
 const router = express.Router();
 

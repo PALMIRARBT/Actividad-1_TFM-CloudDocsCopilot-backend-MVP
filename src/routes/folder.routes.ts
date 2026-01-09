@@ -3,7 +3,7 @@ import * as folderController from '../controllers/folder.controller';
 import authMiddleware from '../middlewares/auth.middleware';
 import { validateOrganizationMembership } from '../middlewares/organization.middleware';
 import { createResourceRateLimiter } from '../middlewares/rate-limit.middleware';
-import { csrfProtectionMiddleware } from '../app';
+import { csrfProtectionMiddleware } from '../middlewares/csrf.middleware';
 
 const router = express.Router();
 

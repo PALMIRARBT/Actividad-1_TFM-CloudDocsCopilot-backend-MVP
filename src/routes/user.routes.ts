@@ -2,7 +2,7 @@ import express from 'express';
 import authenticateToken from '../middlewares/auth.middleware';
 import { requireAdmin } from '../middlewares/role.middleware';
 import * as userController from '../controllers/user.controller';
-import { csrfProtectionMiddleware } from '../app';
+import { csrfProtectionMiddleware } from '../middlewares/csrf.middleware';
 
 const router = express.Router();
 

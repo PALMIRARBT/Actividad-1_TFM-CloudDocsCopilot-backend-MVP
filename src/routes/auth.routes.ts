@@ -2,7 +2,7 @@ import express from 'express';
 import * as authController from '../controllers/auth.controller';
 import { authRateLimiter } from '../middlewares/rate-limit.middleware';
 import authMiddleware from '../middlewares/auth.middleware';
-import { csrfProtectionMiddleware } from '../app';
+import { csrfProtectionMiddleware } from '../middlewares/csrf.middleware';
 
 const router = express.Router();
 
