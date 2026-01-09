@@ -334,21 +334,31 @@ export async function uploadDocument({
   if (!folderId) throw new HttpError(400, 'Folder ID is required');
   if (!organizationId) throw new HttpError(400, 'Organization ID is required');
 
+  if (!isValidObjectId(folderId)) {
+    throw new HttpError(400, 'Invalid folder ID');
+  }
+  if (!isValidObjectId(organizationId)) {
+    throw new HttpError(400, 'Invalid organization ID');
+  }
+
+  const folderObjectId = new mongoose.Types.ObjectId(folderId);
+  const organizationObjectId = new mongoose.Types.ObjectId(organizationId);
+
   // Validar que el usuario tenga acceso de editor a la carpeta
-  await validateFolderAccess(folderId, userId, 'editor');
+  await validateFolderAccess(folderObjectId.toString(), userId, 'editor');
 
   // Obtener información del usuario, carpeta y organización
   const user = await User.findById(userId);
   if (!user) throw new HttpError(404, 'User not found');
 
-  const folder = await Folder.findById(folderId);
+  const folder = await Folder.findById(folderObjectId);
   if (!folder) throw new HttpError(404, 'Folder not found');
 
-  const organization = await Organization.findById(organizationId);
+  const organization = await Organization.findById(organizationObjectId);
   if (!organization) throw new HttpError(404, 'Organization not found');
 
   // Validar que la organización del folder coincida
-  if (folder.organization.toString() !== organizationId) {
+  if (folder.organization.toString() !== organizationObjectId.toString()) {
     throw new HttpError(400, 'Folder does not belong to this organization');
   }
 
@@ -435,11 +445,19 @@ export async function uploadDocument({
 }
 
 export function listDocuments(userId: string): Promise<IDocument[]> {
-  return DocumentModel.find({ uploadedBy: userId }).populate('folder');
+  if (!isValidObjectId(userId)) {
+    throw new HttpError(400, 'Invalid user ID');
+  }
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  return DocumentModel.find({ uploadedBy: userObjectId }).populate('folder');
 }
 
 export async function findDocumentById(id: string): Promise<IDocument | null> {
-  return DocumentModel.findById(id);
+  if (!isValidObjectId(id)) {
+    throw new HttpError(400, 'Invalid document ID');
+  }
+  const documentObjectId = new mongoose.Types.ObjectId(id);
+  return DocumentModel.findById(documentObjectId);
 }
 
 export default {
