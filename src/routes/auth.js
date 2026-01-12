@@ -1,13 +1,9 @@
-<<<<<<< HEAD
 
 
-=======
->>>>>>> 371a0164161d43049b5681c35ea1fd04705f0998
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
-<<<<<<< HEAD
 import { sendConfirmationEmail } from '../services/emailService.js';
 import Profile from '../models/profile.js';
 import fs from 'fs';
@@ -75,18 +71,6 @@ router.post('/register', async (req, res) => {
     if (err.code === 11000) {
       return res.status(409).json({ error: 'El email ya está registrado.' });
     }
-=======
-
-const router = express.Router();
-
-router.post('/register', async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-    const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashed });
-    res.status(201).json({ message: 'User registered', user });
-  } catch (err) {
->>>>>>> 371a0164161d43049b5681c35ea1fd04705f0998
     res.status(400).json({ error: err.message });
   }
 });
