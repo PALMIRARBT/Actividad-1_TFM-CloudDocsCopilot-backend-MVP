@@ -1,5 +1,3 @@
-
-
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -39,7 +37,11 @@ router.post('/register', async (req, res) => {
   console.log('POST /register recibido');
   console.log('req.body:', req.body);
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, confirmPassword } = req.body;
+    // Validar que las contraseñas coincidan
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: 'Las contraseñas no coinciden.' });
+    }
     // Verificar si el email ya existe
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -64,7 +66,7 @@ router.post('/register', async (req, res) => {
       html
     );
 
-    res.status(201).json({ message: 'User registered. Confirmation email sent.', user });
+    res.status(201).json({ message: 'Usuario registrado. Por favor revisa tu email para confirmar la cuenta.' });
   } catch (err) {
     console.error(err); // Mostrar error en la terminal
     // Si el error es de clave duplicada de MongoDB
