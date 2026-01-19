@@ -180,8 +180,7 @@ describe('DocumentController - New Endpoints Integration Tests', () => {
 
     it('should return recent documents of authenticated user', async () => {
       const response = await request(app)
-        .get('/api/documents/recent')
-        .query({ organizationId: testOrgId.toString() })
+        .get(`/api/documents/recent/${testOrgId.toString()}`)
         .set('Authorization', `Bearer ${testToken}`);
 
       expect(response.status).toBe(200);
@@ -196,8 +195,8 @@ describe('DocumentController - New Endpoints Integration Tests', () => {
 
     it('should respect limit parameter', async () => {
       const response = await request(app)
-        .get('/api/documents/recent')
-        .query({ organizationId: testOrgId.toString(), limit: 2 })
+        .get(`/api/documents/recent/${testOrgId.toString()}`)
+        .query({ limit: 2 })
         .set('Authorization', `Bearer ${testToken}`);
 
       expect(response.status).toBe(200);

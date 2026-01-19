@@ -44,6 +44,7 @@ export async function registerUser(userData?: {
   email?: string;
   password?: string;
   organizationId?: string;
+  createOrganization?: boolean; // Si es true y no hay organizationId, crea una org
 }): Promise<any> {
   const user = new UserBuilder()
     .withName(userData?.name || 'Test User')
@@ -51,12 +52,21 @@ export async function registerUser(userData?: {
     .withPassword(userData?.password || 'Test@1234')
     .build();
 
-  // Si no se proporciona organizationId, crear una organización de prueba
-  const organizationId = userData?.organizationId || await createTestOrganization();
+  // Solo crear organización si se solicita explícitamente
+  let organizationId = userData?.organizationId;
+  if (!organizationId && userData?.createOrganization !== false) {
+    // Por defecto crea organización para mantener compatibilidad con tests existentes
+    organizationId = await createTestOrganization();
+  }
+
+  const payload: any = { ...user };
+  if (organizationId) {
+    payload.organizationId = organizationId;
+  }
 
   const response = await request(app)
     .post('/api/auth/register')
-    .send({ ...user, organizationId });
+    .send(payload);
 
   return response;
 }
@@ -102,6 +112,7 @@ export async function registerAndLogin(userData?: {
   email?: string;
   password?: string;
   organizationId?: string;
+  createOrganization?: boolean; // Si es true y no hay organizationId, crea una org
 }): Promise<AuthResult> {
   const user = new UserBuilder()
     .withName(userData?.name || 'Test User')
@@ -109,17 +120,28 @@ export async function registerAndLogin(userData?: {
     .withPassword(userData?.password || 'Test@1234')
     .build();
 
-  // Si no se proporciona organizationId, crear una organización de prueba
-  const organizationId = userData?.organizationId || await createTestOrganization();
+  // Solo crear organización si se solicita explícitamente
+  let organizationId = userData?.organizationId;
+  if (!organizationId && userData?.createOrganization !== false) {
+    // Por defecto crea organización para mantener compatibilidad con tests existentes
+    organizationId = await createTestOrganization();
+  }
+
+  const payload: any = { ...user };
+  if (organizationId) {
+    payload.organizationId = organizationId;
+  }
 
   // Registrar
   await request(app)
     .post('/api/auth/register')
-    .send({ ...user, organizationId });
+    .send(payload);
 
   // Login
   const authResult = await loginUser(user.email, user.password);
-  authResult.organizationId = organizationId;
+  if (organizationId) {
+    authResult.organizationId = organizationId;
+  }
   
   return authResult;
 }
