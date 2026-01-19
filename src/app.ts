@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
@@ -87,6 +88,10 @@ app.get('/api/csrf-token', (req: Request, res: Response) => {
   const token = generateCsrfToken(req, res);
   res.json({ token });
 });
+
+// Servir archivos estáticos (imágenes de perfil, documentos públicos)
+// Permite acceder a http://localhost:4000/uploads/archivo.jpg
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Rutas API
 app.use('/api/auth', authRoutes);
