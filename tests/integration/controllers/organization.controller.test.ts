@@ -176,7 +176,7 @@ describe('OrganizationController Integration Tests', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.organizations).toHaveLength(1);
-      expect(response.body.organizations[0]._id).toBe(testOrgId);
+      expect(response.body.organizations[0].id).toBe(testOrgId);
     });
 
     it('should fail without authentication', async () => {
@@ -202,7 +202,7 @@ describe('OrganizationController Integration Tests', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-      expect(response.body.organization._id).toBe(testOrgId);
+      expect(response.body.organization.id).toBe(testOrgId);
       expect(response.body.organization.name).toBe('Test Org');
     });
 

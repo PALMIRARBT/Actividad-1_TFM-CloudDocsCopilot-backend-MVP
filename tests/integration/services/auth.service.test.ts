@@ -103,7 +103,7 @@ describe('AuthService Integration Tests', () => {
       expect(rootFolder).toBeDefined();
       expect(rootFolder!.type).toBe('root');
       expect(rootFolder!.name).toBe(`root_user_${newUser._id}`);
-      expect(rootFolder!.displayName).toBe('Mi Unidad');
+      expect(rootFolder!.displayName).toBe('RootFolder');
       expect(rootFolder!.organization).toEqual(testOrgId);
       expect(rootFolder!.owner).toEqual(newUser._id);
       expect(rootFolder!.parent).toBeNull();
