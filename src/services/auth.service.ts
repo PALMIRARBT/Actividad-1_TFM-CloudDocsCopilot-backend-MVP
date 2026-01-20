@@ -123,31 +123,27 @@ export async function registerUser({
       storageUsed: 0,
       active: true
     });
-    
+
     // Agregar usuario a la organización si existe
     if (organization) {
       organization.members.push(user._id as mongoose.Types.ObjectId);
       await organization.save();
     }
-    
+
     // Crear carpeta raíz del usuario
     const rootFolderName = `root_user_${user._id}`;
-    
     // Sanitizar org.slug para prevenir path traversal o usar 'users' si no hay organización
     const safeSlug = organization 
       ? organization.slug.replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '')
       : 'users';
     const rootFolderPath = `/${safeSlug}/${user._id}`;
-    
     // Crear directorio físico
     const storageRoot = path.join(process.cwd(), 'storage');
     const safeUserId = user._id.toString().replace(/[^a-z0-9]/gi, '');
     userStoragePath = path.join(storageRoot, safeSlug, safeUserId);
-    
     if (!fs.existsSync(userStoragePath)) {
       fs.mkdirSync(userStoragePath, { recursive: true });
     }
-    
     // Crear carpeta raíz en la base de datos
     rootFolder = await Folder.create({
       name: rootFolderName,
@@ -162,11 +158,30 @@ export async function registerUser({
         role: 'owner'
       }]
     });
-    
     // Actualizar usuario con carpeta raíz
     user.rootFolder = rootFolder._id as mongoose.Types.ObjectId;
     await user.save();
-    
+
+    // --- Envío de email de confirmación ---
+    try {
+      const { sendConfirmationEmail } = await import('./emailService');
+      const fs = await import('fs');
+      const path = await import('path');
+      const jwt = await import('jsonwebtoken');
+      // Generar token de confirmación (JWT simple)
+      const token = jwt.default.sign({ userId: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '1d' });
+      const confirmationUrl = `http://localhost:4000/api/auth/confirm/${token}`;
+      // Leer y personalizar el template HTML
+      const templatePath = path.default.join(process.cwd(), 'src', 'services', 'confirmationTemplate.html');
+      let html = fs.default.readFileSync(templatePath, 'utf8');
+      html = html.replace('{{name}}', name).replace('{{confirmationUrl}}', confirmationUrl);
+      console.log('Enviando email de confirmación...');
+      await sendConfirmationEmail(email, 'Confirma tu cuenta en CloudDocs Copilot', html);
+      console.log('Email de confirmación enviado');
+    } catch (emailErr) {
+      console.error('Error enviando email de confirmación:', emailErr);
+    }
+
     // Retornar datos del usuario (incluyendo _id manualmente)
     const userObj = user.toJSON();
     return {

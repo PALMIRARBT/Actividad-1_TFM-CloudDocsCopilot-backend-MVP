@@ -2,6 +2,9 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { registerUser, loginUser } from '../services/auth.service';
 import HttpError from '../models/error.model';
+import User from '../models/user.model';
+import Profile from '../models/profile.model';
+import jwt from 'jsonwebtoken';
 
 /**
  * Controlador de registro de usuario
@@ -82,9 +85,51 @@ export async function logout(_req: AuthRequest, res: Response, next: NextFunctio
       sameSite: process.env.NODE_ENV === 'production' ? 'strict' as const : 'lax' as const,
       path: '/'
     });
-    
     res.json({ message: 'Logout successful' });
   } catch (err: any) {
+    next(err);
+  }
+}
+
+
+/**
+ * Controlador para confirmar cuenta de usuario mediante token JWT
+ * Activa el usuario si el token es válido
+ */
+export async function confirmAccount(req: any, res: Response, next: NextFunction) {
+  try {
+    const { token } = req.params;
+    if (!token) {
+      return next(new HttpError(400, 'Token is required'));
+    }
+    let payload: any;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    } catch (err) {
+      return next(new HttpError(400, 'Invalid or expired token'));
+    }
+    const user = await User.findById(payload.userId);
+    if (!user) {
+      return next(new HttpError(404, 'User not found'));
+    }
+    if (user.active) {
+      // Si el perfil no existe, crearlo
+      const existingProfile = await Profile.findOne({ user: user._id });
+      if (!existingProfile) {
+        await Profile.create({ user: user._id, name: user.name });
+      }
+      res.json({ success: true, message: 'Account already confirmed' });
+      return;
+    }
+    user.active = true;
+    await user.save();
+    // Crear perfil si no existe
+    const existingProfile = await Profile.findOne({ user: user._id });
+    if (!existingProfile) {
+      await Profile.create({ user: user._id, name: user.name });
+    }
+    res.json({ success: true, message: 'Account confirmed successfully' });
+  } catch (err) {
     next(err);
   }
 }

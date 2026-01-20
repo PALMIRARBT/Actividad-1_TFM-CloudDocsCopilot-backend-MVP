@@ -62,9 +62,10 @@ app.use(cors(getCorsOptions()));
 app.use(cookieParser());
 app.use(express.json());
 
-// ✅ PROTECCIÓN CSRF EXCLUIDA DE CUALQUIER RUTA QUE CONTENGA '/register' PARA PRUEBAS LOCALES
+// ✅ PROTECCIÓN CSRF EXCLUIDA DE LAS RUTAS DE REGISTRO PARA PRUEBAS LOCALES
+// Excluye cualquier ruta que contenga 'register' usando originalUrl para pruebas locales
 app.use((req, res, next) => {
-  if (req.path.includes('/register')) {
+  if (req.originalUrl.includes('register')) {
     return next();
   }
   return csrfProtectionMiddleware(req, res, next);

@@ -59,12 +59,15 @@ router.post('/register', async (req, res) => {
     let html = fs.readFileSync(templatePath, 'utf8');
     html = html.replace('{{name}}', name).replace('{{confirmationUrl}}', confirmationUrl);
 
+
     // Enviar email de confirmación
+    console.log('Enviando email de confirmación...');
     await sendConfirmationEmail(
       email,
       'Confirma tu cuenta en CloudDocs Copilot',
       html
     );
+    console.log('Email de confirmación enviado');
 
     res.status(201).json({ message: 'Usuario registrado. Por favor revisa tu email para confirmar la cuenta.' });
   } catch (err) {
