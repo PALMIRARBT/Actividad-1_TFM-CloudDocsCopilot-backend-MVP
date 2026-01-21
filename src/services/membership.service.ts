@@ -21,6 +21,11 @@ export async function createMembership({
   role?: MembershipRole;
   invitedBy?: string;
 }): Promise<IMembership> {
+  // Validate userId to prevent NoSQL injection via query operators
+  if (typeof userId !== 'string' || !userId.trim()) {
+    throw new HttpError(400, 'Invalid userId');
+  }
+
   const organization = await Organization.findById(organizationId);
   if (!organization) {
     throw new HttpError(404, 'Organization not found');
@@ -37,7 +42,7 @@ export async function createMembership({
 
   // Verificar si ya existe membresía
   const existingMembership = await Membership.findOne({
-    user: userId,
+    user: { $eq: userId },
     organization: organizationId,
   });
 
@@ -66,14 +71,23 @@ export async function createMembership({
 
   try {
     // Crear rootFolder específico para esta membresía (organización)
+
     const rootFolderName = `root_user_${userId}`;
     const safeOrgSlug = organization.slug.replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
-    const safeUserId = userId.replace(/[^a-z0-9]/gi, '');
+    const safeUserId = userId; // userId ya validado como ObjectId (24 hex)
     const rootFolderPath = `/${safeOrgSlug}/${safeUserId}`;
 
-    // Crear directorio físico en storage/{org-slug}/{userId}
-    const storageRoot = path.join(process.cwd(), 'storage');
-    userStoragePath = path.join(storageRoot, safeOrgSlug, safeUserId);
+    // Construir y normalizar ruta física en storage/{org-slug}/{userId}
+    const storageRoot = path.resolve(process.cwd(), 'storage');
+    userStoragePath = path.resolve(storageRoot, safeOrgSlug, safeUserId);
+
+    // Validar que la ruta generada esté contenida dentro de storageRoot
+    const normalizedStorageRoot = storageRoot.endsWith(path.sep)
+      ? storageRoot
+      : storageRoot + path.sep;
+    if (!userStoragePath.startsWith(normalizedStorageRoot)) {
+      throw new HttpError(400, 'Invalid storage path resolved for user directory');
+    }
 
     if (!fs.existsSync(userStoragePath)) {
       fs.mkdirSync(userStoragePath, { recursive: true });
