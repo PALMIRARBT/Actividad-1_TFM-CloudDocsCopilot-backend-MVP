@@ -21,11 +21,7 @@ export async function createMembership({
   role?: MembershipRole;
   invitedBy?: string;
 }): Promise<IMembership> {
-  // Validate userId to prevent NoSQL injection via query operators
-  if (typeof userId !== 'string' || !userId.trim()) {
-    throw new HttpError(400, 'Invalid userId');
-  }
-  // Validate userId to ensure it is a simple identifier and not a query object
+  // Validate userId to prevent NoSQL injection via query operators and path traversal
   if (typeof userId !== 'string' || !/^[a-fA-F0-9]{24}$/.test(userId)) {
     throw new HttpError(400, 'Invalid userId format');
   }
@@ -149,11 +145,19 @@ export async function createMembership({
       );
     }
 
-    if (userStoragePath && fs.existsSync(userStoragePath)) {
-      try {
-        fs.rmSync(userStoragePath, { recursive: true, force: true });
-      } catch (cleanupError) {
-        console.error('Error deleting storage directory during rollback:', cleanupError);
+    if (userStoragePath) {
+      // Validar de nuevo antes de borrar
+      const storageRoot = path.resolve(process.cwd(), 'storage');
+      const normalizedStorageRoot = storageRoot.endsWith(path.sep)
+        ? storageRoot
+        : storageRoot + path.sep;
+      const resolvedUserStoragePath = path.resolve(userStoragePath);
+      if (resolvedUserStoragePath.startsWith(normalizedStorageRoot) && fs.existsSync(resolvedUserStoragePath)) {
+        try {
+          fs.rmSync(resolvedUserStoragePath, { recursive: true, force: true });
+        } catch (cleanupError) {
+          console.error('Error deleting storage directory during rollback:', cleanupError);
+        }
       }
     }
 
@@ -168,12 +172,15 @@ export async function hasActiveMembership(
   userId: string,
   organizationId: string
 ): Promise<boolean> {
+  // Validar userId para evitar inyección
+  if (typeof userId !== 'string' || !/^[a-fA-F0-9]{24}$/.test(userId)) {
+    return false;
+  }
   const membership = await Membership.findOne({
-    user: userId,
+    user: { $eq: userId },
     organization: organizationId,
     status: MembershipStatus.ACTIVE,
   });
-
   return !!membership;
 }
 
@@ -184,8 +191,12 @@ export async function getMembership(
   userId: string,
   organizationId: string
 ): Promise<IMembership | null> {
+  // Validar userId para evitar inyección
+  if (typeof userId !== 'string' || !/^[a-fA-F0-9]{24}$/.test(userId)) {
+    return null;
+  }
   return Membership.findOne({
-    user: userId,
+    user: { $eq: userId },
     organization: organizationId,
     status: MembershipStatus.ACTIVE,
   });
@@ -195,8 +206,12 @@ export async function getMembership(
  * Obtiene todas las membresías activas de un usuario con organizaciones activas
  */
 export async function getUserMemberships(userId: string): Promise<IMembership[]> {
+  // Validar userId para evitar inyección
+  if (typeof userId !== 'string' || !/^[a-fA-F0-9]{24}$/.test(userId)) {
+    return [];
+  }
   return Membership.find({
-    user: userId,
+    user: { $eq: userId },
     status: MembershipStatus.ACTIVE,
   }).populate({
     path: 'organization',
