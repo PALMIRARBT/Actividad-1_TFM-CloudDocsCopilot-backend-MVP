@@ -62,7 +62,7 @@ Content-Type: application/json
 }
 ```
 
-**💾 Guardar el token:** Usar en header `Authorization: Bearer <token>` para los siguientes requests.
+**💾 Guardar el token:** El token JWT se envía automáticamente en las cookies (`Cookie: token=<token>`) tras el login. No es necesario enviarlo en el header Authorization.
 
 ---
 
@@ -71,7 +71,7 @@ Content-Type: application/json
 ### Crear Primera Organización
 ```http
 POST /api/organizations
-Authorization: Bearer <token>
+Cookie: token=<token>
 Content-Type: application/json
 
 {
@@ -120,7 +120,7 @@ Content-Type: application/json
 ### Ver Mis Organizaciones
 ```http
 GET /api/memberships/my-organizations
-Authorization: Bearer <token>
+Cookie: token=<token>
 ```
 
 **Respuesta esperada:**
@@ -167,7 +167,7 @@ Authorization: Bearer <token>
 
 ### Ver Miembros de mi Organización
 ```http
-GET /api/memberships/697005c7327fe390b912bc98/members
+GET /api/memberships/organization/697005c7327fe390b912bc98/members
 Authorization: Bearer <token>
 ```
 
@@ -287,7 +287,7 @@ Content-Type: multipart/form-data
 **Paso 2:** Como owner, invitar usuario2 (debe funcionar)
 ```http
 POST /api/organizations/697005c7327fe390b912bc98/members
-Authorization: Bearer <token-owner>
+Cookie: token=<token-owner>
 Content-Type: application/json
 
 {
@@ -299,7 +299,7 @@ Content-Type: application/json
 **Paso 3:** Invitar usuario3 (debe funcionar)
 ```http
 POST /api/organizations/697005c7327fe390b912bc98/members
-Authorization: Bearer <token-owner>
+Cookie: token=<token-owner>
 Content-Type: application/json
 
 {
@@ -311,7 +311,7 @@ Content-Type: application/json
 **Paso 4:** Intentar invitar usuario4 (debe fallar)
 ```http
 POST /api/organizations/697005c7327fe390b912bc98/members
-Authorization: Bearer <token-owner>
+Cookie: token=<token-owner>
 Content-Type: application/json
 
 {
@@ -334,7 +334,7 @@ Content-Type: application/json
 ### Crear Segunda Organización
 ```http
 POST /api/organizations
-Authorization: Bearer <token>
+Cookie: token=<token>
 Content-Type: application/json
 
 {
@@ -360,7 +360,7 @@ Content-Type: application/json
 ### Verificar que tengo 2 Organizaciones
 ```http
 GET /api/memberships/my-organizations
-Authorization: Bearer <token>
+Cookie: token=<token>
 ```
 
 **Respuesta esperada:**
@@ -388,7 +388,7 @@ Authorization: Bearer <token>
 ### Cambiar Organización Activa
 ```http
 POST /api/memberships/switch/697010ab327fe390b912bcf0
-Authorization: Bearer <token>
+Cookie: token=<token>
 ```
 
 **Respuesta esperada:**
@@ -407,7 +407,7 @@ Authorization: Bearer <token>
 ### Subir Documento en Nueva Org Activa
 ```http
 POST /api/documents/upload
-Authorization: Bearer <token>
+Cookie: token=<token>
 Content-Type: multipart/form-data
 
 {
@@ -453,7 +453,7 @@ Authorization: Bearer <token>
 ### Usuario Abandona Org (No Owner)
 ```http
 DELETE /api/memberships/697005c7327fe390b912bc98/leave
-Authorization: Bearer <token-miembro>
+Cookie: token=<token-miembro>
 ```
 
 **Respuesta esperada:**
