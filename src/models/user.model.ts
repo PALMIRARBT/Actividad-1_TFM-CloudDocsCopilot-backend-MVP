@@ -91,8 +91,8 @@ const userSchema = new Schema<IUser>(
     lastPasswordChange: { type: Date },
 
     // Campos para el reseteo de contraseña
-    passwordResetTokenHash: { type: String, default: null },
-    passwordResetExpires: { type: Date, default: null },
+    passwordResetTokenHash: { type: String, default: null, index: true },
+    passwordResetExpires: { type: Date, default: null, index: true },
     passwordResetRequestedAt: { type: Date, default: null },
 
     organization: {
