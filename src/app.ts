@@ -92,6 +92,8 @@ app.get('/api/csrf-token', (req: Request, res: Response) => {
   res.json({ token });
 });
 
+
+
 // Servir archivos estáticos (imágenes de perfil, documentos públicos)
 // Permite acceder a http://localhost:4000/uploads/archivo.jpg
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
