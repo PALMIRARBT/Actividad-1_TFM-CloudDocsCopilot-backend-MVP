@@ -18,6 +18,7 @@ RUN npm ci
 # Copy source code and build
 COPY tsconfig.json ./
 COPY src/ ./src/
+COPY docs/openapi/ ./docs/openapi/
 
 RUN npm run build
 
@@ -39,8 +40,8 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 
-# Copy necessary files
-COPY src/docs/openapi.json ./dist/docs/openapi.json
+# Copy necessary files (openapi.json from docs/ - single source of truth)
+COPY docs/openapi/openapi.json ./dist/docs/openapi.json
 
 # Create storage and uploads directories
 RUN mkdir -p storage uploads && \

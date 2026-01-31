@@ -41,6 +41,8 @@ tests/
 # Documentation (not needed in container)
 *.md
 docs/
+!docs/openapi/
+!docs/openapi/openapi.json
 !README.md
 
 # Development files
@@ -48,7 +50,7 @@ nodemon.json
 .eslintrc*
 .prettierrc*
 jest.config.js
-tsconfig.json
+# tsconfig.json is needed for build stage
 
 # Storage and uploads (mounted as volumes)
 storage/
