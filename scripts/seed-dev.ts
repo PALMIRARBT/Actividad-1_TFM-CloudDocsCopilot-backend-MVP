@@ -193,13 +193,30 @@ async function createMemberships(
     const orgId = orgMap.get(m.org);
     
     if (userId && orgId) {
+      const org = await Organization.findById(orgId);
+      const user = await User.findById(userId);
+      
+      // Create root folder for this membership
+      const rootFolder = await Folder.create({
+        name: `root_${user?.email?.split('@')[0]}_${org?.name?.toLowerCase().replace(/\s+/g, '_')}`,
+        displayName: 'Mi Carpeta',
+        type: 'root',
+        isRoot: true,
+        organization: orgId,
+        owner: userId,
+        parent: null,
+        path: `/${org?.name?.toLowerCase().replace(/\s+/g, '-')}/${userId}`,
+        permissions: [{ userId: userId, role: 'owner' }],
+      });
+
       await Membership.create({
         user: userId,
         organization: orgId,
         role: m.role,
         joinedAt: new Date(),
+        rootFolder: rootFolder._id,
       });
-      console.log(`   ✓ ${m.user} → ${m.org} (${m.role})`);
+      console.log(`   ✓ ${m.user} → ${m.org} (${m.role}) with root folder`);
     }
   }
 }
