@@ -622,7 +622,7 @@
                   "properties": {
                     "message": {
                       "type": "string",
-                      "example": "If the email exists, a reset link has been sent"
+                      "example": "Revisa tu correo, un link ha sido enviado"
                     }
                   }
                 }
