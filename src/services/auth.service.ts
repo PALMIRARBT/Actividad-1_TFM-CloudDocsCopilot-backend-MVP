@@ -95,6 +95,9 @@ export async function registerUser({
   // Hashear contraseña
   const hashed = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
   
+  // En entorno de test, activar usuarios automáticamente (sin confirmación de email)
+  const isTestEnv = process.env.NODE_ENV === 'test';
+  
   try {
     // Crear usuario sin organización ni rootFolder
     const user = await User.create({ 
@@ -105,7 +108,7 @@ export async function registerUser({
       organization: undefined,
       rootFolder: undefined,
       storageUsed: 0,
-      active: false // Inactivo hasta confirmar email
+      active: isTestEnv // Activo en tests, inactivo en producción hasta confirmar email
     });
     
     // --- Envío de email de confirmación ---

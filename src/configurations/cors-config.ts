@@ -99,6 +99,7 @@ const developmentCorsOptions: CorsOptions = {
     'Origin',
     'X-CSRF-Token',
     'x-csrf-token',
+    'X-Csrf-Token',
   ],
 
   // Headers expuestos al cliente
@@ -174,6 +175,7 @@ const productionCorsOptions: CorsOptions = {
     'X-Requested-With',
     'X-CSRF-Token',
     'x-csrf-token',
+    'X-Csrf-Token',
   ],
 
   // Headers expuestos mínimos por seguridad
