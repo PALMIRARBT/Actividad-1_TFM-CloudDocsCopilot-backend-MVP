@@ -132,7 +132,7 @@ export async function forgotPassword(req: any, res: any, next: any) {
     await requestPasswordReset(email);
 
     // Anti-enumeración: mismo mensaje siempre
-    return res.json({ message: 'If the email exists, a reset link has been sent' });
+    return res.json({ message: 'Check your email, a link has been sent' });
   } catch (err) {
     return next(err);
   }
