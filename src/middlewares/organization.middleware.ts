@@ -196,5 +196,6 @@ export function validateMinimumRole(minimumRole: MembershipRole) {
 declare module './auth.middleware' {
   interface AuthRequest {
     organization?: any;
+    activeOrganization?: any;
   }
 }

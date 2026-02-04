@@ -13,6 +13,7 @@ import userRoutes from './routes/user.routes';
 import organizationRoutes from './routes/organization.routes';
 import membershipRoutes from './routes/membership.routes';
 import searchRoutes from './routes/search.routes';
+import deletionRoutes from './routes/deletion.routes';
 import HttpError from './models/error.model';
 import { errorHandler } from './middlewares/error.middleware';
 import { generalRateLimiter } from './middlewares/rate-limit.middleware';
@@ -106,6 +107,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/folders', folderRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/deletion', deletionRoutes);
 
 // Documentación Swagger/OpenAPI
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec, { explorer: true }));

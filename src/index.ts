@@ -4,6 +4,7 @@ import './configurations/env-config';
 import app from './app';
 import { connectMongo } from './configurations/database-config/mongoDB';
 import ElasticsearchClient from './configurations/elasticsearch-config';
+import { startAutoDeletionJob } from './jobs/auto-deletion.job';
 
 /**
  * Puerto en el que correrá el servidor
@@ -39,6 +40,9 @@ async function start(): Promise<void> {
     } else {
       console.log('ℹ️  Elasticsearch disabled. Search functionality will be limited.');
     }
+    
+    // Iniciar job de eliminación automática
+    startAutoDeletionJob();
     
     app.listen(PORT, () => console.log(`Backend server listening on port ${PORT}`));
   } catch (err) {
