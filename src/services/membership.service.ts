@@ -3,12 +3,326 @@ import Organization from '../models/organization.model';
 import User from '../models/user.model';
 import Folder from '../models/folder.model';
 import HttpError from '../models/error.model';
+import { sendConfirmationEmail } from '../mail/emailService';
 import * as fs from 'fs';
 import * as path from 'path';
 
 /**
- * Crea una membresía para un usuario en una organización
- * Crea automáticamente el rootFolder específico para esta organización
+ * Crea una invitación para un usuario a una organización
+ * Status: PENDING (sin crear rootFolder aún)
+ * Envía email de notificación
+ */
+export async function createInvitation({
+  userId,
+  organizationId,
+  role = MembershipRole.MEMBER,
+  invitedBy,
+}: {
+  userId: string;
+  organizationId: string;
+  role?: MembershipRole;
+  invitedBy: string;
+}): Promise<IMembership> {
+  // Validate userId to prevent NoSQL injection via query operators and path traversal
+  if (typeof userId !== 'string' || !/^[a-fA-F0-9]{24}$/.test(userId)) {
+    throw new HttpError(400, 'Invalid userId format');
+  }
+
+  if (typeof invitedBy !== 'string' || !/^[a-fA-F0-9]{24}$/.test(invitedBy)) {
+    throw new HttpError(400, 'Invalid invitedBy format');
+  }
+
+  const organization = await Organization.findById(organizationId).populate('owner', 'name email');
+  if (!organization) {
+    throw new HttpError(404, 'Organization not found');
+  }
+
+  if (!organization.active) {
+    throw new HttpError(403, 'Organization is not active');
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new HttpError(404, 'User not found');
+  }
+
+  const inviter = await User.findById(invitedBy);
+  if (!inviter) {
+    throw new HttpError(404, 'Inviter user not found');
+  }
+
+  // Verificar si ya existe membresía (activa o pendiente)
+  const existingMembership = await Membership.findOne({
+    user: { $eq: userId },
+    organization: { $eq: organizationId },
+  });
+
+  if (existingMembership) {
+    if (existingMembership.status === MembershipStatus.ACTIVE) {
+      throw new HttpError(409, 'User is already a member of this organization');
+    }
+    if (existingMembership.status === MembershipStatus.PENDING) {
+      throw new HttpError(409, 'User already has a pending invitation to this organization');
+    }
+  }
+
+  // Verificar límite de usuarios del plan (contar solo ACTIVE + PENDING)
+  const totalMembersCount = await Membership.countDocuments({
+    organization: { $eq: organizationId },
+    status: { $in: [MembershipStatus.ACTIVE, MembershipStatus.PENDING] },
+  });
+
+  if (
+    organization.settings.maxUsers !== -1 &&
+    totalMembersCount >= organization.settings.maxUsers
+  ) {
+    throw new HttpError(
+      403,
+      `Organization has reached maximum users limit (${organization.settings.maxUsers}) for ${organization.plan} plan`
+    );
+  }
+
+  // Validar que el rol asignado esté permitido según el plan
+  // Por ejemplo, el plan FREE podría no permitir múltiples ADMIN
+  if (role === MembershipRole.ADMIN || role === MembershipRole.OWNER) {
+    const adminCount = await Membership.countDocuments({
+      organization: { $eq: organizationId },
+      role: { $in: [MembershipRole.ADMIN, MembershipRole.OWNER] },
+      status: MembershipStatus.ACTIVE,
+    });
+
+    // Ejemplo: plan FREE solo permite 1 admin (el owner)
+    if (organization.plan === 'free' && adminCount >= 1) {
+      throw new HttpError(
+        403,
+        'Free plan does not allow multiple administrators. Upgrade to invite admins.'
+      );
+    }
+  }
+
+  // Crear membresía con estado PENDING (sin rootFolder)
+  const membership = await Membership.create({
+    user: userId,
+    organization: organizationId,
+    role,
+    status: MembershipStatus.PENDING,
+    invitedBy,
+    // rootFolder se creará al aceptar
+  });
+
+  // Enviar email de invitación
+  try {
+    const invitationTemplate = fs.readFileSync(
+      path.join(process.cwd(), 'src', 'mail', 'invitationTemplate.html'),
+      'utf-8'
+    );
+
+    const appUrl = process.env.APP_URL || 'http://localhost:4000';
+    const acceptUrl = `${appUrl}/api/memberships/invitations/${membership._id}/accept`;
+
+    const emailHtml = invitationTemplate
+      .replace(/{{userName}}/g, user.name || user.email)
+      .replace(/{{organizationName}}/g, organization.name)
+      .replace(/{{role}}/g, role)
+      .replace(/{{inviterName}}/g, inviter.name || inviter.email)
+      .replace(/{{inviterEmail}}/g, inviter.email)
+      .replace(/{{acceptUrl}}/g, acceptUrl)
+      .replace(/{{appUrl}}/g, appUrl);
+
+    await sendConfirmationEmail(
+      user.email,
+      `Invitación a ${organization.name} en CloudDocs`,
+      emailHtml
+    );
+  } catch (emailError) {
+    console.error('Error sending invitation email:', emailError);
+    // No bloqueamos la creación de la invitación si falla el email
+  }
+
+  return membership.populate('organization', 'name slug plan');
+}
+
+/**
+ * Acepta una invitación pendiente
+ * Crea el rootFolder y activa la membresía
+ */
+export async function acceptInvitation(
+  membershipId: string,
+  userId: string
+): Promise<IMembership> {
+  const membership = await Membership.findById(membershipId).populate('organization');
+
+  if (!membership) {
+    throw new HttpError(404, 'Invitation not found');
+  }
+
+  if (membership.user.toString() !== userId) {
+    throw new HttpError(403, 'This invitation is not for you');
+  }
+
+  if (membership.status !== MembershipStatus.PENDING) {
+    throw new HttpError(400, 'Invitation is not pending');
+  }
+
+  const organization = membership.organization as any;
+  if (!organization.active) {
+    throw new HttpError(403, 'Organization is not active');
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new HttpError(404, 'User not found');
+  }
+
+  // Verificar límite de usuarios activos antes de aceptar
+  const activeMembersCount = await Membership.countDocuments({
+    organization: { $eq: organization._id },
+    status: MembershipStatus.ACTIVE,
+  });
+
+  if (
+    organization.settings.maxUsers !== -1 &&
+    activeMembersCount >= organization.settings.maxUsers
+  ) {
+    throw new HttpError(
+      403,
+      `Organization has reached maximum active users limit (${organization.settings.maxUsers})`
+    );
+  }
+
+  let rootFolder = null;
+  let userStoragePath = '';
+
+  try {
+    // Crear rootFolder específico para esta membresía
+    const rootFolderName = `root_user_${userId}`;
+    const safeOrgSlug = organization.slug.replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
+    const safeUserId = userId;
+    const rootFolderPath = `/${safeOrgSlug}/${safeUserId}`;
+
+    // Construir y normalizar ruta física
+    const storageRoot = path.resolve(process.cwd(), 'storage');
+    userStoragePath = path.resolve(storageRoot, safeOrgSlug, safeUserId);
+
+    const normalizedStorageRoot = storageRoot.endsWith(path.sep)
+      ? storageRoot
+      : storageRoot + path.sep;
+    if (!userStoragePath.startsWith(normalizedStorageRoot)) {
+      throw new HttpError(400, 'Invalid storage path resolved for user directory');
+    }
+
+    if (!fs.existsSync(userStoragePath)) {
+      fs.mkdirSync(userStoragePath, { recursive: true });
+    }
+
+    // Crear carpeta raíz en la base de datos
+    rootFolder = await Folder.create({
+      name: rootFolderName,
+      displayName: 'RootFolder',
+      type: 'root',
+      isRoot: true,
+      organization: organization._id,
+      owner: userId,
+      parent: null,
+      path: rootFolderPath,
+      permissions: [{
+        userId: userId,
+        role: 'owner'
+      }]
+    });
+
+    // Actualizar membresía a ACTIVE con rootFolder
+    membership.status = MembershipStatus.ACTIVE;
+    membership.rootFolder = rootFolder._id as any;
+    membership.joinedAt = new Date();
+    await membership.save();
+
+    // Actualizar array legacy en Organization
+    if (!organization.members.includes(userId as any)) {
+      organization.members.push(userId as any);
+      await organization.save();
+    }
+
+    // Si es la primera organización del usuario, establecerla como activa
+    if (!user.organization) {
+      user.organization = organization._id as any;
+      user.rootFolder = rootFolder._id as any;
+      await user.save();
+    }
+
+    return membership.populate('organization', 'name slug plan');
+  } catch (error) {
+    // Rollback: limpiar rootFolder creado
+    if (rootFolder?._id) {
+      await Folder.findByIdAndDelete(rootFolder._id).catch(err =>
+        console.error('Error deleting folder during rollback:', err)
+      );
+    }
+
+    if (userStoragePath) {
+      const storageRoot = path.resolve(process.cwd(), 'storage');
+      const normalizedStorageRoot = storageRoot.endsWith(path.sep)
+        ? storageRoot
+        : storageRoot + path.sep;
+      const resolvedUserStoragePath = path.resolve(userStoragePath);
+      if (resolvedUserStoragePath.startsWith(normalizedStorageRoot) && fs.existsSync(resolvedUserStoragePath)) {
+        try {
+          fs.rmSync(resolvedUserStoragePath, { recursive: true, force: true });
+        } catch (cleanupError) {
+          console.error('Error deleting storage directory during rollback:', cleanupError);
+        }
+      }
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Rechaza una invitación pendiente
+ */
+export async function rejectInvitation(
+  membershipId: string,
+  userId: string
+): Promise<void> {
+  const membership = await Membership.findById(membershipId);
+
+  if (!membership) {
+    throw new HttpError(404, 'Invitation not found');
+  }
+
+  if (membership.user.toString() !== userId) {
+    throw new HttpError(403, 'This invitation is not for you');
+  }
+
+  if (membership.status !== MembershipStatus.PENDING) {
+    throw new HttpError(400, 'Invitation is not pending');
+  }
+
+  // Eliminar invitación
+  await Membership.findByIdAndDelete(membershipId);
+}
+
+/**
+ * Obtiene las invitaciones pendientes de un usuario
+ */
+export async function getPendingInvitations(userId: string): Promise<IMembership[]> {
+  if (typeof userId !== 'string' || !/^[a-fA-F0-9]{24}$/.test(userId)) {
+    throw new HttpError(400, 'Invalid userId format');
+  }
+
+  return Membership.find({
+    user: { $eq: userId },
+    status: MembershipStatus.PENDING,
+  })
+    .populate('organization', 'name slug plan')
+    .populate('invitedBy', 'name email')
+    .sort({ createdAt: -1 });
+}
+
+/**
+ * Crea una membresía directamente en estado ACTIVE (uso interno/legacy)
+ * Para invitaciones usar createInvitation + acceptInvitation
  */
 export async function createMembership({
   userId,
@@ -21,7 +335,7 @@ export async function createMembership({
   role?: MembershipRole;
   invitedBy?: string;
 }): Promise<IMembership> {
-  // Validate userId to prevent NoSQL injection via query operators and path traversal
+  // Validación básica
   if (typeof userId !== 'string' || !/^[a-fA-F0-9]{24}$/.test(userId)) {
     throw new HttpError(400, 'Invalid userId format');
   }
@@ -71,17 +385,14 @@ export async function createMembership({
 
   try {
     // Crear rootFolder específico para esta membresía (organización)
-
     const rootFolderName = `root_user_${userId}`;
     const safeOrgSlug = organization.slug.replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
-    const safeUserId = userId; // userId ya validado como ObjectId (24 hex)
+    const safeUserId = userId;
     const rootFolderPath = `/${safeOrgSlug}/${safeUserId}`;
 
-    // Construir y normalizar ruta física en storage/{org-slug}/{userId}
     const storageRoot = path.resolve(process.cwd(), 'storage');
     userStoragePath = path.resolve(storageRoot, safeOrgSlug, safeUserId);
 
-    // Validar que la ruta generada esté contenida dentro de storageRoot
     const normalizedStorageRoot = storageRoot.endsWith(path.sep)
       ? storageRoot
       : storageRoot + path.sep;
@@ -93,7 +404,6 @@ export async function createMembership({
       fs.mkdirSync(userStoragePath, { recursive: true });
     }
 
-    // Crear carpeta raíz en la base de datos
     rootFolder = await Folder.create({
       name: rootFolderName,
       displayName: 'RootFolder',
@@ -109,7 +419,6 @@ export async function createMembership({
       }]
     });
 
-    // Crear membresía con referencia al rootFolder
     const membership = await Membership.create({
       user: userId,
       organization: organizationId,
@@ -119,26 +428,22 @@ export async function createMembership({
       invitedBy: invitedBy || undefined,
     });
 
-    // Actualizar array legacy en Organization
     if (!organization.members.includes(userId as any)) {
       organization.members.push(userId as any);
       await organization.save();
     }
 
-    // Si es la primera organización del usuario, establecerla como activa
     if (!user.organization) {
       user.organization = organizationId as any;
       user.rootFolder = rootFolder._id as any;
       await user.save();
     } else if (user.organization.toString() === organizationId) {
-      // Si es su organización actual, actualizar el rootFolder
       user.rootFolder = rootFolder._id as any;
       await user.save();
     }
 
     return membership;
   } catch (error) {
-    // Rollback: limpiar rootFolder creado
     if (rootFolder?._id) {
       await Folder.findByIdAndDelete(rootFolder._id).catch(err =>
         console.error('Error deleting folder during rollback:', err)
@@ -146,7 +451,6 @@ export async function createMembership({
     }
 
     if (userStoragePath) {
-      // Validar de nuevo antes de borrar
       const storageRoot = path.resolve(process.cwd(), 'storage');
       const normalizedStorageRoot = storageRoot.endsWith(path.sep)
         ? storageRoot
@@ -545,6 +849,10 @@ export async function transferOwnership(
 
 export default {
   createMembership,
+  createInvitation,
+  acceptInvitation,
+  rejectInvitation,
+  getPendingInvitations,
   hasActiveMembership,
   getMembership,
   getUserMemberships,
