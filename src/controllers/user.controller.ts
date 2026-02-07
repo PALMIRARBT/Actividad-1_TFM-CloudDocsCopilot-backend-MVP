@@ -179,4 +179,42 @@ export async function updateAvatar(req: AuthRequest, res: Response, next: NextFu
   }
 }
 
-export default { list, getProfile, activate, deactivate, update, changePassword, remove, deleteSelf, updateAvatar };
+/**
+ * Controlador para buscar usuarios por email.
+ * Consulta: GET /api/users/search?email=xxx[&organizationId=yyy]
+ */
+export async function search(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const email = (req.query.email as string) || '';
+    if (!email || !email.trim()) {
+      return next(new HttpError(400, 'Query parameter "email" is required'));
+    }
+
+    const organizationId = req.query.organizationId as string | undefined;
+
+    const users = await userService.findUsersByEmail(email, {
+      organizationId,
+      excludeOrganizationMembers: true,
+      excludeUserId: req.user?.id
+    });
+
+    // Mapear campos expuestos al frontend
+    const result = users.map(u => ({
+      id: u.id || u._id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      active: u.active,
+      organization: u.organization,
+      avatar: u.avatar,
+      createdAt: u.createdAt,
+      updatedAt: u.updatedAt
+    }));
+
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export default { list, getProfile, activate, deactivate, update, changePassword, remove, deleteSelf, updateAvatar, search };

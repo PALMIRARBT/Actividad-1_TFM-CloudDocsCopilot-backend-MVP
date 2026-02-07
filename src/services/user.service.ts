@@ -144,6 +144,44 @@ export async function updateAvatar(id: string, { avatar }: UpdateAvatarDto): Pro
   return user;
 }
 
+/**
+ * Busca usuarios por email (coincidencia parcial, case-insensitive).
+ * Opcionalmente filtra por organización.
+ */
+export interface FindUsersOptions {
+  organizationId?: string;
+  excludeOrganizationMembers?: boolean; // if true, exclude users already in organizationId
+  excludeUserId?: string; // exclude this user id (e.g., the inviter)
+}
+
+export async function findUsersByEmail(email: string, options: FindUsersOptions = {}): Promise<IUser[]> {
+  if (!email || !email.trim()) return [];
+
+  const normalized = email.trim().toLowerCase();
+
+  const filter: any = { email: normalized };
+
+  if (options.excludeUserId) {
+    filter._id = { $ne: options.excludeUserId };
+  }
+
+  if (options.organizationId) {
+    if (options.excludeOrganizationMembers) {
+      // Excluir usuarios que ya pertenecen a la organización
+      filter.organization = { $ne: options.organizationId };
+    } else {
+      // Filtrar sólo usuarios de la organización
+      filter.organization = options.organizationId;
+    }
+  }
+
+  // Limitar resultados por seguridad (por defecto 20)
+  return User.find(filter)
+    .limit(20)
+    .select('-password -passwordResetTokenHash -passwordResetExpires -passwordResetRequestedAt')
+    .exec();
+}
+
 export default {
   getAllUsers,
   setUserActive,
@@ -151,4 +189,5 @@ export default {
   changePassword,
   deleteUser,
   updateAvatar
+  ,findUsersByEmail
 };

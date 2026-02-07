@@ -2,6 +2,7 @@ import Membership, { IMembership, MembershipRole, MembershipStatus } from '../mo
 import Organization from '../models/organization.model';
 import User from '../models/user.model';
 import Folder from '../models/folder.model';
+import DocumentModel from '../models/document.model';
 import HttpError from '../models/error.model';
 import { sendConfirmationEmail } from '../mail/emailService';
 import * as fs from 'fs';
@@ -195,9 +196,9 @@ export async function acceptInvitation(
 
   try {
     // Crear rootFolder específico para esta membresía
-    const rootFolderName = `root_user_${userId}`;
     const safeOrgSlug = organization.slug.replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
     const safeUserId = userId;
+    const rootFolderName = `root_${safeOrgSlug}_${safeUserId}`;
     const rootFolderPath = `/${safeOrgSlug}/${safeUserId}`;
 
     // Construir y normalizar ruta física
@@ -385,9 +386,9 @@ export async function createMembership({
 
   try {
     // Crear rootFolder específico para esta membresía (organización)
-    const rootFolderName = `root_user_${userId}`;
     const safeOrgSlug = organization.slug.replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
     const safeUserId = userId;
+    const rootFolderName = `root_${safeOrgSlug}_${safeUserId}`;
     const rootFolderPath = `/${safeOrgSlug}/${safeUserId}`;
 
     const storageRoot = path.resolve(process.cwd(), 'storage');
@@ -667,8 +668,53 @@ export async function updateMembershipRole(
 }
 
 /**
+ * Función auxiliar para eliminar recursivamente subcarpetas y documentos
+ */
+async function deleteFolderContentsRecursively(folderId: string): Promise<void> {
+  // Obtener todas las subcarpetas
+  const subfolders = await Folder.find({ parent: folderId });
+  
+  for (const subfolder of subfolders) {
+    // Recursión: eliminar contenido de subcarpetas
+    await deleteFolderContentsRecursively(subfolder._id.toString());
+    
+    // Eliminar documentos de esta subcarpeta
+    const docs = await DocumentModel.find({ folder: subfolder._id });
+    for (const doc of docs) {
+      try {
+        // Eliminar archivo físico usando el path del documento
+        if (doc.path && fs.existsSync(doc.path)) {
+          fs.unlinkSync(doc.path);
+        }
+      } catch (e: any) {
+        console.error('[delete-doc-error]', { id: doc._id, path: doc.path, err: e.message });
+      }
+      // Eliminar registro de documento
+      await DocumentModel.findByIdAndDelete(doc._id);
+    }
+    
+    // Eliminar registro de subcarpeta
+    await Folder.findByIdAndDelete(subfolder._id);
+  }
+  
+  // Eliminar documentos del folder actual
+  const docs = await DocumentModel.find({ folder: folderId });
+  for (const doc of docs) {
+    try {
+      if (doc.path && fs.existsSync(doc.path)) {
+        fs.unlinkSync(doc.path);
+      }
+    } catch (e: any) {
+      console.error('[delete-doc-error]', { id: doc._id, path: doc.path, err: e.message });
+    }
+    await DocumentModel.findByIdAndDelete(doc._id);
+  }
+}
+
+/**
  * Elimina una membresía específica (por ID de membresía)
  * Requiere permisos de ADMIN u OWNER para ejecutar
+ * ELIMINA PERMANENTEMENTE: membresía, carpetas, documentos y archivos físicos
  */
 export async function removeMembershipById(
   membershipId: string,
@@ -702,11 +748,37 @@ export async function removeMembershipById(
   const userId = membership.user.toString();
   const rootFolderId = membership.rootFolder;
 
-  // Suspender membresía
-  membership.status = MembershipStatus.SUSPENDED;
-  await membership.save();
+  // 1. Eliminar rootFolder, subcarpetas y documentos
+  if (rootFolderId) {
+    const rootFolder = await Folder.findById(rootFolderId);
+    if (rootFolder) {
+      try {
+        // Eliminar recursivamente subcarpetas y documentos de la BD
+        await deleteFolderContentsRecursively(rootFolderId.toString());
+        
+        // Eliminar rootFolder de la BD
+        await Folder.findByIdAndDelete(rootFolderId);
+        
+        // Eliminar directorio físico completo
+        const storageRoot = path.resolve(process.cwd(), 'storage');
+        const folderPath = path.resolve(storageRoot, rootFolder.path.replace(/^\//, ''));
+        
+        // Validación de seguridad: asegurar que está dentro de storage
+        const normalizedStorageRoot = storageRoot.endsWith(path.sep)
+          ? storageRoot
+          : storageRoot + path.sep;
+        
+        if (folderPath.startsWith(normalizedStorageRoot) && fs.existsSync(folderPath)) {
+          fs.rmSync(folderPath, { recursive: true, force: true });
+        }
+      } catch (error) {
+        console.error('Error deleting folder contents during membership removal:', error);
+        // Continuar con la eliminación aunque falle el borrado de archivos
+      }
+    }
+  }
 
-  // Actualizar array legacy en organization
+  // 2. Actualizar array legacy en organization
   const organization = await Organization.findById(organizationId);
   if (organization) {
     organization.members = organization.members.filter(
@@ -715,36 +787,21 @@ export async function removeMembershipById(
     await organization.save();
   }
 
-  // Si era la organización activa del usuario, limpiarla
+  // 3. Si era la organización activa del usuario, limpiarla
   const user = await User.findById(userId);
   if (user && user.organization?.toString() === organizationId) {
     user.organization = undefined;
+    user.rootFolder = undefined;
     await user.save();
   }
 
-  // Eliminar rootFolder y archivos físicos
-  if (rootFolderId) {
-    const rootFolder = await Folder.findById(rootFolderId);
-    if (rootFolder) {
-      const storageRoot = path.join(process.cwd(), 'storage');
-      const folderPath = path.join(storageRoot, rootFolder.path);
-      
-      if (fs.existsSync(folderPath)) {
-        try {
-          fs.rmSync(folderPath, { recursive: true, force: true });
-        } catch (error) {
-          console.error('Error deleting folder during membership removal:', error);
-        }
-      }
-
-      await Folder.findByIdAndDelete(rootFolderId);
-    }
-  }
+  // 4. Eliminar membresía permanentemente
+  await Membership.findByIdAndDelete(membershipId);
 }
 
 /**
- * Elimina una membresía (soft delete)
- * Limpia el rootFolder asociado y actualiza referencias
+ * Elimina una membresía (cuando el usuario abandona la organización)
+ * ELIMINA PERMANENTEMENTE: membresía, carpetas, documentos y archivos físicos
  */
 export async function removeMembership(userId: string, organizationId: string): Promise<void> {
   if (typeof userId !== 'string' || !/^[a-fA-F0-9]{24}$/.test(userId)) {
@@ -764,13 +821,39 @@ export async function removeMembership(userId: string, organizationId: string): 
     throw new HttpError(400, 'Cannot remove organization owner. Transfer ownership first.');
   }
 
-  // Obtener rootFolder antes de suspender
   const rootFolderId = membership.rootFolder;
 
-  membership.status = MembershipStatus.SUSPENDED;
-  await membership.save();
+  // 1. Eliminar rootFolder, subcarpetas y documentos
+  if (rootFolderId) {
+    const rootFolder = await Folder.findById(rootFolderId);
+    if (rootFolder) {
+      try {
+        // Eliminar recursivamente subcarpetas y documentos de la BD
+        await deleteFolderContentsRecursively(rootFolderId.toString());
+        
+        // Eliminar rootFolder de la BD
+        await Folder.findByIdAndDelete(rootFolderId);
+        
+        // Eliminar directorio físico completo
+        const storageRoot = path.resolve(process.cwd(), 'storage');
+        const folderPath = path.resolve(storageRoot, rootFolder.path.replace(/^\//, ''));
+        
+        // Validación de seguridad: asegurar que está dentro de storage
+        const normalizedStorageRoot = storageRoot.endsWith(path.sep)
+          ? storageRoot
+          : storageRoot + path.sep;
+        
+        if (folderPath.startsWith(normalizedStorageRoot) && fs.existsSync(folderPath)) {
+          fs.rmSync(folderPath, { recursive: true, force: true });
+        }
+      } catch (error) {
+        console.error('Error deleting folder contents during membership removal:', error);
+        // Continuar con la eliminación aunque falle el borrado de archivos
+      }
+    }
+  }
 
-  // Actualizar array legacy en organization
+  // 2. Actualizar array legacy en organization
   const organization = await Organization.findById(organizationId);
   if (organization) {
     organization.members = organization.members.filter(
@@ -779,34 +862,16 @@ export async function removeMembership(userId: string, organizationId: string): 
     await organization.save();
   }
 
-  // Si era la organización activa, limpiarla
+  // 3. Si era la organización activa del usuario, limpiarla
   const user = await User.findById(userId);
   if (user && user.organization?.toString() === organizationId) {
     user.organization = undefined;
+    user.rootFolder = undefined;
     await user.save();
   }
 
-  // Opcional: Eliminar rootFolder y archivos físicos
-  // (Podrías querer mantenerlos por un tiempo antes de eliminar permanentemente)
-  if (rootFolderId) {
-    const rootFolder = await Folder.findById(rootFolderId);
-    if (rootFolder) {
-      // Eliminar directorio físico
-      const storageRoot = path.join(process.cwd(), 'storage');
-      const folderPath = path.join(storageRoot, rootFolder.path);
-      
-      if (fs.existsSync(folderPath)) {
-        try {
-          fs.rmSync(folderPath, { recursive: true, force: true });
-        } catch (error) {
-          console.error('Error deleting folder during membership removal:', error);
-        }
-      }
-
-      // Eliminar carpeta de BD (esto eliminará en cascada las subcarpetas si tienes middleware)
-      await Folder.findByIdAndDelete(rootFolderId);
-    }
-  }
+  // 4. Eliminar membresía permanentemente
+  await Membership.findByIdAndDelete(membership._id);
 }
 
 /**
