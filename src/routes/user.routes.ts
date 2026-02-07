@@ -9,6 +9,9 @@ const router = express.Router();
 // CSRF protection is applied globally in app.ts
 router.get('/', authenticateToken, requireAdmin, userController.list);
 
+// Buscar usuarios por email: /api/users/search?email=xxx
+router.get('/search', authenticateToken,  userController.search);
+
 // Acciones sobre el propio usuario
 router.delete('/me', authenticateToken, (req, res, next) => {
     req.params.id = 'me';
