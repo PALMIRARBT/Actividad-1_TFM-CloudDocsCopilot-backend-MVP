@@ -71,6 +71,12 @@ export async function shareDocument({ id, userId, userIds }: ShareDocumentDto): 
   if (!doc) throw new Error('Document not found');
   if (String(doc.uploadedBy) !== String(userId)) throw new HttpError(403, 'Forbidden');
 
+  // Si el documento pertenece a una organización, por defecto ya es visible para todos los miembros activos.
+  // Mantener endpoint por compatibilidad, pero no es necesario para "org-wide access".
+  if (doc.organization) {
+    return doc;
+  }
+
   // Filtra el owner de la lista de usuarios con los que compartir
   const filteredIds = uniqueIds.filter(id => String(id) !== String(userId));
   if (filteredIds.length === 0) throw new HttpError(400, 'Cannot share document with yourself as the owner');
@@ -248,7 +254,9 @@ export async function copyDocument({
   const doc = await DocumentModel.findById(documentId);
   if (!doc) throw new HttpError(404, 'Document not found');
 
-  // Usuario debe tener acceso al documento original (owner o shared)
+  // Usuario debe tener acceso al documento original:
+  // - Si es de organización: cualquier miembro activo
+  // - Si es personal: owner o sharedWith.
   const hasAccess = String(doc.uploadedBy) === String(userId) ||
     doc.sharedWith?.some((id: mongoose.Types.ObjectId) => String(id) === String(userId));
 
@@ -369,16 +377,10 @@ export async function getUserRecentDocuments({
     throw new HttpError(403, 'No active organization. Please create or join an organization first.');
   }
 
-  // Convertir a ObjectId para asegurar tipos seguros en la query
-  const userObjectId = new mongoose.Types.ObjectId(userId);
   const orgObjectId = new mongoose.Types.ObjectId(activeOrgId);
 
   const documents = await DocumentModel.find({
     organization: orgObjectId,
-    $or: [
-      { uploadedBy: userObjectId },
-      { sharedWith: userObjectId }
-    ]
   })
   .sort({ createdAt: -1 })
   .limit(limit)
@@ -386,10 +388,10 @@ export async function getUserRecentDocuments({
   .select('-__v')
   .lean();
 
-  // Agregar campo calculado indicando si es propio o compartido
+  // Agregar campo calculado indicando si es propio o visible por organización
   const documentsWithAccessType = documents.map(doc => ({
     ...doc,
-    accessType: doc.uploadedBy.toString() === userId.toString() ? 'owner' : 'shared',
+    accessType: doc.uploadedBy.toString() === userId.toString() ? 'owner' : 'org',
     isOwned: doc.uploadedBy.toString() === userId.toString()
   }));
 
@@ -505,7 +507,8 @@ export async function uploadDocument({
 
   // Construir path en el sistema de archivos
   const uploadsRoot = path.join(process.cwd(), 'uploads');
-  const sanitizedFilename = sanitizePathOrThrow(file.filename, uploadsRoot);
+  const rawFilename = path.basename(file.filename);
+  const sanitizedFilename = sanitizePathOrThrow(rawFilename, uploadsRoot);
   const tempPath = path.join(uploadsRoot, sanitizedFilename);
   
   // Construir paths de destino
@@ -569,12 +572,18 @@ export async function uploadDocument({
   return doc;
 }
 
-export function listDocuments(userId: string): Promise<IDocument[]> {
+export async function listDocuments(userId: string): Promise<IDocument[]> {
   if (!isValidObjectId(userId)) {
     throw new HttpError(400, 'Invalid user ID');
   }
-  const userObjectId = new mongoose.Types.ObjectId(userId);
-  return DocumentModel.find({ uploadedBy: userObjectId }).populate('folder');
+
+  const activeOrgId = await getActiveOrganization(userId);
+  if (!activeOrgId) {
+    throw new HttpError(403, 'No existe una organización activa. Por favor, crea o únete a una organización primero.');
+  }
+
+  const orgObjectId = new mongoose.Types.ObjectId(activeOrgId);
+  return DocumentModel.find({ organization: orgObjectId }).populate('folder');
 }
 
 export async function findDocumentById(id: string): Promise<IDocument | null> {
