@@ -35,15 +35,9 @@ const ALLOWED = (process.env.ALLOWED_MIME_TYPES ||
 ).split(',');
 
 export function fileFilter(_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback): void {
-  console.log(`[upload] Checking file type: ${file.mimetype}`);
-  console.log(`[upload] Allowed types:`, ALLOWED);
-  
   if (!ALLOWED.includes(file.mimetype)) {
-    console.log(`[upload] ❌ File type ${file.mimetype} is NOT allowed`);
     return cb(new HttpError(400, 'Unsupported file type') as any);
   }
-  
-  console.log(`[upload] ✅ File type ${file.mimetype} is allowed`);
   cb(null, true);
 }
 

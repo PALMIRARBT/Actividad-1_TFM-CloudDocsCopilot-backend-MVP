@@ -260,36 +260,21 @@ export async function preview(req: AuthRequest, res: Response, next: NextFunctio
       return next(new HttpError(403, 'Access denied to this document'));
     }
     
-    console.log('[preview] Document info:', {
-      id: doc._id,
-      filename: doc.filename,
-      originalname: doc.originalname,
-      path: doc.path,
-      mimeType: doc.mimeType
-    });
-    
     const storageBase = path.join(process.cwd(), 'storage');
     const relativePath = doc.path.startsWith('/') ? doc.path.substring(1) : doc.path;
-    
-    console.log('[preview] Storage base:', storageBase);
-    console.log('[preview] Relative path:', relativePath);
     
     // Intentar validar el path
     let fullPath: string | null = null;
     
     try {
       fullPath = await validateDownloadPath(relativePath, storageBase);
-      console.log('[preview] Validated full path:', fullPath);
     } catch (error) {
       // Si falla, intentar con /obs adicional (bug conocido de duplicación)
       const alternativePath = path.join('obs', relativePath);
-      console.log('[preview] Trying alternative path:', alternativePath);
       
       try {
         fullPath = await validateDownloadPath(alternativePath, storageBase);
-        console.log('[preview] Alternative path worked:', fullPath);
       } catch (error2) {
-        console.error('[preview] Both paths failed');
         return next(new HttpError(404, 'File not found'));
       }
     }
@@ -303,7 +288,6 @@ export async function preview(req: AuthRequest, res: Response, next: NextFunctio
                           doc.mimeType === 'application/msword';
     
     if (isWordDocument) {
-      console.log('[preview] Converting Word document to HTML');
       
       try {
         const result = await mammoth.convertToHtml({ path: fullPath });
