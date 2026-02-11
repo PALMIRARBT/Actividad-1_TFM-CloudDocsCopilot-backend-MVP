@@ -17,6 +17,7 @@ import * as notificationService from './notification.service';
 import { emitToUser } from '../socket/socket';
 import { processDocumentAI } from '../jobs/process-document-ai.job';
 import { textExtractionService } from './ai/text-extraction.service';
+import { extractContentFromDocument } from '../utils/pdf-extractor';
 
 /**
  * Valida si un string es un ObjectId válido de MongoDB
@@ -970,6 +971,19 @@ export async function uploadDocument({
   };
 
   const doc = await DocumentModel.create(docData);
+
+  // Extraer contenido del documento (si es PDF)
+  try {
+    const extractedContent = await extractContentFromDocument(physicalPath, docData.mimeType);
+    if (extractedContent) {
+      doc.extractedContent = extractedContent;
+      await doc.save();
+      console.log(`✅ Content extracted for document: ${doc.filename}`);
+    }
+  } catch (error: any) {
+    console.error(`⚠️  Failed to extract content from ${doc.filename}:`, error.message);
+    // No lanzar error, la extracción de contenido no es crítica
+  }
 
   // Actualizar almacenamiento usado del usuario
   user.storageUsed = currentUsage + fileSize;
