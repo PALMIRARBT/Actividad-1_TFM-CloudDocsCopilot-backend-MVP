@@ -66,10 +66,11 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       members: [testUserId, testUser2Id],
     });
     testOrgId = org._id;
+    const testOrgSlug = org.slug; // Generado automáticamente: 'test-org'
 
     // Crear estructura de carpetas
     const rootFolder = await Folder.create({
-      name: `root_user_${testUserId}`,
+      name: `root_${testOrgSlug}_${testUserId}`,
       displayName: 'My Files',
       type: 'root',
       organization: testOrgId,
@@ -152,8 +153,8 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.tree).toBeDefined();
       
-      // Verificar estructura raíz
-      expect(response.body.tree.name).toBe(`root_user_${testUserId}`);
+      // Verificar estructura raíz (el nombre técnico ahora incluye el slug: root_{orgSlug}_{userId})
+      expect(response.body.tree.name).toMatch(/^root_test-org_/);
       expect(response.body.tree.displayName).toBe('My Files');
       expect(response.body.tree.isRoot).toBe(true);
       

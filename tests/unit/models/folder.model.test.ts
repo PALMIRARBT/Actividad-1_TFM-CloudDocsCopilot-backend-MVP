@@ -91,7 +91,7 @@ describe('Folder Model - Hierarchical Structure', () => {
   describe('Root Folder with Technical Name', () => {
     it('should create root folder with technical identifier', async () => {
       const rootFolder = await Folder.create({
-        name: `root_user_${testUserId}`,
+        name: `root_test-organization_${testUserId}`,
         type: 'root',
         owner: testUserId,
         organization: testOrgId,
@@ -100,7 +100,7 @@ describe('Folder Model - Hierarchical Structure', () => {
         path: `/test-organization/${testUserId}`,
       });
 
-      expect(rootFolder.name).toBe(`root_user_${testUserId}`);
+      expect(rootFolder.name).toBe(`root_test-organization_${testUserId}`);
       expect(rootFolder.type).toBe('root');
       expect(rootFolder.isRoot).toBe(true);
       expect(rootFolder.parent).toBeNull();
@@ -108,7 +108,7 @@ describe('Folder Model - Hierarchical Structure', () => {
 
     it('should use displayName for user-friendly name', async () => {
       const rootFolder = await Folder.create({
-        name: `root_user_${testUserId}`,
+        name: `root_test-organization_${testUserId}`,
         displayName: 'Mi Unidad',
         type: 'root',
         owner: testUserId,
@@ -200,7 +200,7 @@ describe('Folder Model - Hierarchical Structure', () => {
 
     it('should build correct nested path', async () => {
       const root = await Folder.create({
-        name: `root_user_${testUserId}`,
+        name: `root_test-organization_${testUserId}`,
         type: 'root',
         owner: testUserId,
         organization: testOrgId,

@@ -68,6 +68,7 @@ describe('DocumentController - New Endpoints Integration Tests', () => {
       members: [testUserId, testUser2Id],
     });
     testOrgId = org._id;
+    const testOrgSlug = org.slug; // Generado automáticamente: 'test-org'
 
     // Crear membresías requeridas por middleware
     await createMembership({
@@ -83,7 +84,7 @@ describe('DocumentController - New Endpoints Integration Tests', () => {
 
     // Crear carpetas
     const rootFolder = await Folder.create({
-      name: `root_user_${testUserId}`,
+      name: `root_${testOrgSlug}_${testUserId}`,
       displayName: 'My Files',
       type: 'root',
       organization: testOrgId,

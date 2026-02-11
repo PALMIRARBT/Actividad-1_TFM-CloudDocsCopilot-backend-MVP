@@ -72,7 +72,7 @@ describe('FolderService Integration Tests', () => {
 
     // Crear carpeta raíz
     const rootFolder = await Folder.create({
-      name: `root_user_${testUserId}`,
+      name: `root_${testOrgSlug}_${testUserId}`,
       displayName: 'Mi Unidad',
       type: 'root',
       organization: testOrgId,
@@ -506,7 +506,7 @@ describe('FolderService Integration Tests', () => {
       const renamed = await folderService.renameFolder({
         id: rootFolderId.toString(),
         userId: testUserId.toString(),
-        name: `root_user_${testUserId}`, // Same technical name
+        name: `root_${testOrgSlug}_${testUserId}`, // Same technical name
         displayName: 'My New Drive',
       });
 

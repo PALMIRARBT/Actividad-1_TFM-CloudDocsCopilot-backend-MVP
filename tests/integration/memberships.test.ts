@@ -257,11 +257,19 @@ describe('Membership Endpoints', () => {
         .send({ userId: newUserAuth.userId, role: 'member' })
         .expect(201);
 
-      expect(response.body).toHaveProperty('membership');
-      expect(response.body.membership.role).toBe('member');
+      // La API ahora devuelve 'invitation' porque crea invitaciones PENDING
+      expect(response.body).toHaveProperty('invitation');
+      expect(response.body.invitation.role).toBe('member');
+      expect(response.body.invitation.status).toBe('pending');
     });
 
     it('should invite user with admin role (as owner)', async () => {
+      // Primero actualizar la segunda organización a plan BASIC para permitir admins adicionales
+      await Organization.findByIdAndUpdate(secondOrgId, {
+        plan: 'basic',
+        'settings.maxUsers': 10
+      });
+
       const newAdminAuth = await registerAndLogin({
         name: 'New Admin',
         email: 'newadmin',
@@ -275,8 +283,10 @@ describe('Membership Endpoints', () => {
         .send({ userId: newAdminAuth.userId, role: 'admin' })
         .expect(201);
 
-      expect(response.body).toHaveProperty('membership');
-      expect(response.body.membership.role).toBe('admin');
+      // La API ahora devuelve 'invitation' porque crea invitaciones PENDING
+      expect(response.body).toHaveProperty('invitation');
+      expect(response.body.invitation.role).toBe('admin');
+      expect(response.body.invitation.status).toBe('pending');
     });
 
     it('should fail without userId', async () => {
@@ -418,9 +428,9 @@ describe('Membership Endpoints', () => {
 
       expect(response.body).toHaveProperty('message');
 
-      // Verify membership is suspended
+      // Verify membership is permanently deleted (not suspended)
       const membership = await Membership.findById(toRemoveMembership?._id);
-      expect(membership?.status).toBe(MembershipStatus.SUSPENDED);
+      expect(membership).toBeNull();
     });
 
     it('should remove member successfully (as admin)', async () => {
@@ -503,11 +513,26 @@ describe('Membership Endpoints', () => {
         createOrganization: false
       });
 
+      // Invitar al usuario
       await request(app)
         .post(`/api/memberships/organization/${organizationId}/members`)
         .set('Cookie', ownerCookies.join('; '))
         .send({ userId: toLeaveAuth.userId })
         .expect(201);
+
+      // Aceptar la invitación para que tenga membresía activa
+      const pendingMembership = await Membership.findOne({
+        user: toLeaveAuth.userId,
+        organization: organizationId,
+        status: MembershipStatus.PENDING
+      });
+
+      if (pendingMembership) {
+        await request(app)
+          .post(`/api/memberships/invitations/${pendingMembership._id}/accept`)
+          .set('Cookie', toLeaveAuth.cookies.join('; '))
+          .expect(200);
+      }
 
       const response = await request(app)
         .delete(`/api/memberships/${organizationId}/leave`)
@@ -516,12 +541,12 @@ describe('Membership Endpoints', () => {
 
       expect(response.body).toHaveProperty('message');
 
-      // Verify membership is suspended
+      // Verify membership is permanently deleted (not suspended)
       const membership = await Membership.findOne({
         user: toLeaveAuth.userId,
         organization: organizationId
       });
-      expect(membership?.status).toBe(MembershipStatus.SUSPENDED);
+      expect(membership).toBeNull();
     });
 
     it('should fail when owner tries to leave', async () => {
