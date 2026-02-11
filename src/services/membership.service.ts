@@ -121,10 +121,25 @@ export async function createInvitation({
     const appUrl = process.env.APP_URL || 'http://localhost:4000';
     const acceptUrl = `${appUrl}/api/memberships/invitations/${membership._id}/accept`;
 
+    // Map internal role enum to a safe, human-readable label for the email template
+    let roleDisplay: string;
+    switch (role) {
+      case MembershipRole.VIEWER:
+        roleDisplay = 'Viewer';
+        break;
+      case MembershipRole.ADMIN:
+        roleDisplay = 'Admin';
+        break;
+      case MembershipRole.MEMBER:
+      default:
+        roleDisplay = 'Member';
+        break;
+    }
+
     const emailHtml = invitationTemplate
       .replace(/{{userName}}/g, user.name || user.email)
       .replace(/{{organizationName}}/g, organization.name)
-      .replace(/{{role}}/g, role)
+      .replace(/{{role}}/g, roleDisplay)
       .replace(/{{inviterName}}/g, inviter.name || inviter.email)
       .replace(/{{inviterEmail}}/g, inviter.email)
       .replace(/{{acceptUrl}}/g, acceptUrl)

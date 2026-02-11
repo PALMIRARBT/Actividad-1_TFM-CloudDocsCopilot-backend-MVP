@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import * as membershipService from '../services/membership.service';
 import HttpError from '../models/error.model';
+import { MembershipRole } from '../models/membership.model';
 
 /**
  * Obtiene todas las organizaciones del usuario autenticado
@@ -171,6 +172,12 @@ export async function inviteUserToOrganization(
     // Ensure userId is a string and looks like a MongoDB ObjectId to avoid NoSQL injection
     if (typeof userId !== 'string' || !/^[a-fA-F0-9]{24}$/.test(userId)) {
       return next(new HttpError(400, 'Invalid userId format'));
+    }
+
+    // Validate role against allowed membership roles to prevent HTML injection in emails
+    const allowedRoles = Object.values(MembershipRole);
+    if (role && !allowedRoles.includes(role as MembershipRole)) {
+      return next(new HttpError(400, 'Invalid role value'));
     }
     
     const invitation = await membershipService.createInvitation({
