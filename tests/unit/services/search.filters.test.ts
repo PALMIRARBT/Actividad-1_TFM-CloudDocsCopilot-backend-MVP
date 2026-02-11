@@ -2,7 +2,7 @@ jest.resetModules();
 // Ensure we test the real implementation, not the global mock
 jest.unmock('../../../src/services/search.service');
 
-const mockGetInstance = jest.fn();
+const mockGetInstanceFilters = jest.fn();
 
 afterEach(() => jest.clearAllMocks());
 
@@ -11,9 +11,9 @@ describe('search.service - filter branches', () => {
     const hits = { hits: { hits: [], total: { value: 0 } }, took: 2 };
     const client = { search: jest.fn().mockResolvedValue(hits) };
     const es = require('../../../src/configurations/elasticsearch-config');
-    es.getInstance = mockGetInstance;
-    if (es.default) es.default.getInstance = mockGetInstance;
-    mockGetInstance.mockReturnValue(client);
+    es.getInstance = mockGetInstanceFilters;
+    if (es.default) es.default.getInstance = mockGetInstanceFilters;
+    mockGetInstanceFilters.mockReturnValue(client);
 
     const svc = require('../../../src/services/search.service');
     const res = await svc.searchDocuments({
