@@ -8,34 +8,8 @@ function isValidObjectId(id: string): boolean {
   return mongoose.Types.ObjectId.isValid(id);
 }
 
-async function assertCanReadDocument(userId: string, docId: string) {
-  if (!isValidObjectId(docId)) throw new HttpError(400, 'Invalid document ID');
-
-  const doc = await DocumentModel.findById(docId);
-  if (!doc) throw new HttpError(404, 'Document not found');
-
-  let hasAccess = false;
-
-  if (doc.organization) {
-    hasAccess = await hasActiveMembership(userId, doc.organization.toString());
-  } else {
-    hasAccess =
-      doc.uploadedBy.toString() === userId.toString() ||
-      doc.sharedWith?.some((id: any) => id.toString() === userId.toString());
-  }
-
-  if (!hasAccess) throw new HttpError(403, 'Access denied to this document');
-  return doc;
-}
-
 export interface CreateCommentDto {
   documentId: string;
-  userId: string;
-  content: string;
-}
-
-export interface UpdateCommentDto {
-  commentId: string;
   userId: string;
   content: string;
 }
@@ -45,23 +19,66 @@ export interface ListCommentsDto {
   userId: string;
 }
 
+export interface UpdateCommentDto {
+  commentId: string;
+  userId: string;
+  content: string;
+}
+
+/**
+ * Verifica acceso de lectura al documento para comentarios.
+ * - Org doc: membership ACTIVE en doc.organization
+ * - Personal doc: uploadedBy o sharedWith
+ */
+async function ensureDocumentReadAccess(documentId: string, userId: string) {
+  const doc = await DocumentModel.findById(documentId);
+  if (!doc) throw new HttpError(404, 'Document not found');
+
+  if (doc.organization) {
+    const hasAccess = await hasActiveMembership(userId, doc.organization.toString());
+    if (!hasAccess) throw new HttpError(403, 'Access denied to this document');
+  } else {
+    const hasAccess =
+      doc.uploadedBy.toString() === userId.toString() ||
+      doc.sharedWith?.some((id: any) => id.toString() === userId.toString());
+
+    if (!hasAccess) throw new HttpError(403, 'Access denied to this document');
+  }
+
+  return doc;
+}
+
 export async function createComment({
   documentId,
   userId,
   content
 }: CreateCommentDto): Promise<IComment> {
-  if (!content || !content.trim()) throw new HttpError(400, 'content is required');
+  if (!isValidObjectId(documentId)) throw new HttpError(400, 'Invalid document ID');
+  if (!isValidObjectId(userId)) throw new HttpError(400, 'Invalid user ID');
+  if (!content || !content.trim()) throw new HttpError(400, 'Content is required');
 
-  const doc = await assertCanReadDocument(userId, documentId);
+  const doc = await ensureDocumentReadAccess(documentId, userId);
 
-  const created = await CommentModel.create({
-    document: new mongoose.Types.ObjectId(documentId),
-    organization: doc.organization ?? null,
-    createdBy: new mongoose.Types.ObjectId(userId),
+  const comment = await CommentModel.create({
+    document: documentId,
+    organization: doc.organization ? doc.organization.toString() : null,
+    createdBy: userId,
     content: content.trim()
   });
 
-  return created;
+  return comment;
+}
+
+export async function listComments({ documentId, userId }: ListCommentsDto): Promise<IComment[]> {
+  if (!isValidObjectId(documentId)) throw new HttpError(400, 'Invalid document ID');
+  if (!isValidObjectId(userId)) throw new HttpError(400, 'Invalid user ID');
+
+  await ensureDocumentReadAccess(documentId, userId);
+
+  return CommentModel.find({ document: new mongoose.Types.ObjectId(documentId) })
+    .sort({ createdAt: -1 })
+    .populate('createdBy', 'name email avatar')
+    .select('-__v');
 }
 
 export async function updateComment({
@@ -70,18 +87,18 @@ export async function updateComment({
   content
 }: UpdateCommentDto): Promise<IComment> {
   if (!isValidObjectId(commentId)) throw new HttpError(400, 'Invalid comment ID');
-  if (!content || !content.trim()) throw new HttpError(400, 'content is required');
+  if (!isValidObjectId(userId)) throw new HttpError(400, 'Invalid user ID');
+  if (!content || !content.trim()) throw new HttpError(400, 'Content is required');
 
   const comment = await CommentModel.findById(commentId);
   if (!comment) throw new HttpError(404, 'Comment not found');
 
-  // Must still have read access to the doc to edit your comment
-  await assertCanReadDocument(userId, comment.document.toString());
-
-  // Only author can edit (as requested)
   if (comment.createdBy.toString() !== userId.toString()) {
-    throw new HttpError(403, 'You can only edit your own comments');
+    throw new HttpError(403, 'You can only edit your own comment');
   }
+
+  // Ensure user still has access to the document (defense in depth)
+  await ensureDocumentReadAccess(comment.document.toString(), userId);
 
   comment.content = content.trim();
   await comment.save();
@@ -89,16 +106,8 @@ export async function updateComment({
   return comment;
 }
 
-export async function listComments({ documentId, userId }: ListCommentsDto): Promise<IComment[]> {
-  await assertCanReadDocument(userId, documentId);
-
-  return CommentModel.find({ document: new mongoose.Types.ObjectId(documentId) })
-    .sort({ createdAt: -1 })
-    .populate('createdBy', 'name email avatar');
-}
-
 export default {
   createComment,
-  updateComment,
-  listComments
+  listComments,
+  updateComment
 };

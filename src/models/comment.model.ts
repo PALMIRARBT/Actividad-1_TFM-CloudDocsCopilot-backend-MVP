@@ -1,8 +1,8 @@
-import mongoose, { Schema, Document as MongooseDocument, Model, Types } from 'mongoose';
+import mongoose, { Document as MongooseDocument, Schema, Model, Types } from 'mongoose';
 
 export interface IComment extends MongooseDocument {
   document: Types.ObjectId;
-  organization?: Types.ObjectId | null;
+  organization?: Types.ObjectId;
   createdBy: Types.ObjectId;
   content: string;
   createdAt: Date;
@@ -14,27 +14,28 @@ const commentSchema = new Schema<IComment>(
     document: {
       type: Schema.Types.ObjectId,
       ref: 'Document',
-      required: true,
+      required: [true, 'Documento es requerido'],
       index: true
     },
     organization: {
       type: Schema.Types.ObjectId,
       ref: 'Organization',
       required: false,
-      default: null,
-      index: true
+      index: true,
+      default: null
     },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: [true, 'createdBy es requerido'],
       index: true
     },
     content: {
       type: String,
-      required: [true, 'El contenido del comentario es obligatorio'],
+      required: [true, 'Contenido es requerido'],
       trim: true,
-      maxlength: [5000, 'Comentario no puede exceder 5000 caracteres']
+      minlength: [1, 'Contenido debe tener al menos 1 caracter'],
+      maxlength: [2000, 'Contenido no puede exceder 2000 caracteres']
     }
   },
   {

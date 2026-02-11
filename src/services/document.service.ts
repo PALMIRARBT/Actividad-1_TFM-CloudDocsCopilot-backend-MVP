@@ -8,7 +8,8 @@ import Organization from '../models/organization.model';
 import HttpError from '../models/error.model';
 import { sanitizePathOrThrow, isPathWithinBase } from '../utils/path-sanitizer';
 import { validateFolderAccess } from './folder.service';
-import { getMembership, getActiveOrganization } from './membership.service';
+import { getMembership, getActiveOrganization, hasAnyRole } from './membership.service';
+import { MembershipRole } from '../models/membership.model';
 import { PLAN_LIMITS } from '../models/types/organization.types';
 import * as searchService from './search.service';
 
@@ -98,13 +99,34 @@ export async function shareDocument({ id, userId, userIds }: ShareDocumentDto): 
 }
 
 /**
- * Eliminar un documento si el usuario es propietario
+ * Eliminar un documento con permisos:
+ * - Si es de organización: SOLO OWNER o ADMIN pueden eliminar.
+ * - Si es personal (sin organización): SOLO el uploadedBy puede eliminar (legacy).
  */
 export async function deleteDocument({ id, userId }: DeleteDocumentDto): Promise<IDocument | null> {
   if (!isValidObjectId(id)) throw new HttpError(400, 'Invalid document id');
+
   const doc = await DocumentModel.findById(id);
   if (!doc) throw new Error('Document not found');
-  if (String(doc.uploadedBy) !== String(userId)) throw new HttpError(403, 'Forbidden');
+
+  // Permisos para documentos de organización
+  if (doc.organization) {
+    const orgId = doc.organization.toString();
+
+    const canDelete = await hasAnyRole(userId, orgId, [
+      MembershipRole.OWNER,
+      MembershipRole.ADMIN,
+    ]);
+
+    if (!canDelete) {
+      throw new HttpError(403, 'Solo el propietario o administradores de la organización pueden eliminar este documento');
+    }
+  } else {
+    // Personal: solo el propietario (uploadedBy)
+    if (String(doc.uploadedBy) !== String(userId)) {
+      throw new HttpError(403, 'Forbidden');
+    }
+  }
 
   // Elimina el archivo físico
   try {
@@ -403,9 +425,9 @@ export async function getUserRecentDocuments({
  * Valida cuotas de almacenamiento y tipo/tamaño de archivo según el plan de la organización
  * Usa la organización activa y rootFolder de la membresía del usuario
  */
-export async function uploadDocument({ 
-  file, 
-  userId, 
+export async function uploadDocument({
+  file,
+  userId,
   folderId,
 }: UploadDocumentDto): Promise<IDocument> {
   if (!file || !file.filename) throw new HttpError(400, 'File is required');
