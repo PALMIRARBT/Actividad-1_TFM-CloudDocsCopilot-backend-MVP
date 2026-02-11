@@ -132,7 +132,7 @@ export async function share(req: AuthRequest, res: Response, next: NextFunction)
     }
     
     const doc = await documentService.shareDocument({
-      id: req.params.id,
+      id: String(req.params.id),
       userId: req.user!.id,
       userIds
     });
@@ -162,7 +162,7 @@ export async function move(req: AuthRequest, res: Response, next: NextFunction):
     }
     
     const doc = await documentService.moveDocument({
-      documentId: req.params.id,
+      documentId: String(req.params.id),
       userId: req.user!.id,
       targetFolderId
     });
@@ -189,7 +189,7 @@ export async function copy(req: AuthRequest, res: Response, next: NextFunction):
     }
     
     const newDoc = await documentService.copyDocument({
-      documentId: req.params.id,
+      documentId: String(req.params.id),
       userId: req.user!.id,
       targetFolderId
     });
@@ -209,7 +209,7 @@ export async function copy(req: AuthRequest, res: Response, next: NextFunction):
  */
 export async function download(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const doc = await documentService.findDocumentById(req.params.id);
+    const doc = await documentService.findDocumentById(String(req.params.id));
     
     if (!doc) {
       return next(new HttpError(404, 'Document not found'));
@@ -254,7 +254,7 @@ export async function download(req: AuthRequest, res: Response, next: NextFuncti
  */
 export async function preview(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const doc = await documentService.findDocumentById(req.params.id);
+    const doc = await documentService.findDocumentById(String(req.params.id));
     
     if (!doc) {
       return next(new HttpError(404, 'Document not found'));
@@ -386,7 +386,7 @@ export async function preview(req: AuthRequest, res: Response, next: NextFunctio
 export async function remove(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     await documentService.deleteDocument({
-      id: req.params.id,
+      id: String(req.params.id),
       userId: req.user!.id
     });
     
