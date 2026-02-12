@@ -39,6 +39,13 @@ router.post(
 );
 
 /**
+ * @route   GET /api/documents/shared
+ * @desc    Lista documentos compartidos al usuario (por otros usuarios)
+ * @access  Authenticated users
+ */
+router.get('/shared', documentController.listSharedToMe);
+
+/**
  * @route   GET /api/documents
  * @desc    Lista todos los documentos del usuario
  * @access  Authenticated users
@@ -100,7 +107,5 @@ router.post('/:id/copy', documentController.copy);
  * @access  Document owner
  */
 router.delete('/:id', documentController.remove);
-
-
 
 export default router;

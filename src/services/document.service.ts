@@ -105,6 +105,35 @@ export async function shareDocument({ id, userId, userIds }: ShareDocumentDto): 
 }
 
 /**
+ * Lista documentos compartidos al usuario (por otros usuarios) en su organización activa
+ * NOTA: Se filtra únicamente por organización y se excluyen los documentos subidos por el usuario.
+ */
+export async function listSharedDocumentsToUser(userId: string): Promise<IDocument[]> {
+  if (!isValidObjectId(userId)) {
+    throw new HttpError(400, 'Invalid user ID');
+  }
+
+  const activeOrgId = await getActiveOrganization(userId);
+  if (!activeOrgId) {
+    throw new HttpError(403, 'No existe una organización activa. Por favor, crea o únete a una organización primero.');
+  }
+
+  const orgObjectId = new mongoose.Types.ObjectId(activeOrgId);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+
+  const docs = await DocumentModel.find({
+    organization: orgObjectId,
+    uploadedBy: { $ne: userObjectId },
+  })
+    .sort({ createdAt: -1 })
+    .populate('folder', 'name displayName path')
+    .select('-__v')
+    .lean();
+
+  return docs as any;
+}
+
+/**
  * Reemplazar (sobrescribir) el archivo físico y metadatos de un documento existente
  * Mantiene el mismo doc.path y doc.filename para que el URL quede estable.
  */
@@ -767,14 +796,13 @@ export async function findDocumentById(id: string): Promise<IDocument | null> {
   return DocumentModel.findById(documentObjectId);
 }
 
-
-
 export default {
   shareDocument,
   deleteDocument,
   replaceDocumentFile,
   uploadDocument,
   listDocuments,
+  listSharedDocumentsToUser,
   findDocumentById,
   moveDocument,
   copyDocument,

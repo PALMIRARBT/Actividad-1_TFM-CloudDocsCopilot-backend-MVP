@@ -81,6 +81,23 @@ export async function list(req: AuthRequest, res: Response, next: NextFunction):
 }
 
 /**
+ * Controlador para listar documentos compartidos al usuario (por otros usuarios)
+ */
+export async function listSharedToMe(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const docs = await documentService.listSharedDocumentsToUser(req.user!.id);
+
+    res.json({
+      success: true,
+      count: docs.length,
+      documents: docs
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * Controlador para obtener documentos recientes del usuario
  */
 export async function getRecent(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
@@ -463,4 +480,4 @@ export async function remove(req: AuthRequest, res: Response, next: NextFunction
   }
 }
 
-export default { upload, replaceFile, list, getRecent, getById, share, move, copy, download, preview, remove };
+export default { upload, replaceFile, list, listSharedToMe, getRecent, getById, share, move, copy, download, preview, remove };
