@@ -13,6 +13,7 @@ import { MembershipRole } from '../models/membership.model';
 import { PLAN_LIMITS } from '../models/types/organization.types';
 import * as searchService from './search.service';
 import * as notificationService from './notification.service';
+import { emitToUser } from '../socket/socket';
 
 /**
  * Valida si un string es un ObjectId válido de MongoDB
@@ -286,8 +287,11 @@ export async function replaceDocumentFile({ documentId, userId, file }: ReplaceD
         message: 'Se actualizó un documento',
         metadata: {
           originalname: doc.originalname,
-          folderId: doc.folder?.toString?.(),
+          folderId: doc.folder?.toString?.()
         },
+        emitter: (recipientUserId, payload) => {
+          emitToUser(recipientUserId, 'notification:new', payload);
+        }
       });
     } catch (e: any) {
       console.error('Failed to create notification (DOC_EDITED):', e.message);
@@ -802,6 +806,9 @@ export async function uploadDocument({
           originalname: doc.originalname,
           folderId: doc.folder?.toString?.(),
         },
+        emitter: (recipientUserId, payload) => {
+          emitToUser(recipientUserId, 'notification:new', payload);
+        }
       });
     } catch (e: any) {
       console.error('Failed to create notification (DOC_UPLOADED):', e.message);

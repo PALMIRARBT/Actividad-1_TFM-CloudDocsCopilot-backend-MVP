@@ -3,6 +3,8 @@ import HttpError from '../models/error.model';
 import CommentModel, { IComment } from '../models/comment.model';
 import DocumentModel from '../models/document.model';
 import { hasActiveMembership } from './membership.service';
+import { notifyOrganizationMembers } from './notification.service';
+import { emitToUser } from '../socket/socket';
 
 function isValidObjectId(id: string): boolean {
   return mongoose.Types.ObjectId.isValid(id);
@@ -66,6 +68,33 @@ export async function createComment({
     content: content.trim()
   });
 
+  // Notify all active members of the organization except the actor.
+  // Only makes sense for org documents.
+  if (doc.organization) {
+    // Optional: get document name (best-effort)
+    let docName = '';
+    try {
+      // doc.originalname might exist depending on your schema
+      docName = (doc as any).originalname || (doc as any).filename || '';
+    } catch {
+      // ignore
+    }
+
+    await notifyOrganizationMembers({
+      actorUserId: userId,
+      type: 'DOC_COMMENTED',
+      documentId,
+      message: docName ? `New comment on: ${docName}` : 'New comment on a document',
+      metadata: {
+        documentId,
+        commentId: comment._id?.toString(),
+      },
+      emitter: (recipientUserId, payload) => {
+        emitToUser(recipientUserId, 'notification:new', payload);
+      },
+    });
+  }
+
   return comment;
 }
 
@@ -98,10 +127,36 @@ export async function updateComment({
   }
 
   // Ensure user still has access to the document (defense in depth)
-  await ensureDocumentReadAccess(comment.document.toString(), userId);
+  const doc = await ensureDocumentReadAccess(comment.document.toString(), userId);
 
   comment.content = content.trim();
   await comment.save();
+
+  // Treat editing a comment as "DOC_COMMENTED" (simplest + matches your enum),
+  // but we include metadata so UI can show "edited comment" if you want.
+  if (doc.organization) {
+    let docName = '';
+    try {
+      docName = (doc as any).originalname || (doc as any).filename || '';
+    } catch {
+      // ignore
+    }
+
+    await notifyOrganizationMembers({
+      actorUserId: userId,
+      type: 'DOC_COMMENTED',
+      documentId: comment.document.toString(),
+      message: docName ? `Comment edited on: ${docName}` : 'Comment edited on a document',
+      metadata: {
+        documentId: comment.document.toString(),
+        commentId: comment._id?.toString(),
+        edited: true,
+      },
+      emitter: (recipientUserId, payload) => {
+        emitToUser(recipientUserId, 'notification:new', payload);
+      },
+    });
+  }
 
   return comment;
 }

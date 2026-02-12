@@ -2,7 +2,8 @@ import mongoose from 'mongoose';
 import HttpError from '../models/error.model';
 import NotificationModel, { INotification, NotificationType } from '../models/notification.model';
 import { getActiveOrganization } from './membership.service';
-import Membership from '../models/membership.model';
+import Membership, { MembershipStatus } from '../models/membership.model';
+import { emitToUser } from '../socket/socket';
 
 function isValidObjectId(id: string): boolean {
   return mongoose.Types.ObjectId.isValid(id);
@@ -18,6 +19,17 @@ export interface CreateOrgNotificationDto {
   metadata?: Record<string, any>;
   emitter?: NotificationEmitter; // optional
 }
+
+/**
+ * Default realtime emitter using Socket.IO rooms (user:<id>)
+ */
+const defaultEmitter: NotificationEmitter = (recipientUserId, payload) => {
+  try {
+    emitToUser(recipientUserId, 'notification:new', payload);
+  } catch {
+    // noop (realtime should never break persistence)
+  }
+};
 
 /**
  * Crea notificaciones para todos los miembros activos de la org (excepto el actor).
@@ -47,19 +59,21 @@ export async function notifyOrganizationMembers({
     {
       organization: orgObjectId,
       user: { $ne: actorObjectId },
-      status: 'active',
+      status: MembershipStatus.ACTIVE,
     },
     { user: 1 }
   ).lean();
 
-  const recipientIds = memberships.map(m => m.user?.toString()).filter(Boolean) as string[];
+  const recipientIds = memberships
+    .map((m: any) => m.user?.toString())
+    .filter(Boolean) as string[];
 
   if (recipientIds.length === 0) {
     return [];
   }
 
   const now = new Date();
-  const docsToInsert = recipientIds.map(recipientId => ({
+  const docsToInsert = recipientIds.map((recipientId) => ({
     organization: orgObjectId,
     recipient: new mongoose.Types.ObjectId(recipientId),
     actor: actorObjectId,
@@ -74,22 +88,22 @@ export async function notifyOrganizationMembers({
 
   const inserted = await NotificationModel.insertMany(docsToInsert, { ordered: false });
 
-  // Optional realtime emit
-  if (emitter) {
-    for (const n of inserted) {
-      emitter(n.recipient.toString(), {
-        id: n._id?.toString?.() || undefined,
-        organization: n.organization.toString(),
-        recipient: n.recipient.toString(),
-        actor: n.actor.toString(),
-        type: n.type,
-        entity: { kind: n.entity.kind, id: n.entity.id.toString() },
-        message: n.message,
-        metadata: n.metadata || {},
-        readAt: n.readAt,
-        createdAt: n.createdAt,
-      });
-    }
+  // Realtime emit (uses Socket.IO by default)
+  const emitFn = emitter || defaultEmitter;
+
+  for (const n of inserted) {
+    emitFn(n.recipient.toString(), {
+      id: n._id?.toString?.() || undefined,
+      organization: n.organization.toString(),
+      recipient: n.recipient.toString(),
+      actor: n.actor.toString(),
+      type: n.type,
+      entity: { kind: n.entity.kind, id: n.entity.id.toString() },
+      message: n.message,
+      metadata: n.metadata || {},
+      readAt: n.readAt,
+      createdAt: n.createdAt,
+    });
   }
 
   return inserted as any;
