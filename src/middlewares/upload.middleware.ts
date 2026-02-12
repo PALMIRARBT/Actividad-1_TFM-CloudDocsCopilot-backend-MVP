@@ -34,37 +34,35 @@ const ALLOWED = (process.env.ALLOWED_MIME_TYPES ||
   'application/zip,application/x-rar-compressed'
 ).split(',');
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    // Extraer extensión de forma segura
-    const ext = path.extname(file.originalname || '').toLowerCase();
-    
-    // Validar que la extensión solo contiene caracteres permitidos
-    if (ext && !/^\.[\w-]+$/.test(ext)) {
-      return cb(new Error('Invalid file extension') as any, '');
-    }
-    
-    // Generar nombre aleatorio seguro (solo UUID + extensión validada)
-    const base = crypto.randomUUID();
-    const safeFilename = `${base}${ext}`;
-    
-    cb(null, safeFilename);
-  }
-});
-
-function fileFilter(_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback): void {
-  console.log(`[upload] Checking file type: ${file.mimetype}`);
-  console.log(`[upload] Allowed types:`, ALLOWED);
-  
+export function fileFilter(_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback): void {
   if (!ALLOWED.includes(file.mimetype)) {
-    console.log(`[upload] ❌ File type ${file.mimetype} is NOT allowed`);
     return cb(new HttpError(400, 'Unsupported file type') as any);
   }
-  
-  console.log(`[upload] ✅ File type ${file.mimetype} is allowed`);
   cb(null, true);
 }
+
+function generateFilename(file: Express.Multer.File, cb: (err: any, filename: string) => void) {
+  // Extraer extensión de forma segura
+  const ext = path.extname(file.originalname || '').toLowerCase();
+
+  // Validar que la extensión solo contiene caracteres permitidos
+  if (ext && !/^\.[\w-]+$/.test(ext)) {
+    return cb(new Error('Invalid file extension') as any, '');
+  }
+
+  // Generar nombre aleatorio seguro (solo UUID + extensión validada)
+  const base = crypto.randomUUID();
+  const safeFilename = `${base}${ext}`;
+
+  cb(null, safeFilename);
+}
+
+export { generateFilename };
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadDir),
+  filename: (_req, file, cb) => generateFilename(file, cb)
+});
 
 export const upload = multer({
   storage,

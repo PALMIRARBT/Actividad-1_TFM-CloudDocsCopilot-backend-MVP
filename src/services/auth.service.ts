@@ -129,11 +129,9 @@ export async function registerUser({
         let html = fs.default.readFileSync(templatePath, 'utf8');
         const safeName = escapeHtml(name);
         html = html.replace('{{name}}', safeName).replace('{{confirmationUrl}}', confirmationUrl);
-        console.log('Enviando email de confirmación...');
         await sendConfirmationEmail(email, 'Confirma tu cuenta en CloudDocs Copilot', html);
-        console.log('Email de confirmación enviado');
       } catch (emailErr) {
-        console.error('Error enviando email de confirmación:', emailErr);
+        // Silent fail - user can still use the account
       }
     }
 
@@ -363,3 +361,5 @@ export default {
   registerUser,
   loginUser
 };
+
+export { escapeHtml, hashResetToken };

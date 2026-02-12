@@ -77,7 +77,15 @@ describe('AuthService Integration Tests', () => {
     const storageRoot = path.join(process.cwd(), 'storage');
     const orgStoragePath = path.join(storageRoot, testOrgSlug);
     if (fs.existsSync(orgStoragePath)) {
-      fs.rmSync(orgStoragePath, { recursive: true, force: true });
+      try {
+        fs.rmSync(orgStoragePath, { recursive: true, force: true });
+      } catch (err: any) {
+        if (err && (err.code === 'ENOTEMPTY' || err.code === 'EBUSY' || err.code === 'EPERM')) {
+          console.warn('Warning: could not fully remove orgStoragePath during cleanup:', err.code);
+        } else {
+          throw err;
+        }
+      }
     }
   });
 
@@ -130,7 +138,8 @@ describe('AuthService Integration Tests', () => {
       
       expect(rootFolder).toBeDefined();
       expect(rootFolder!.type).toBe('root');
-      expect(rootFolder!.name).toBe(`root_user_${newUser._id}`);
+      // El nombre ahora incluye el slug de la organización: root_{orgSlug}_{userId}
+      expect(rootFolder!.name).toBe(`root_${testOrgSlug}_${newUser._id}`);
       expect(rootFolder!.displayName).toBe('RootFolder');
       expect(rootFolder!.organization).toEqual(testOrgId);
       expect(rootFolder!.owner).toEqual(newUser._id);

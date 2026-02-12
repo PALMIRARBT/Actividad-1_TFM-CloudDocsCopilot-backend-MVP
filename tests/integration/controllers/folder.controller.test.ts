@@ -66,10 +66,11 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       members: [testUserId, testUser2Id],
     });
     testOrgId = org._id;
+    const testOrgSlug = org.slug; // Generado automáticamente: 'test-org'
 
     // Crear estructura de carpetas
     const rootFolder = await Folder.create({
-      name: `root_user_${testUserId}`,
+      name: `root_${testOrgSlug}_${testUserId}`,
       displayName: 'My Files',
       type: 'root',
       organization: testOrgId,
@@ -133,7 +134,15 @@ describe('FolderController - New Endpoints Integration Tests', () => {
     // Limpiar directorios de prueba
     const storageDir = path.join(process.cwd(), 'storage');
     if (fs.existsSync(storageDir)) {
-      fs.rmSync(storageDir, { recursive: true, force: true });
+      try {
+        fs.rmSync(storageDir, { recursive: true, force: true });
+      } catch (err: any) {
+        if (err && (err.code === 'ENOTEMPTY' || err.code === 'EBUSY' || err.code === 'EPERM')) {
+          console.warn('Warning: could not fully remove storageDir during cleanup:', err.code);
+        } else {
+          throw err;
+        }
+      }
     }
   });
 
@@ -152,8 +161,8 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.tree).toBeDefined();
       
-      // Verificar estructura raíz
-      expect(response.body.tree.name).toBe(`root_user_${testUserId}`);
+      // Verificar estructura raíz (el nombre técnico ahora incluye el slug: root_{orgSlug}_{userId})
+      expect(response.body.tree.name).toMatch(/^root_test-org_/);
       expect(response.body.tree.displayName).toBe('My Files');
       expect(response.body.tree.isRoot).toBe(true);
       

@@ -68,6 +68,7 @@ describe('DocumentController - New Endpoints Integration Tests', () => {
       members: [testUserId, testUser2Id],
     });
     testOrgId = org._id;
+    const testOrgSlug = org.slug; // Generado automáticamente: 'test-org'
 
     // Crear membresías requeridas por middleware
     await createMembership({
@@ -83,7 +84,7 @@ describe('DocumentController - New Endpoints Integration Tests', () => {
 
     // Crear carpetas
     const rootFolder = await Folder.create({
-      name: `root_user_${testUserId}`,
+      name: `root_${testOrgSlug}_${testUserId}`,
       displayName: 'My Files',
       type: 'root',
       organization: testOrgId,
@@ -129,7 +130,15 @@ describe('DocumentController - New Endpoints Integration Tests', () => {
     // Limpiar directorios de prueba
     const storageDir = path.join(process.cwd(), 'storage');
     if (fs.existsSync(storageDir)) {
-      fs.rmSync(storageDir, { recursive: true, force: true });
+      try {
+        fs.rmSync(storageDir, { recursive: true, force: true });
+      } catch (err: any) {
+        if (err && (err.code === 'ENOTEMPTY' || err.code === 'EBUSY' || err.code === 'EPERM')) {
+          console.warn('Warning: could not fully remove storageDir during cleanup:', err.code);
+        } else {
+          throw err;
+        }
+      }
     }
   });
 
