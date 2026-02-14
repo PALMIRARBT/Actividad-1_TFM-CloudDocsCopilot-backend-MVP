@@ -64,7 +64,7 @@ describe('Document Endpoints', () => {
         .expect(400);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('Invalid folderId format');
+      expect(response.body.error).toContain('Invalid folder ID');
     });
   });
 
