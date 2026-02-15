@@ -117,7 +117,7 @@ export class DocumentProcessor {
       }
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[processor] Error processing document ${documentId}:`, errorMessage);
+      console.error('[processor] Error processing document %s:', documentId, errorMessage);
 
       throw new HttpError(500, `Failed to process document: ${errorMessage}`);
     }
