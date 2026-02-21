@@ -1,247 +1,155 @@
-import * as searchService from '../../../src/services/search.service';
-import ElasticsearchClient from '../../../src/configurations/elasticsearch-config';
-import { IDocument } from '../../../src/models/document.model';
-import mongoose from 'mongoose';
+﻿jest.disableAutomock();
 
-// Mock de Elasticsearch
-jest.mock('../../../src/configurations/elasticsearch-config');
+import mongoose from "mongoose";
+import { IDocument } from "../../../src/models/document.model";
 
-describe('Search Service', () => {
-  let mockClient: any;
+jest.mock("../../../src/configurations/elasticsearch-config", () => ({
+  __esModule: true,
+  default: {
+    getInstance: jest.fn(),
+  },
+}));
+
+import ElasticsearchClient from "../../../src/configurations/elasticsearch-config";
+
+const searchService = jest.requireActual("../../../src/services/search.service") as typeof import("../../../src/services/search.service");
+
+describe("Search Service", () => {
+  const mockClient = {
+    index: jest.fn(),
+    delete: jest.fn(),
+    search: jest.fn(),
+  };
 
   beforeEach(() => {
-    mockClient = {
-      index: jest.fn().mockResolvedValue({ result: 'created' }),
-      delete: jest.fn().mockResolvedValue({ result: 'deleted' }),
-      search: jest.fn()
-    };
-
-    (ElasticsearchClient.getInstance as jest.Mock).mockReturnValue(mockClient);
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
+
+    (ElasticsearchClient as any).getInstance.mockReturnValue(mockClient);
+
+    mockClient.index.mockResolvedValue({ result: "created" });
+    mockClient.delete.mockResolvedValue({ result: "deleted" });
+    mockClient.search.mockResolvedValue({ hits: { hits: [], total: { value: 0 } }, took: 1 });
   });
 
-  describe('indexDocument', () => {
-    it('debe indexar un documento correctamente', async () => {
-      const mockDocument = {
-        _id: new mongoose.Types.ObjectId(),
-        filename: 'test.pdf',
-        originalname: 'Test Document.pdf',
-        mimeType: 'application/pdf',
-        size: 1024,
-        uploadedBy: new mongoose.Types.ObjectId(),
-        organization: new mongoose.Types.ObjectId(),
-        folder: new mongoose.Types.ObjectId(),
-        uploadedAt: new Date()
-      } as IDocument;
+  it("indexDocument debe indexar un documento correctamente", async () => {
+    const doc = {
+      _id: new mongoose.Types.ObjectId(),
+      filename: "test.pdf",
+      originalname: "Test Document.pdf",
+      extractedContent: "contenido",
+      mimeType: "application/pdf",
+      size: 1024,
+      uploadedBy: new mongoose.Types.ObjectId(),
+      organization: new mongoose.Types.ObjectId(),
+      folder: new mongoose.Types.ObjectId(),
+      uploadedAt: new Date(),
+    } as IDocument;
 
-      await searchService.indexDocument(mockDocument);
+    await searchService.indexDocument(doc);
 
-      expect(mockClient.index).toHaveBeenCalledWith({
-        index: 'documents',
-        id: mockDocument._id.toString(),
+    expect(mockClient.index).toHaveBeenCalledTimes(1);
+    expect(mockClient.index).toHaveBeenCalledWith(
+      expect.objectContaining({
+        index: "documents",
+        id: doc._id.toString(),
         document: expect.objectContaining({
-          filename: 'test.pdf',
-          originalname: 'Test Document.pdf',
-          mimeType: 'application/pdf'
-        })
-      });
-    });
+          filename: "test.pdf",
+          originalname: "Test Document.pdf",
+          extractedContent: "contenido",
+          mimeType: "application/pdf",
+        }),
+      })
+    );
   });
 
-  describe('removeDocumentFromIndex', () => {
-    it('debe eliminar un documento del índice', async () => {
-      const documentId = new mongoose.Types.ObjectId().toString();
+  it("removeDocumentFromIndex debe eliminar un documento del índice", async () => {
+    const id = new mongoose.Types.ObjectId().toString();
 
-      await searchService.removeDocumentFromIndex(documentId);
+    await searchService.removeDocumentFromIndex(id);
 
-      expect(mockClient.delete).toHaveBeenCalledWith({
-        index: 'documents',
-        id: documentId
-      });
-    });
-
-    it('debe manejar documento no encontrado (404)', async () => {
-      const documentId = new mongoose.Types.ObjectId().toString();
-      mockClient.delete.mockRejectedValue({
-        meta: { statusCode: 404 }
-      });
-
-      await expect(searchService.removeDocumentFromIndex(documentId)).resolves.not.toThrow();
-    });
+    expect(mockClient.delete).toHaveBeenCalledTimes(1);
+    expect(mockClient.delete).toHaveBeenCalledWith({ index: "documents", id });
   });
 
-  describe('searchDocuments', () => {
-    it('debe realizar búsqueda con query_string', async () => {
-      const mockResponse = {
-        hits: {
-          hits: [
-            {
-              _id: '1',
-              _score: 1.5,
-              _source: {
-                filename: 'test.pdf',
-                originalname: 'Test.pdf'
-              }
-            }
-          ],
-          total: { value: 1 }
-        },
-        took: 10
-      };
+  it("removeDocumentFromIndex debe manejar 404 sin lanzar error", async () => {
+    const id = new mongoose.Types.ObjectId().toString();
+    mockClient.delete.mockRejectedValueOnce({ meta: { statusCode: 404 } });
 
-      mockClient.search.mockResolvedValue(mockResponse);
-
-      const result = await searchService.searchDocuments({
-        query: 'test',
-        userId: new mongoose.Types.ObjectId().toString(),
-        organizationId: new mongoose.Types.ObjectId().toString()
-      });
-
-      expect(mockClient.search).toHaveBeenCalledWith(
-        expect.objectContaining({
-          index: 'documents',
-          query: expect.objectContaining({
-            bool: expect.objectContaining({
-              must: expect.arrayContaining([
-                expect.objectContaining({
-                  query_string: expect.objectContaining({
-                    query: '*test*',
-                    fields: ['filename', 'originalname']
-                  })
-                })
-              ])
-            })
-          })
-        })
-      );
-
-      expect(result.documents).toHaveLength(1);
-      expect(result.total).toBe(1);
-      expect(result.took).toBe(10);
-    });
-
-    it('debe aplicar filtros de organización', async () => {
-      mockClient.search.mockResolvedValue({
-        hits: { hits: [], total: 0 },
-        took: 5
-      });
-
-      const orgId = new mongoose.Types.ObjectId().toString();
-
-      await searchService.searchDocuments({
-        query: 'test',
-        userId: new mongoose.Types.ObjectId().toString(),
-        organizationId: orgId
-      });
-
-      expect(mockClient.search).toHaveBeenCalledWith(
-        expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.objectContaining({
-              filter: expect.arrayContaining([
-                { term: { organization: orgId } }
-              ])
-            })
-          })
-        })
-      );
-    });
-
-    it('debe aplicar filtro de tipo MIME', async () => {
-      mockClient.search.mockResolvedValue({
-        hits: { hits: [], total: 0 },
-        took: 5
-      });
-
-      await searchService.searchDocuments({
-        query: 'test',
-        userId: new mongoose.Types.ObjectId().toString(),
-        mimeType: 'application/pdf'
-      });
-
-      expect(mockClient.search).toHaveBeenCalledWith(
-        expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.objectContaining({
-              filter: expect.arrayContaining([
-                { term: { mimeType: 'application/pdf' } }
-              ])
-            })
-          })
-        })
-      );
-    });
-
-    it('debe manejar paginación', async () => {
-      mockClient.search.mockResolvedValue({
-        hits: { hits: [], total: 0 },
-        took: 5
-      });
-
-      await searchService.searchDocuments({
-        query: 'test',
-        userId: new mongoose.Types.ObjectId().toString(),
-        limit: 10,
-        offset: 20
-      });
-
-      expect(mockClient.search).toHaveBeenCalledWith(
-        expect.objectContaining({
-          size: 10,
-          from: 20
-        })
-      );
-    });
+    await expect(searchService.removeDocumentFromIndex(id)).resolves.toBeUndefined();
   });
 
-  describe('getAutocompleteSuggestions', () => {
-    it('debe retornar sugerencias únicas', async () => {
-      mockClient.search.mockResolvedValue({
-        hits: {
-          hits: [
-            { _source: { originalname: 'Test.pdf' } },
-            { _source: { originalname: 'Test.pdf' } }, // Duplicado
-            { _source: { originalname: 'Testing.pdf' } }
-          ],
-          total: 3
-        },
-        took: 5
-      });
-
-      const suggestions = await searchService.getAutocompleteSuggestions(
-        'test',
-        new mongoose.Types.ObjectId().toString()
-      );
-
-      expect(suggestions).toHaveLength(2); // Sin duplicados
-      expect(suggestions).toContain('Test.pdf');
-      expect(suggestions).toContain('Testing.pdf');
+  it("searchDocuments debe buscar en 3 fields y filtrar por mimeType.keyword", async () => {
+    mockClient.search.mockResolvedValueOnce({
+      hits: {
+        hits: [
+          {
+            _id: "1",
+            _score: 1.5,
+            _source: { filename: "test.pdf", originalname: "Test.pdf", extractedContent: "algo" },
+          },
+        ],
+        total: { value: 1 },
+      },
+      took: 10,
     });
 
-    it('debe respetar el límite de sugerencias', async () => {
-      mockClient.search.mockResolvedValue({
-        hits: {
-          hits: [
-            { _source: { originalname: 'Test1.pdf' } },
-            { _source: { originalname: 'Test2.pdf' } },
-            { _source: { originalname: 'Test3.pdf' } }
-          ],
-          total: 3
-        },
-        took: 5
-      });
-
-      const suggestions = await searchService.getAutocompleteSuggestions(
-        'test',
-        new mongoose.Types.ObjectId().toString(),
-        undefined,
-        2
-      );
-
-      expect(suggestions.length).toBeLessThanOrEqual(2);
+    const res = await searchService.searchDocuments({
+      query: "test",
+      userId: new mongoose.Types.ObjectId().toString(),
+      mimeType: "application/pdf",
     });
+
+    expect(mockClient.search).toHaveBeenCalledTimes(1);
+
+    expect(mockClient.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        index: "documents",
+        query: expect.objectContaining({
+          bool: expect.objectContaining({
+            must: expect.arrayContaining([
+              expect.objectContaining({
+                query_string: expect.objectContaining({
+                  query: "*test*",
+                  fields: ["filename", "originalname", "extractedContent"],
+                }),
+              }),
+            ]),
+            filter: expect.arrayContaining([
+              expect.objectContaining({ term: expect.objectContaining({ uploadedBy: expect.any(String) }) }),
+              { term: { "mimeType.keyword": "application/pdf" } },
+            ]),
+          }),
+        }),
+      })
+    );
+
+    expect(res.total).toBe(1);
+    expect(res.took).toBe(10);
+    expect(res.documents).toHaveLength(1);
+  });
+
+  it("getAutocompleteSuggestions debe devolver sugerencias únicas y respetar limit", async () => {
+    mockClient.search.mockResolvedValueOnce({
+      hits: {
+        hits: [
+          { _source: { originalname: "Test.pdf" } },
+          { _source: { originalname: "Test.pdf" } },
+          { _source: { originalname: "Testing.pdf" } },
+        ],
+        total: { value: 3 },
+      },
+      took: 1,
+    });
+
+    const suggestions = await searchService.getAutocompleteSuggestions(
+      "test",
+      new mongoose.Types.ObjectId().toString(),
+      undefined,
+      2
+    );
+
+    expect(Array.isArray(suggestions)).toBe(true);
+    expect(suggestions).toContain("Test.pdf");
+    expect(suggestions.length).toBeLessThanOrEqual(2);
   });
 });

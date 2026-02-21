@@ -113,7 +113,7 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
       const dateRange: any = {};
       if (fromDate) dateRange.gte = fromDate.toISOString();
       if (toDate) dateRange.lte = toDate.toISOString();
-      filters.push({ range: { uploadedAt: dateRange } });
+      filters.push({ range: { createdAt: dateRange } });
     }
 
     // Realizar búsqueda con query_string para mayor flexibilidad
@@ -144,7 +144,7 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
       size: limit,
       sort: [
         { _score: { order: 'desc' } },
-        { uploadedAt: { order: 'desc' } }
+        { createdAt: { order: 'desc' } }
       ]
     });
 
