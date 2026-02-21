@@ -20,33 +20,37 @@ import {
 // Configurar timeout largo para tests con Ollama (puede ser lento)
 jest.setTimeout(30000);
 
-describe('Ollama Provider Integration', () => {
-  beforeAll(() => {
-    process.env.AI_PROVIDER = 'ollama';
-    process.env.OLLAMA_BASE_URL = 'http://localhost:11434';
-    process.env.OLLAMA_CHAT_MODEL = 'llama3.2:3b';
-    process.env.OLLAMA_EMBEDDING_MODEL = 'nomic-embed-text';
-    resetAIProvider();
-  });
+// The main integration suite requires Ollama to be running. Detect availability
+// at runtime and skip the heavy tests in CI when Ollama isn't reachable.
+(async () => {
+  process.env.AI_PROVIDER = 'ollama';
+  process.env.OLLAMA_BASE_URL = 'http://localhost:11434';
+  process.env.OLLAMA_CHAT_MODEL = 'llama3.2:3b';
+  process.env.OLLAMA_EMBEDDING_MODEL = 'nomic-embed-text';
+  resetAIProvider();
 
-  describe('Connection', () => {
-    it('should connect to Ollama server', async () => {
-      const provider = getAIProvider();
-      expect(provider.name).toBe('ollama');
+  const isAvailable = await checkAIProviderAvailability();
+  const maybeDescribe = isAvailable ? describe : describe.skip;
 
-      const isAvailable = await checkAIProviderAvailability();
-      expect(isAvailable).toBe(true);
+  maybeDescribe('Ollama Provider Integration', () => {
+    describe('Connection', () => {
+      it('should connect to Ollama server', async () => {
+        const provider = getAIProvider();
+        expect(provider.name).toBe('ollama');
+
+        const available = await checkAIProviderAvailability();
+        expect(available).toBe(true);
+      });
+
+      it('should have correct configuration', () => {
+        const provider = getAIProvider();
+        expect(provider.getEmbeddingModel()).toBe('nomic-embed-text');
+        expect(provider.getChatModel()).toBe('llama3.2:3b');
+        expect(provider.getEmbeddingDimensions()).toBe(768);
+      });
     });
 
-    it('should have correct configuration', () => {
-      const provider = getAIProvider();
-      expect(provider.getEmbeddingModel()).toBe('nomic-embed-text');
-      expect(provider.getChatModel()).toBe('llama3.2:3b');
-      expect(provider.getEmbeddingDimensions()).toBe(768);
-    });
-  });
-
-  describe('Embeddings', () => {
+    describe('Embeddings', () => {
     it('should generate embedding with nomic-embed-text (768 dims)', async () => {
       const provider = getAIProvider();
       const result = await provider.generateEmbedding('Test text for embedding with Ollama');
