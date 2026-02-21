@@ -1,14 +1,14 @@
 /**
  * Tests de Seguridad Multitenancy para RAG (RFE-AI-005)
- * 
+ *
  * NOTA IMPORTANTE: Estos son tests unitarios que verifican la presencia de
  * organizationId en chunks y validaciones de parámetros.
- * 
+ *
  * Los tests de búsqueda vectorial con $vectorSearch NO pueden ejecutarse contra
  * mongodb-memory-server porque este operador es específico de MongoDB Atlas.
  * La validación completa de seguridad cross-org requiere tests de integración
  * contra una instancia real de Atlas con índices vectoriales configurados.
- * 
+ *
  * Lo que estos tests SÍ verifican:
  * ✅ Los chunks se crean con organizationId
  * ✅ Los métodos de RAG requieren organizationId (validación de parámetros)
@@ -49,7 +49,7 @@ describe('RAG Multitenancy Security (RFE-AI-005) - Unit Tests', () => {
     mongoServer = await MongoMemoryServer.create();
     const mongoUri = mongoServer.getUri();
     await mongoose.connect(mongoUri);
-    
+
     // Usar el mismo URI para "Atlas" (en tests unitarios no hacemos búsquedas vectoriales reales)
     process.env.MONGO_ATLAS_URI = mongoUri;
 
@@ -146,7 +146,7 @@ describe('RAG Multitenancy Security (RFE-AI-005) - Unit Tests', () => {
 
       expect(org1Chunks.length).toBeGreaterThan(0);
 
-      org1Chunks.forEach((chunk) => {
+      org1Chunks.forEach(chunk => {
         expect(chunk.organizationId).toBe(org1Id);
         expect(chunk.documentId).toBe(doc1Id);
         expect(chunk.content).toBeDefined();
@@ -159,7 +159,7 @@ describe('RAG Multitenancy Security (RFE-AI-005) - Unit Tests', () => {
 
       expect(org2Chunks.length).toBeGreaterThan(0);
 
-      org2Chunks.forEach((chunk) => {
+      org2Chunks.forEach(chunk => {
         expect(chunk.organizationId).toBe(org2Id);
         expect(chunk.documentId).toBe(doc2Id);
         expect(chunk.content).toBeDefined();
@@ -174,7 +174,7 @@ describe('RAG Multitenancy Security (RFE-AI-005) - Unit Tests', () => {
 
       expect(allChunks.length).toBeGreaterThan(0);
 
-      allChunks.forEach((chunk) => {
+      allChunks.forEach(chunk => {
         expect(chunk.organizationId).toBeDefined();
         expect(chunk.organizationId).not.toBeNull();
         expect(typeof chunk.organizationId).toBe('string');
@@ -185,39 +185,39 @@ describe('RAG Multitenancy Security (RFE-AI-005) - Unit Tests', () => {
 
   describe('🔐 Parameter Validation - organizationId Required', () => {
     it('should reject search() without organizationId', async () => {
-      await expect(
-        ragService.search('test query', '', 5)
-      ).rejects.toThrow('Organization ID is required');
+      await expect(ragService.search('test query', '', 5)).rejects.toThrow(
+        'Organization ID is required'
+      );
     });
 
     it('should reject search() with whitespace-only organizationId', async () => {
-      await expect(
-        ragService.search('test query', '   ', 5)
-      ).rejects.toThrow('Organization ID is required');
+      await expect(ragService.search('test query', '   ', 5)).rejects.toThrow(
+        'Organization ID is required'
+      );
     });
 
     it('should reject searchInDocument() without organizationId', async () => {
-      await expect(
-        ragService.searchInDocument('test query', '', doc1Id, 5)
-      ).rejects.toThrow('Organization ID is required');
+      await expect(ragService.searchInDocument('test query', '', doc1Id, 5)).rejects.toThrow(
+        'Organization ID is required'
+      );
     });
 
     it('should reject answerQuestion() without proper parameters', async () => {
       // Empty question
-      await expect(
-        ragService.answerQuestion('', org1Id, 5)
-      ).rejects.toThrow('Question cannot be empty');
+      await expect(ragService.answerQuestion('', org1Id, 5)).rejects.toThrow(
+        'Question cannot be empty'
+      );
 
       // Whitespace-only question
-      await expect(
-        ragService.answerQuestion('   ', org1Id, 5)
-      ).rejects.toThrow('Question cannot be empty');
+      await expect(ragService.answerQuestion('   ', org1Id, 5)).rejects.toThrow(
+        'Question cannot be empty'
+      );
     });
 
     it('should reject answerQuestionInDocument() without organizationId', async () => {
-      await expect(
-        ragService.answerQuestionInDocument('test', '', doc1Id, 5)
-      ).rejects.toThrow('Organization ID is required');
+      await expect(ragService.answerQuestionInDocument('test', '', doc1Id, 5)).rejects.toThrow(
+        'Organization ID is required'
+      );
     });
   });
 
@@ -264,7 +264,7 @@ describe('RAG Multitenancy Security (RFE-AI-005) - Unit Tests', () => {
 
       expect(chunks.length).toBe(result.chunksCreated);
 
-      chunks.forEach((chunk) => {
+      chunks.forEach(chunk => {
         expect(chunk.organizationId).toBe(org1Id);
         expect(chunk.documentId).toBe(testDoc._id.toString());
       });
@@ -275,28 +275,28 @@ describe('RAG Multitenancy Security (RFE-AI-005) - Unit Tests', () => {
     it('should document that $vectorSearch tests require real Atlas', async () => {
       /**
        * NOTA PARA DESARROLLADORES:
-       * 
+       *
        * Los siguientes escenarios de seguridad cross-org requieren tests de integración
        * contra una instancia REAL de MongoDB Atlas con índices vectoriales configurados:
-       * 
+       *
        * 1. ❌ Búsquedas vectoriales NO deben retornar chunks de otras organizaciones
        * 2. ❌ searchInDocument() debe filtrar por organizationId
        * 3. ❌ answerQuestion() debe usar solo chunks de la org correcta
        * 4. ❌ answerQuestionInDocument() debe validar org ownership
-       * 
+       *
        * RAZÓN: mongodb-memory-server NO soporta el operador $vectorSearch que es
        * específico de MongoDB Atlas.
-       * 
+       *
        * SOLUCIÓN: Los tests unitarios actuales verifican que:
        * ✅ Los chunks se crean con organizationId
        * ✅ Los métodos validan organizationId (rechazan valores vacíos)
        * ✅ La estructura de datos es correcta
-       * 
+       *
        * Para tests de integración completos:
        * - Configure una instancia de Atlas de test
        * - Cree índices vectoriales en la colección document_chunks
        * - Ejecute los tests contra esa instancia
-       * 
+       *
        * Ver: docs/TEST-CONFIGURATION.md para más detalles
        */
 

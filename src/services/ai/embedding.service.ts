@@ -3,27 +3,27 @@ import { getAIProvider } from './providers';
 
 /**
  * Servicio para generar embeddings vectoriales
- * 
+ *
  * MIGRADO A PROVIDER ABSTRACTION (RFE-AI-001)
- * 
+ *
  * Este servicio ahora delega toda la lógica de generación de embeddings
  * al provider configurado (OpenAI, Ollama, Mock, etc.), permitiendo:
  * - Cambiar de proveedor sin modificar código
  * - Soportar múltiples modelos de embeddings
  * - Dimensiones dinámicas según provider (1536, 768, etc.)
- * 
+ *
  * Proveedores soportados:
  * - OpenAI: text-embedding-3-small (1536 dims)
  * - Ollama: nomic-embed-text (768 dims)
  * - Mock: Embeddings determinísticos para tests
- * 
+ *
  * Este servicio se encarga exclusivamente de convertir texto en vectores numéricos.
  * NO maneja almacenamiento ni lógica de búsqueda - solo generación de embeddings.
  */
 export class EmbeddingService {
   /**
    * Genera un embedding vectorial a partir de texto
-   * 
+   *
    * Delega al provider activo configurado via AI_PROVIDER env var.
    *
    * @param text - Texto a convertir en vector de embeddings
@@ -38,11 +38,16 @@ export class EmbeddingService {
 
     try {
       const provider = getAIProvider();
-      
+
       // Delegar al provider - maneja su propia implementación y errores
       const result = await provider.generateEmbedding(text);
 
-      if (!result || !result.embedding || !Array.isArray(result.embedding) || result.embedding.length === 0) {
+      if (
+        !result ||
+        !result.embedding ||
+        !Array.isArray(result.embedding) ||
+        result.embedding.length === 0
+      ) {
         throw new Error('Provider returned invalid embedding (empty or not an array)');
       }
 
@@ -63,7 +68,7 @@ export class EmbeddingService {
   /**
    * Genera embeddings para múltiples textos en lote
    * Más eficiente que llamar a generateEmbedding() múltiples veces
-   * 
+   *
    * Delega al provider activo - algunos providers (como OpenAI) optimizan
    * procesamiento en lote, mientras que otros procesan secuencialmente.
    *

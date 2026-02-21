@@ -1,6 +1,9 @@
 import { deletionService } from '../../../src/services/deletion.service';
 import DocumentModel from '../../../src/models/document.model';
-import DeletionAuditModel, { DeletionAction, DeletionStatus } from '../../../src/models/deletion-audit.model';
+import DeletionAuditModel, {
+  DeletionAction,
+  DeletionStatus
+} from '../../../src/models/deletion-audit.model';
 import searchService from '../../../src/services/search.service';
 import HttpError from '../../../src/models/error.model';
 import { Types } from 'mongoose';
@@ -48,9 +51,13 @@ describe('DeletionService', () => {
     jest.clearAllMocks();
     // Default mocks to avoid unresolved promises during async flows
     (User.findById as jest.Mock).mockImplementation(() => ({
-      select: () => ({ lean: () => Promise.resolve({ name: 'Test User', email: 'test@example.com' }) })
+      select: () => ({
+        lean: () => Promise.resolve({ name: 'Test User', email: 'test@example.com' })
+      })
     }));
-    (notificationService.notifyMembersOfOrganization as unknown as jest.Mock).mockResolvedValue(undefined);
+    (notificationService.notifyMembersOfOrganization as unknown as jest.Mock).mockResolvedValue(
+      undefined
+    );
   });
 
   describe('moveToTrash', () => {
@@ -233,7 +240,10 @@ describe('DeletionService', () => {
       const result = await deletionService.restoreFromTrash(mockDocId, mockContext);
 
       expect(result).toBeDefined();
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to re-index document:', expect.any(Error));
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to re-index document:',
+        expect.any(Error)
+      );
 
       consoleErrorSpy.mockRestore();
     });
@@ -243,9 +253,9 @@ describe('DeletionService', () => {
     it('should throw 404 when document not found', async () => {
       (DocumentModel.findById as jest.Mock).mockResolvedValue(null);
 
-      await expect(
-        deletionService.permanentDelete(mockDocId, mockContext, {})
-      ).rejects.toThrow(new HttpError(404, 'Document not found'));
+      await expect(deletionService.permanentDelete(mockDocId, mockContext, {})).rejects.toThrow(
+        new HttpError(404, 'Document not found')
+      );
     });
 
     it('should throw 403 when user does not own document', async () => {
@@ -254,9 +264,7 @@ describe('DeletionService', () => {
 
       (DocumentModel.findById as jest.Mock).mockResolvedValue(document);
 
-      await expect(
-        deletionService.permanentDelete(mockDocId, mockContext, {})
-      ).rejects.toThrow(
+      await expect(deletionService.permanentDelete(mockDocId, mockContext, {})).rejects.toThrow(
         new HttpError(403, 'You do not have permission to permanently delete this document')
       );
     });
@@ -267,9 +275,7 @@ describe('DeletionService', () => {
 
       (DocumentModel.findById as jest.Mock).mockResolvedValue(document);
 
-      await expect(
-        deletionService.permanentDelete(mockDocId, mockContext, {})
-      ).rejects.toThrow(
+      await expect(deletionService.permanentDelete(mockDocId, mockContext, {})).rejects.toThrow(
         new HttpError(400, 'Document must be in trash before permanent deletion')
       );
     });
@@ -291,11 +297,11 @@ describe('DeletionService', () => {
       (DeletionAuditModel.create as jest.Mock).mockResolvedValue(mockAuditEntry);
 
       // Mock the secure overwrite to throw error so we can check audit entry creation
-      jest.spyOn(deletionService as any, 'secureOverwriteFile').mockRejectedValue(new Error('File error'));
+      jest
+        .spyOn(deletionService as any, 'secureOverwriteFile')
+        .mockRejectedValue(new Error('File error'));
 
-      await expect(
-        deletionService.permanentDelete(mockDocId, mockContext, {})
-      ).rejects.toThrow();
+      await expect(deletionService.permanentDelete(mockDocId, mockContext, {})).rejects.toThrow();
 
       expect(DeletionAuditModel.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -319,7 +325,9 @@ describe('DeletionService', () => {
       (DocumentModel.findById as jest.Mock).mockResolvedValue(document);
       (DeletionAuditModel.create as jest.Mock).mockResolvedValue(mockAuditEntry);
 
-      jest.spyOn(deletionService as any, 'secureOverwriteFile').mockRejectedValue(new Error('Mock error'));
+      jest
+        .spyOn(deletionService as any, 'secureOverwriteFile')
+        .mockRejectedValue(new Error('Mock error'));
 
       await expect(
         deletionService.permanentDelete(mockDocId, mockContext, { method: 'simple', passes: 3 })
@@ -378,7 +386,7 @@ describe('DeletionService', () => {
     it('should calculate scheduled deletion date correctly', async () => {
       const document = { ...mockDocument };
       document.isOwnedBy = jest.fn().mockReturnValue(true);
-      document.save = jest.fn().mockImplementation(function(this: any) {
+      document.save = jest.fn().mockImplementation(function (this: any) {
         // Simulate what the real save does - scheduledDeletionDate gets set
         return Promise.resolve(this);
       });
@@ -392,11 +400,11 @@ describe('DeletionService', () => {
 
       // After moveToTrash, the service sets scheduledDeletionDate
       expect(document.scheduledDeletionDate).toBeDefined();
-      
+
       if (document.scheduledDeletionDate) {
         const scheduledTime = new Date(document.scheduledDeletionDate).getTime();
         const expectedTime = now + 30 * 24 * 60 * 60 * 1000;
-        
+
         // Allow 1 second difference for test execution time
         expect(Math.abs(scheduledTime - expectedTime)).toBeLessThan(1000);
       }

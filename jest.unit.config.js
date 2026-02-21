@@ -67,8 +67,7 @@ module.exports = {
   // Mapear alias de import `src/*` a la carpeta real
   moduleNameMapper: {
     '^src/(.*)$': '<rootDir>/src/$1'
-  }
-  ,
+  },
   // Evitar que ts-jest ejecute diagnósticos de TypeScript en node_modules
   // Esto previene errores de tipos de dependencias (ej. openai) durante los tests unitarios
   globals: {

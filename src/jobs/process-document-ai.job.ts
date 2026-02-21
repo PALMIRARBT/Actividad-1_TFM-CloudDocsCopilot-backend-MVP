@@ -6,7 +6,7 @@ import { getAIProvider } from '../services/ai/providers/provider.factory';
 
 /**
  * Job de Procesamiento AI para Documentos (RFE-AI-002)
- * 
+ *
  * Este job procesa un documento y:
  * 1. Extrae el texto del archivo
  * 2. Guarda el texto extraído en el documento
@@ -14,14 +14,14 @@ import { getAIProvider } from '../services/ai/providers/provider.factory';
  * 4. Indexa el documento en Elasticsearch con contenido
  * 5. (Futuro) Clasifica el documento
  * 6. (Futuro) Genera resumen
- * 
+ *
  * Este job se ejecuta asíncronamente después del upload
  * para no bloquear la respuesta al usuario.
  */
 
 /**
  * Procesa un documento con IA
- * 
+ *
  * @param documentId - ID del documento a procesar
  * @returns Promise<void>
  */
@@ -32,7 +32,7 @@ export async function processDocumentAI(documentId: string): Promise<void> {
   try {
     // 1. Obtener documento
     const doc = await DocumentModel.findById(documentId);
-    
+
     if (!doc) {
       throw new Error(`Document ${documentId} not found`);
     }
@@ -54,7 +54,7 @@ export async function processDocumentAI(documentId: string): Promise<void> {
 
     // 3. Extraer texto del documento
     console.log(`[ai-job] Extracting text from ${doc.mimeType} file...`);
-    
+
     // Verificar si el tipo MIME es soportado
     if (!textExtractionService.isSupportedMimeType(doc.mimeType)) {
       console.log(`[ai-job] Document ${documentId} has unsupported MIME type: ${doc.mimeType}`);
@@ -65,7 +65,7 @@ export async function processDocumentAI(documentId: string): Promise<void> {
     }
 
     const extractionResult = await textExtractionService.extractText(doc.path, doc.mimeType);
-    
+
     if (!extractionResult.text || extractionResult.text.trim().length === 0) {
       console.log(`[ai-job] No text extracted from document ${documentId}`);
       doc.aiProcessingStatus = 'completed';
@@ -77,8 +77,10 @@ export async function processDocumentAI(documentId: string): Promise<void> {
     // 4. Guardar texto extraído en el documento
     doc.extractedText = extractionResult.text;
     await doc.save();
-    
-    console.log(`[ai-job] Extracted ${extractionResult.text.length} characters from document ${documentId}`);
+
+    console.log(
+      `[ai-job] Extracted ${extractionResult.text.length} characters from document ${documentId}`
+    );
 
     // 5. Procesar chunks + embeddings (vector search)
     if (doc.organization) {
@@ -88,9 +90,13 @@ export async function processDocumentAI(documentId: string): Promise<void> {
         doc.organization.toString(),
         extractionResult.text
       );
-      console.log(`[ai-job] Created ${processingResult.chunksCreated} chunks for document ${documentId}`);
+      console.log(
+        `[ai-job] Created ${processingResult.chunksCreated} chunks for document ${documentId}`
+      );
     } else {
-      console.log(`[ai-job] Skipping chunk processing - document ${documentId} has no organization`);
+      console.log(
+        `[ai-job] Skipping chunk processing - document ${documentId} has no organization`
+      );
     }
 
     // 6. Indexar en Elasticsearch con contenido
@@ -100,7 +106,10 @@ export async function processDocumentAI(documentId: string): Promise<void> {
       console.log(`[ai-job] Document ${documentId} indexed successfully`);
     } catch (esError: any) {
       // No fallar todo el procesamiento si Elasticsearch falla
-      console.error(`[ai-job] Failed to index document ${documentId} in Elasticsearch:`, esError.message);
+      console.error(
+        `[ai-job] Failed to index document ${documentId} in Elasticsearch:`,
+        esError.message
+      );
     }
 
     // 7. Clasificar documento (RFE-AI-003)
@@ -111,7 +120,9 @@ export async function processDocumentAI(documentId: string): Promise<void> {
       doc.aiCategory = classification.category;
       doc.aiConfidence = classification.confidence;
       doc.aiTags = classification.tags;
-      console.log(`[ai-job] Document ${documentId} classified as "${classification.category}" (confidence: ${classification.confidence})`);
+      console.log(
+        `[ai-job] Document ${documentId} classified as "${classification.category}" (confidence: ${classification.confidence})`
+      );
     } catch (classifyError: any) {
       // No fallar todo el procesamiento si clasificación falla
       console.error(`[ai-job] Failed to classify document ${documentId}:`, classifyError.message);
@@ -140,11 +151,13 @@ export async function processDocumentAI(documentId: string): Promise<void> {
 
     const duration = Date.now() - startTime;
     console.log(`[ai-job] ✅ Document ${documentId} processed successfully in ${duration}ms`);
-
   } catch (error: any) {
     const duration = Date.now() - startTime;
-    console.error(`[ai-job] ❌ Failed to process document ${documentId} after ${duration}ms:`, error.message);
-    
+    console.error(
+      `[ai-job] ❌ Failed to process document ${documentId} after ${duration}ms:`,
+      error.message
+    );
+
     // Actualizar documento con error
     try {
       const doc = await DocumentModel.findById(documentId);
@@ -154,7 +167,10 @@ export async function processDocumentAI(documentId: string): Promise<void> {
         await doc.save();
       }
     } catch (saveError: any) {
-      console.error(`[ai-job] Failed to save error state for document ${documentId}:`, saveError.message);
+      console.error(
+        `[ai-job] Failed to save error state for document ${documentId}:`,
+        saveError.message
+      );
     }
 
     // Re-throw para que el caller pueda manejar el error si es necesario
@@ -165,13 +181,13 @@ export async function processDocumentAI(documentId: string): Promise<void> {
 /**
  * Procesa múltiples documentos pendientes
  * Útil para reprocesar documentos que fallaron o procesar backlog
- * 
+ *
  * @param limit - Número máximo de documentos a procesar
  * @returns Número de documentos procesados exitosamente
  */
 export async function processPendingDocuments(limit: number = 10): Promise<number> {
   console.log(`[ai-job] Processing up to ${limit} pending documents...`);
-  
+
   try {
     // Buscar documentos con estado 'pending' o 'failed'
     const documents = await DocumentModel.find({
@@ -190,7 +206,7 @@ export async function processPendingDocuments(limit: number = 10): Promise<numbe
     console.log(`[ai-job] Found ${documents.length} pending documents`);
 
     let successCount = 0;
-    
+
     for (const doc of documents) {
       try {
         await processDocumentAI(doc._id.toString());
@@ -201,9 +217,10 @@ export async function processPendingDocuments(limit: number = 10): Promise<numbe
       }
     }
 
-    console.log(`[ai-job] Batch processing completed: ${successCount}/${documents.length} successful`);
+    console.log(
+      `[ai-job] Batch processing completed: ${successCount}/${documents.length} successful`
+    );
     return successCount;
-
   } catch (error: any) {
     console.error('[ai-job] Failed to process pending documents:', error.message);
     throw error;
@@ -213,15 +230,15 @@ export async function processPendingDocuments(limit: number = 10): Promise<numbe
 /**
  * Reprocesar un documento que ya fue procesado
  * Útil cuando se actualiza el contenido o se quiere volver a clasificar
- * 
+ *
  * @param documentId - ID del documento a reprocesar
  * @returns Promise<void>
  */
 export async function reprocessDocument(documentId: string): Promise<void> {
   console.log(`[ai-job] Reprocessing document ${documentId}...`);
-  
+
   const doc = await DocumentModel.findById(documentId);
-  
+
   if (!doc) {
     throw new Error(`Document ${documentId} not found`);
   }

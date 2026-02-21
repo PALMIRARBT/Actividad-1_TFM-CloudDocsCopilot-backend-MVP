@@ -12,10 +12,10 @@ import type {
 
 /**
  * Implementación del proveedor Ollama
- * 
+ *
  * Usa modelos locales ejecutados por Ollama (sin costo, sin API key).
  * Requiere que Ollama esté instalado y corriendo en localhost:11434.
- * 
+ *
  * Modelos recomendados:
  * - Chat: llama3.2:3b
  * - Embeddings: nomic-embed-text (768 dims)
@@ -41,7 +41,9 @@ export class OllamaProvider implements AIProvider {
       host: this.baseUrl
     });
 
-    console.log(`[ollama-provider] Initialized with chat model: ${this.chatModel}, embedding model: ${this.embeddingModel}`);
+    console.log(
+      `[ollama-provider] Initialized with chat model: ${this.chatModel}, embedding model: ${this.embeddingModel}`
+    );
   }
 
   /**
@@ -108,9 +110,7 @@ export class OllamaProvider implements AIProvider {
 
     try {
       // Ollama no tiene batch nativo, procesamos secuencialmente
-      const results = await Promise.all(
-        texts.map(text => this.generateEmbedding(text))
-      );
+      const results = await Promise.all(texts.map(text => this.generateEmbedding(text)));
 
       return results;
     } catch (error: unknown) {
@@ -164,10 +164,7 @@ export class OllamaProvider implements AIProvider {
       console.error('[ollama-provider] Error generating response:', errorMessage);
 
       if (errorMessage.includes('not found') || errorMessage.includes('model')) {
-        throw new HttpError(
-          500,
-          `Ollama model ${model} not found. Run: ollama pull ${model}`
-        );
+        throw new HttpError(500, `Ollama model ${model} not found. Run: ollama pull ${model}`);
       } else if (errorMessage.includes('connection') || errorMessage.includes('ECONNREFUSED')) {
         throw new HttpError(503, 'Ollama server not running. Start it with: ollama serve');
       }
@@ -203,7 +200,7 @@ Responde ÚNICAMENTE con un objeto JSON válido (sin markdown, sin explicaciones
       // Limpiar markdown si existe
       let jsonStr = result.response.trim();
       jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      
+
       const parsed = JSON.parse(jsonStr);
       return {
         category: parsed.category || 'Otro',
@@ -244,7 +241,7 @@ Responde ÚNICAMENTE con un objeto JSON válido (sin markdown, sin explicaciones
       // Limpiar markdown si existe
       let jsonStr = result.response.trim();
       jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      
+
       const parsed = JSON.parse(jsonStr);
       return {
         summary: parsed.summary || 'No se pudo generar resumen',
@@ -268,7 +265,9 @@ Responde ÚNICAMENTE con un objeto JSON válido (sin markdown, sin explicaciones
       return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Ollama connection failed: ${errorMessage}. Is Ollama running on ${this.baseUrl}?`);
+      throw new Error(
+        `Ollama connection failed: ${errorMessage}. Is Ollama running on ${this.baseUrl}?`
+      );
     }
   }
 

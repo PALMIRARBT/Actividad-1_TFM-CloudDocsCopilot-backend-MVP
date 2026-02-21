@@ -1,6 +1,6 @@
 /**
  * Interfaz base para proveedores de IA
- * 
+ *
  * Define el contrato que todos los proveedores (OpenAI, Ollama, Mock)
  * deben implementar para garantizar intercambiabilidad.
  */

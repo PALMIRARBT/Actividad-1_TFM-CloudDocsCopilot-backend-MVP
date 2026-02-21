@@ -67,7 +67,9 @@ describe('Embedding Service', () => {
     it('should handle OpenAI API errors', async () => {
       mockProvider.generateEmbedding.mockRejectedValue(new Error('API rate limit exceeded'));
 
-      await expect(embeddingService.generateEmbedding('Test')).rejects.toThrow(/Failed to generate embedding/);
+      await expect(embeddingService.generateEmbedding('Test')).rejects.toThrow(
+        /Failed to generate embedding/
+      );
     });
 
     it('should throw error for empty text input', async () => {
@@ -109,7 +111,9 @@ describe('Embedding Service', () => {
     it('should generate embeddings for multiple texts', async () => {
       const mockEmbeddings = [Array(1536).fill(0.1), Array(1536).fill(0.2), Array(1536).fill(0.3)];
 
-      mockProvider.generateEmbeddings.mockResolvedValue(mockEmbeddings.map(embedding => ({ embedding })));
+      mockProvider.generateEmbeddings.mockResolvedValue(
+        mockEmbeddings.map(embedding => ({ embedding }))
+      );
 
       const texts = ['Text 1', 'Text 2', 'Text 3'];
       const result = await embeddingService.generateEmbeddings(texts);
@@ -129,14 +133,18 @@ describe('Embedding Service', () => {
 
       const texts = ['Text 1', 'Text 2', 'Text 3'];
 
-      await expect(embeddingService.generateEmbeddings(texts)).rejects.toThrow('Expected 3 embeddings');
+      await expect(embeddingService.generateEmbeddings(texts)).rejects.toThrow(
+        'Expected 3 embeddings'
+      );
     });
 
     it('should handle batch processing for large arrays', async () => {
       const largeArray = Array(100).fill('test text');
       const mockEmbedding = Array(1536).fill(0);
 
-      mockProvider.generateEmbeddings.mockResolvedValue(largeArray.map(() => ({ embedding: mockEmbedding })));
+      mockProvider.generateEmbeddings.mockResolvedValue(
+        largeArray.map(() => ({ embedding: mockEmbedding }))
+      );
 
       const result = await embeddingService.generateEmbeddings(largeArray);
 
@@ -147,7 +155,9 @@ describe('Embedding Service', () => {
     it('should handle API errors during batch processing', async () => {
       mockProvider.generateEmbeddings.mockRejectedValue(new Error('Batch processing failed'));
 
-      await expect(embeddingService.generateEmbeddings(['Text 1', 'Text 2'])).rejects.toThrow(/Failed to generate embeddings/);
+      await expect(embeddingService.generateEmbeddings(['Text 1', 'Text 2'])).rejects.toThrow(
+        /Failed to generate embeddings/
+      );
     });
   });
 });

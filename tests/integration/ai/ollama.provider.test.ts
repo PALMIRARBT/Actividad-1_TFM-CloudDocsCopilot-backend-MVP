@@ -1,15 +1,14 @@
 /**
  * Tests de integración para Ollama Provider
- * 
+ *
  * IMPORTANTE: Estos tests requieren que Ollama esté instalado y corriendo:
  * 1. Instalar Ollama: winget install Ollama.Ollama
  * 2. Descargar modelos: ollama pull llama3.2:3b && ollama pull nomic-embed-text
  * 3. Iniciar servidor: ollama serve (normalmente se inicia automáticamente)
- * 
+ *
  * Para ejecutar estos tests (se omiten por defecto):
  * RUN_OLLAMA_TESTS=true npm test -- tests/integration/ai/ollama.provider.test.ts
  */
-
 
 import { describe, it, expect, beforeAll } from '@jest/globals';
 import {
@@ -87,11 +86,14 @@ describeOllama('Ollama Provider Integration', () => {
 
       // Los embeddings deben ser diferentes (verificar cosine similarity)
       // En vez de comparar todo el array, verificar que la similitud no sea perfecta
-      const dotProduct = result1.embedding.reduce((sum, val, i) => sum + val * result2.embedding[i], 0);
+      const dotProduct = result1.embedding.reduce(
+        (sum, val, i) => sum + val * result2.embedding[i],
+        0
+      );
       const norm1 = Math.sqrt(result1.embedding.reduce((sum, val) => sum + val * val, 0));
       const norm2 = Math.sqrt(result2.embedding.reduce((sum, val) => sum + val * val, 0));
       const cosineSimilarity = dotProduct / (norm1 * norm2);
-      
+
       // La similitud debe ser alta pero no perfecta (embeddings diferentes)
       expect(cosineSimilarity).toBeLessThan(1.0);
       expect(cosineSimilarity).toBeGreaterThan(0.5);
@@ -129,10 +131,9 @@ describeOllama('Ollama Provider Integration', () => {
 
     it('should use system message when provided', async () => {
       const provider = getAIProvider();
-      const result = await provider.generateResponse(
-        'What is your role?',
-        { systemMessage: 'You are a helpful math tutor.' }
-      );
+      const result = await provider.generateResponse('What is your role?', {
+        systemMessage: 'You are a helpful math tutor.'
+      });
 
       expect(result.response).toBeTruthy();
     });
@@ -208,7 +209,7 @@ describeOllama('Ollama Provider Integration', () => {
 
     it('should handle invalid model gracefully', async () => {
       const provider = getAIProvider();
-      
+
       // Intentar usar un modelo que no existe
       await expect(
         provider.generateResponse('test', { model: 'nonexistent-model' })

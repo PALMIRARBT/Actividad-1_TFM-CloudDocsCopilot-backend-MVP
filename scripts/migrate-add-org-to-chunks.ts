@@ -57,7 +57,9 @@ async function migrateChunks() {
     console.log(`📊 Total de chunks encontrados: ${chunks.length}`);
 
     // 4. Filtrar chunks que ya tienen organizationId
-    const chunksWithoutOrg: DocumentChunkMigration[] = chunks.filter((chunk) => !chunk.organizationId);
+    const chunksWithoutOrg: DocumentChunkMigration[] = chunks.filter(
+      chunk => !chunk.organizationId
+    );
     const chunksWithOrg = chunks.length - chunksWithoutOrg.length;
 
     console.log(`✅ Chunks ya migrados: ${chunksWithOrg}`);
@@ -97,7 +99,9 @@ async function migrateChunks() {
           .exec();
 
         if (!document) {
-          console.warn(`⚠️  Documento no encontrado: ${documentId} (${documentChunks.length} chunks)`);
+          console.warn(
+            `⚠️  Documento no encontrado: ${documentId} (${documentChunks.length} chunks)`
+          );
           documentsNotFound++;
           continue;
         }
@@ -113,7 +117,7 @@ async function migrateChunks() {
         const organizationId = document.organization.toString();
 
         // Actualizar todos los chunks de este documento
-        const chunkIds = documentChunks.map((c) => c._id);
+        const chunkIds = documentChunks.map(c => c._id);
         const result = await chunksCollection.updateMany(
           { _id: { $in: chunkIds } },
           { $set: { organizationId } }
@@ -178,7 +182,7 @@ if (require.main === module) {
       console.log('\n✅ Migración finalizada con éxito');
       process.exit(0);
     })
-    .catch((error) => {
+    .catch(error => {
       console.error('\n❌ Migración fallida:', error);
       process.exit(1);
     });

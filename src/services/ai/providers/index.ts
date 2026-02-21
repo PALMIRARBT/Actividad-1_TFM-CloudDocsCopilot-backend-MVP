@@ -1,6 +1,6 @@
 /**
  * AI Providers Module
- * 
+ *
  * Exports para el sistema de proveedores de IA intercambiables.
  * Permite usar OpenAI, Ollama o Mock sin cambiar el código de negocio.
  */

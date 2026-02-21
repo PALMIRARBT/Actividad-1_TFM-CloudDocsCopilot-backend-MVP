@@ -19,8 +19,7 @@ export const SUPPORTED_MIME_TYPES = {
   // Text files
   TXT: 'text/plain',
   // Markdown
-  MD: 'text/markdown'
-  ,
+  MD: 'text/markdown',
   // Images
   PNG: 'image/png',
   JPG: 'image/jpeg',
@@ -236,7 +235,10 @@ export class TextExtractionService {
    */
   // synchronous extractFromText removed in favor of async version
 
-  private async extractFromTextAsync(filePath: string, mimeType: string): Promise<ITextExtractionResult> {
+  private async extractFromTextAsync(
+    filePath: string,
+    mimeType: string
+  ): Promise<ITextExtractionResult> {
     const text = (await fs.promises.readFile(filePath, 'utf-8')).trim();
     const wordCount = this.countWords(text);
 
@@ -270,7 +272,7 @@ export class TextExtractionService {
       await worker.initialize(OCR_LANGUAGES);
 
       const { data } = await worker.recognize(filePath);
-      const text = (data && data.text) ? data.text.trim() : '';
+      const text = data && data.text ? data.text.trim() : '';
       const wordCount = this.countWords(text);
 
       return {
@@ -313,7 +315,10 @@ export class TextExtractionService {
         mimeType: SUPPORTED_MIME_TYPES.PDF
       };
     } catch (err) {
-      console.warn('[text-extraction] OCR fallback for PDF failed:', err instanceof Error ? err.message : err);
+      console.warn(
+        '[text-extraction] OCR fallback for PDF failed:',
+        err instanceof Error ? err.message : err
+      );
       return {
         text: '',
         charCount: 0,

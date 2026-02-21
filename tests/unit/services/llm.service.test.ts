@@ -51,7 +51,9 @@ describe('LLMService', () => {
     it('should throw error when API fails', async () => {
       mockProvider.generateResponse.mockRejectedValue(new Error('API unavailable'));
 
-      await expect(llmService.generateResponse('Test prompt')).rejects.toThrow(/Failed to generate response/);
+      await expect(llmService.generateResponse('Test prompt')).rejects.toThrow(
+        /Failed to generate response/
+      );
     });
 
     it('should handle missing choices in response', async () => {
@@ -128,7 +130,9 @@ describe('LLMService', () => {
 
       mockProvider.generateResponse.mockRejectedValue(rateLimitError);
 
-      await expect(llmService.generateResponse('Test')).rejects.toThrow(/Failed to generate response/);
+      await expect(llmService.generateResponse('Test')).rejects.toThrow(
+        /Failed to generate response/
+      );
     });
 
     it('should handle authentication errors', async () => {
@@ -137,7 +141,9 @@ describe('LLMService', () => {
 
       mockProvider.generateResponse.mockRejectedValue(authError);
 
-      await expect(llmService.generateResponse('Test')).rejects.toThrow(/Failed to generate response/);
+      await expect(llmService.generateResponse('Test')).rejects.toThrow(
+        /Failed to generate response/
+      );
     });
   });
 });

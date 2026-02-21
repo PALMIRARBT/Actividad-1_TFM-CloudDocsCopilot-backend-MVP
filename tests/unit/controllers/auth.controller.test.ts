@@ -153,7 +153,9 @@ describe('Auth Controller', () => {
 
       await register(mockRequest as AuthRequest, mockResponse as Response, mockNext);
 
-      expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Password validation failed: too short'));
+      expect(mockNext).toHaveBeenCalledWith(
+        new HttpError(400, 'Password validation failed: too short')
+      );
     });
 
     it('should pass through unexpected errors', async () => {
@@ -403,9 +405,7 @@ describe('Auth Controller', () => {
 
       await confirmAccount(mockRequest, mockResponse as Response, mockNext);
 
-      expect(mockNext).toHaveBeenCalledWith(
-        new HttpError(400, 'Invalid or expired token')
-      );
+      expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Invalid or expired token'));
     });
 
     it('should use custom frontend URL from environment', async () => {

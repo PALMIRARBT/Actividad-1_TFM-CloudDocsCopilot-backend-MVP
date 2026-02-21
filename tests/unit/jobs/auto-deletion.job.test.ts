@@ -24,7 +24,9 @@ describe('auto-deletion job', () => {
   });
 
   it('runAutoDeletionNow propagates errors from deletionService', async () => {
-    (deletionService.autoDeleteExpiredDocuments as jest.Mock).mockRejectedValue(new Error('DB error'));
+    (deletionService.autoDeleteExpiredDocuments as jest.Mock).mockRejectedValue(
+      new Error('DB error')
+    );
 
     await expect(runAutoDeletionNow()).rejects.toThrow('DB error');
   });
@@ -51,7 +53,9 @@ describe('auto-deletion job', () => {
 
     startAutoDeletionJob();
 
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Auto-deletion cron job scheduled'));
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Auto-deletion cron job scheduled')
+    );
     logSpy.mockRestore();
   });
 });

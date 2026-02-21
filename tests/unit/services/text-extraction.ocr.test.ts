@@ -87,6 +87,8 @@ describe('TextExtractionService OCR unit tests', () => {
 
     const { textExtractionService } = require('../../../src/services/ai/text-extraction.service');
 
-    await expect(textExtractionService.extractText(imgPath, 'image/png')).rejects.toThrow('OCR is disabled');
+    await expect(textExtractionService.extractText(imgPath, 'image/png')).rejects.toThrow(
+      'OCR is disabled'
+    );
   });
 });

@@ -156,7 +156,11 @@ export class DocumentProcessor {
       return result.deletedCount || 0;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[processor] Error deleting chunks for document %s: %s', documentId, errorMessage);
+      console.error(
+        '[processor] Error deleting chunks for document %s: %s',
+        documentId,
+        errorMessage
+      );
 
       throw new HttpError(500, `Failed to delete document chunks: ${errorMessage}`);
     }

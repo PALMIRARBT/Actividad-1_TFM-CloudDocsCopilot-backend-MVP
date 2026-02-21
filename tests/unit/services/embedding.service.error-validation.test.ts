@@ -75,7 +75,9 @@ describe('EmbeddingService - Provider abstraction dimension checks', () => {
 
       const texts = ['T1', 'T2', 'T3'];
 
-      await expect(embeddingService.generateEmbeddings(texts)).rejects.toThrow('Expected 3 embeddings');
+      await expect(embeddingService.generateEmbeddings(texts)).rejects.toThrow(
+        'Expected 3 embeddings'
+      );
     });
   });
 });

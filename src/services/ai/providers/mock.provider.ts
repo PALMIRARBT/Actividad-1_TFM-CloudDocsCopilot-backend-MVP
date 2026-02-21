@@ -10,7 +10,7 @@ import type {
 
 /**
  * Implementación Mock del proveedor de IA
- * 
+ *
  * Retorna respuestas determinísticas sin llamar a ningún LLM real.
  * Útil para:
  * - Tests automatizados (rápidos y confiables)
@@ -72,16 +72,24 @@ export class MockAIProvider implements AIProvider {
     let response: string;
 
     if (prompt.toLowerCase().includes('what is')) {
-      response = 'This is a mock response to your question. In a real scenario, an AI model would provide a detailed answer.';
-    } else if (prompt.toLowerCase().includes('classify') || prompt.toLowerCase().includes('categoría')) {
+      response =
+        'This is a mock response to your question. In a real scenario, an AI model would provide a detailed answer.';
+    } else if (
+      prompt.toLowerCase().includes('classify') ||
+      prompt.toLowerCase().includes('categoría')
+    ) {
       response = JSON.stringify({
         category: 'Informe',
         confidence: 0.85,
         tags: ['mock', 'test', 'document']
       });
-    } else if (prompt.toLowerCase().includes('resume') || prompt.toLowerCase().includes('summarize')) {
+    } else if (
+      prompt.toLowerCase().includes('resume') ||
+      prompt.toLowerCase().includes('summarize')
+    ) {
       response = JSON.stringify({
-        summary: 'Este es un resumen mock del documento. En un escenario real, la IA generaría un resumen detallado basado en el contenido.',
+        summary:
+          'Este es un resumen mock del documento. En un escenario real, la IA generaría un resumen detallado basado en el contenido.',
         keyPoints: [
           'Punto clave 1 del documento',
           'Punto clave 2 del documento',

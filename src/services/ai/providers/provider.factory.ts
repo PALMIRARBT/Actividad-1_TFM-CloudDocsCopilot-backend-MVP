@@ -15,14 +15,14 @@ let currentProvider: AIProvider | null = null;
 
 /**
  * Factory para obtener el proveedor de IA configurado
- * 
+ *
  * Lee la variable de entorno AI_PROVIDER para determinar qué proveedor usar:
  * - 'openai': Usa OpenAI API (requiere OPENAI_API_KEY)
  * - 'ollama': Usa Ollama local (requiere Ollama corriendo)
  * - 'mock': Usa respuestas mock (para tests)
- * 
+ *
  * Por defecto usa 'openai' si no está configurado.
- * 
+ *
  * @returns Instancia del proveedor de IA
  * @throws Error si el proveedor especificado no es válido
  */

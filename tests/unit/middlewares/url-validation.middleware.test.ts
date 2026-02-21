@@ -1,4 +1,10 @@
-import { validateWebhookUrl, validateImageUrl, validateRedirectUrl, validateQueryUrl, scanForUrls } from '../../../src/middlewares/url-validation.middleware';
+import {
+  validateWebhookUrl,
+  validateImageUrl,
+  validateRedirectUrl,
+  validateQueryUrl,
+  scanForUrls
+} from '../../../src/middlewares/url-validation.middleware';
 import HttpError from '../../../src/models/error.model';
 
 describe('url-validation.middleware', () => {

@@ -27,7 +27,7 @@ export interface IDocument extends MongooseDocument {
   uploadedAt: Date;
   /** Usuarios con quienes se comparte el documento */
   sharedWith: Types.ObjectId[];
-  
+
   // 🤖 AI Processing Metadata (RFE-AI-002)
   /** Estado del procesamiento AI del documento */
   aiProcessingStatus?: 'none' | 'pending' | 'processing' | 'completed' | 'failed';
@@ -47,7 +47,7 @@ export interface IDocument extends MongooseDocument {
   aiProcessedAt?: Date | null;
   /** Mensaje de error si el procesamiento AI falló */
   aiError?: string | null;
-  
+
   /** Indica si el documento está marcado como eliminado (soft delete) */
   isDeleted: boolean;
   /** Fecha en que el documento fue marcado como eliminado */
@@ -159,7 +159,7 @@ const documentSchema = new Schema<IDocument>(
         ref: 'User'
       }
     ],
-    
+
     // 🤖 AI Processing Metadata (RFE-AI-002)
     aiProcessingStatus: {
       type: String,
@@ -207,32 +207,32 @@ const documentSchema = new Schema<IDocument>(
       default: null,
       maxlength: [500, 'AI error message cannot exceed 500 characters']
     },
-    
+
     isDeleted: {
       type: Boolean,
       default: false,
-      index: true,
+      index: true
     },
     deletedAt: {
       type: Date,
-      default: null,
+      default: null
     },
     deletionReason: {
       type: String,
       trim: true,
       maxlength: [500, 'Deletion reason cannot exceed 500 characters'],
-      default: null,
+      default: null
     },
     deletedBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      default: null,
+      default: null
     },
     scheduledDeletionDate: {
       type: Date,
       default: null,
-      index: true, // Índice para el job de eliminación automática
-    },
+      index: true // Índice para el job de eliminación automática
+    }
   },
   {
     timestamps: true,

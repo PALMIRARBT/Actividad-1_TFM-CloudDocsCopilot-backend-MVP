@@ -53,9 +53,9 @@ describe('search.service', () => {
       aiProcessingStatus: 'completed'
     };
     const extractedText = 'This is the extracted content from the PDF document.';
-    
+
     await svc.indexDocument(doc as any, extractedText);
-    
+
     expect(client.index).toHaveBeenCalledWith(
       expect.objectContaining({
         index: 'documents',
@@ -90,9 +90,9 @@ describe('search.service', () => {
       uploadedBy: { toString: () => 'u3' },
       uploadedAt: new Date()
     };
-    
+
     await svc.indexDocument(doc as any);
-    
+
     expect(client.index).toHaveBeenCalledWith(
       expect.objectContaining({
         document: expect.objectContaining({

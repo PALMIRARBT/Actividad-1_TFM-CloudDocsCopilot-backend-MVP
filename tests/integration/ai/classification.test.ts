@@ -1,6 +1,6 @@
 /**
  * Integration Tests - Document Classification & Summarization (RFE-AI-003, RFE-AI-007)
- * 
+ *
  * Tests:
  * - Automatic classification during document upload/processing
  * - Manual classification endpoint
@@ -323,9 +323,10 @@ describe('AI Classification & Summarization - Integration Tests', () => {
         .expect(200);
 
       // Verificar que el documento fue clasificado y resumido
-      const processedDoc = await DocumentModel.findById(document._id)
-        .select('+extractedText +aiCategory +aiConfidence +aiTags +aiSummary +aiKeyPoints');
-      
+      const processedDoc = await DocumentModel.findById(document._id).select(
+        '+extractedText +aiCategory +aiConfidence +aiTags +aiSummary +aiKeyPoints'
+      );
+
       expect(processedDoc?.aiCategory).toBeDefined();
       expect(processedDoc?.aiConfidence).toBeDefined();
       expect(processedDoc?.aiTags).toBeDefined();
@@ -422,4 +423,3 @@ describe('AI Classification & Summarization - Integration Tests', () => {
     });
   });
 });
-

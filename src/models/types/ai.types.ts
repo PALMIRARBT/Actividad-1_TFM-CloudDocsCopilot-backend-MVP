@@ -154,4 +154,4 @@ export const DOCUMENT_CATEGORIES = [
   'Otro'
 ] as const;
 
-export type DocumentCategory = typeof DOCUMENT_CATEGORIES[number];
+export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];

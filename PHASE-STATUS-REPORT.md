@@ -8,13 +8,13 @@
 
 ## 📈 Resumen Ejecutivo
 
-| Fase | RFEs | Estado | Estimado | Real | Progreso |
-|------|------|--------|----------|------|----------|
-| **Fase 0** | Setup | ✅ **COMPLETADA** | 2-3h | 2.5h | 100% |
-| **Fase 1** | RFE-AI-005, RFE-AI-001, RFE-AI-004 | ✅ **COMPLETADA** | 8-10h | ~6h | 100% |
-| **Fase 2** | RFE-AI-002 | ⬜ Pendiente | 6-8h | - | 0% |
-| **Fase 3** | RFE-AI-003, RFE-AI-004 | ⚡ **PARCIAL** | 10-12h | ~2h | 20% |
-| **Fase 4** | RFE-AI-006, RFE-AI-007 | ⬜ Pendiente | 8-10h | - | 0% |
+| Fase       | RFEs                               | Estado            | Estimado | Real | Progreso |
+| ---------- | ---------------------------------- | ----------------- | -------- | ---- | -------- |
+| **Fase 0** | Setup                              | ✅ **COMPLETADA** | 2-3h     | 2.5h | 100%     |
+| **Fase 1** | RFE-AI-005, RFE-AI-001, RFE-AI-004 | ✅ **COMPLETADA** | 8-10h    | ~6h  | 100%     |
+| **Fase 2** | RFE-AI-002                         | ⬜ Pendiente      | 6-8h     | -    | 0%       |
+| **Fase 3** | RFE-AI-003, RFE-AI-004             | ⚡ **PARCIAL**    | 10-12h   | ~2h  | 20%      |
+| **Fase 4** | RFE-AI-006, RFE-AI-007             | ⬜ Pendiente      | 8-10h    | -    | 0%       |
 
 **Progreso Total:** ~10.5h / 34-43h (≈ 28% completado)
 
@@ -26,22 +26,22 @@
 
 ### Estado: 100% Completada ✅
 
-| Task | Estado | Notas |
-|------|--------|-------|
-| Instalar Ollama | ✅ | Versión 0.16.2 instalada |
-| Descargar modelos | ✅ | llama3.2:3b (2GB) + nomic-embed-text (274MB) |
-| Crear estructura providers/ | ✅ | 6 archivos creados |
-| Implementar AIProvider interface | ✅ | Con tipos EmbeddingResult, ChatResult |
-| OllamaProvider | ✅ | Genera embeddings 768 dims + chat |
-| OpenAIProvider | ✅ | Mantiene funcionalidad existente |
-| MockProvider | ✅ | Para tests rápidos |
-| Factory pattern | ✅ | getAIProvider() según AI_PROVIDER env |
-| Tests integración | ✅ | 31/31 tests pasando |
-| Configuración .env | ✅ | Unificada en un solo archivo |
+| Task                             | Estado | Notas                                        |
+| -------------------------------- | ------ | -------------------------------------------- |
+| Instalar Ollama                  | ✅     | Versión 0.16.2 instalada                     |
+| Descargar modelos                | ✅     | llama3.2:3b (2GB) + nomic-embed-text (274MB) |
+| Crear estructura providers/      | ✅     | 6 archivos creados                           |
+| Implementar AIProvider interface | ✅     | Con tipos EmbeddingResult, ChatResult        |
+| OllamaProvider                   | ✅     | Genera embeddings 768 dims + chat            |
+| OpenAIProvider                   | ✅     | Mantiene funcionalidad existente             |
+| MockProvider                     | ✅     | Para tests rápidos                           |
+| Factory pattern                  | ✅     | getAIProvider() según AI_PROVIDER env        |
+| Tests integración                | ✅     | 31/31 tests pasando                          |
+| Configuración .env               | ✅     | Unificada en un solo archivo                 |
 
 ### Entregables Completados
 
-```
+```text
 src/services/ai/providers/
 ├── ai-provider.interface.ts       ✅
 ├── openai.provider.ts             ✅
@@ -69,15 +69,16 @@ tests/integration/ai/
 
 **Problema:** Vector search no filtraba por organizationId - usuarios podían ver documentos de otras organizaciones
 
-| Task | Estado | Archivo Modificado |
-|------|--------|-------------------|
-| Agregar organizationId a IDocumentChunk | ✅ | src/models/types/ai.types.ts |
-| Modificar document-processor.service | ✅ | Acepta organizationId param |
-| Filtrar en rag.service.ts | ✅ | $vectorSearch con $eq filter |
-| Actualizar ai.controller.ts | ✅ | Pasa organizationId a RAG |
-| Tests de seguridad | ✅ | 11/11 tests passing |
+| Task                                    | Estado | Archivo Modificado           |
+| --------------------------------------- | ------ | ---------------------------- |
+| Agregar organizationId a IDocumentChunk | ✅     | src/models/types/ai.types.ts |
+| Modificar document-processor.service    | ✅     | Acepta organizationId param  |
+| Filtrar en rag.service.ts               | ✅     | $vectorSearch con $eq filter |
+| Actualizar ai.controller.ts             | ✅     | Pasa organizationId a RAG    |
+| Tests de seguridad                      | ✅     | 11/11 tests passing          |
 
-**Resultado:** 
+**Resultado:**
+
 - 5 archivos modificados
 - 11 tests de seguridad creados (todos passing)
 - 0 TypeScript errors
@@ -87,14 +88,15 @@ tests/integration/ai/
 
 **Problema:** Servicios hardcoded a OpenAI - sin modo local/gratis
 
-| Task | Estado | Archivo Modificado |
-|------|--------|-------------------|
-| Migrar embedding.service.ts | ✅ | Usa getAIProvider() |
-| Migrar llm.service.ts | ✅ | Usa getAIProvider() |
-| Eliminar OpenAI mocking global | ✅ | ~140 líneas eliminadas |
-| Dimensiones dinámicas | ✅ | 1536 para OpenAI, 768 para Ollama |
+| Task                           | Estado | Archivo Modificado                |
+| ------------------------------ | ------ | --------------------------------- |
+| Migrar embedding.service.ts    | ✅     | Usa getAIProvider()               |
+| Migrar llm.service.ts          | ✅     | Usa getAIProvider()               |
+| Eliminar OpenAI mocking global | ✅     | ~140 líneas eliminadas            |
+| Dimensiones dinámicas          | ✅     | 1536 para OpenAI, 768 para Ollama |
 
 **Resultado:**
+
 - 2 servicios migrados
 - ~179 líneas de código complejo eliminadas
 - Soporta OpenAI, Ollama, Mock con misma API
@@ -104,22 +106,23 @@ tests/integration/ai/
 
 **Problema:** Campo `extractedContent` se buscaba pero nunca se indexaba
 
-| Task | Estado | Archivo Modificado |
-|------|--------|-------------------|
-| Modificar indexDocument() | ✅ | Acepta extractedText param |
-| Agregar campo content | ✅ | Truncado a 100KB |
-| Indexar campos AI | ✅ | aiCategory, aiTags, aiProcessingStatus |
-| Corregir searchDocuments() | ✅ | Usa 'content' en vez de 'extractedContent' |
-| Tests | ✅ | 6/6 tests passing |
+| Task                       | Estado | Archivo Modificado                         |
+| -------------------------- | ------ | ------------------------------------------ |
+| Modificar indexDocument()  | ✅     | Acepta extractedText param                 |
+| Agregar campo content      | ✅     | Truncado a 100KB                           |
+| Indexar campos AI          | ✅     | aiCategory, aiTags, aiProcessingStatus     |
+| Corregir searchDocuments() | ✅     | Usa 'content' en vez de 'extractedContent' |
+| Tests                      | ✅     | 6/6 tests passing                          |
 
 **Resultado:**
+
 - Bug crítico corregido
 - Búsqueda por contenido ahora funcional
 - 6 tests creados (todos passing)
 
 ### Entregables Completados Fase 1
 
-```typescript
+```text
 // Servicios migrados
 src/services/ai/embedding.service.ts      ✅ Migrado a providers
 src/services/ai/llm.service.ts            ✅ Migrado a providers
@@ -153,16 +156,17 @@ docs/RFE/RFE-AI-004-FIX-ES-CONTENT-SEARCH.md     ✅ Actualizado
 
 **Requerido para:** US-201, US-202, US-203, US-205
 
-| Task | Estado | Estimado |
-|------|--------|----------|
-| Extender Document schema | ⬜ | 1h |
-| Crear job processDocumentAI | ⬜ | 2h |
-| Integrar en upload controller | ⬜ | 1h |
-| Endpoint /ai-status | ⬜ | 1h |
-| Indexar metadata AI en ES | ⬜ | 1h |
-| Tests auto-procesamiento | ⬜ | 1h |
+| Task                          | Estado | Estimado |
+| ----------------------------- | ------ | -------- |
+| Extender Document schema      | ⬜     | 1h       |
+| Crear job processDocumentAI   | ⬜     | 2h       |
+| Integrar en upload controller | ⬜     | 1h       |
+| Endpoint /ai-status           | ⬜     | 1h       |
+| Indexar metadata AI en ES     | ⬜     | 1h       |
+| Tests auto-procesamiento      | ⬜     | 1h       |
 
 **Campos a Agregar:**
+
 ```typescript
 interface IDocument {
   // ... campos existentes ...
@@ -194,15 +198,16 @@ interface IDocument {
 
 **Requerido para:** US-201, US-205
 
-| Task | Estado | Estimado |
-|------|--------|----------|
-| Definir taxonomía DOCUMENT_CATEGORIES | ⬜ | 30min |
-| Implementar classifyDocument() en providers | ⬜ | 2h |
-| Integrar en AI pipeline | ⬜ | 30min |
-| Endpoint manual clasificación | ⬜ | 1h |
-| Tests clasificación | ⬜ | 1h |
+| Task                                        | Estado | Estimado |
+| ------------------------------------------- | ------ | -------- |
+| Definir taxonomía DOCUMENT_CATEGORIES       | ⬜     | 30min    |
+| Implementar classifyDocument() en providers | ⬜     | 2h       |
+| Integrar en AI pipeline                     | ⬜     | 30min    |
+| Endpoint manual clasificación               | ⬜     | 1h       |
+| Tests clasificación                         | ⬜     | 1h       |
 
 **Categorías Propuestas:**
+
 - Contrato, Factura, Informe, Manual, Política, Presentación, Reporte Financiero, Acta de Reunión, Propuesta, Otro
 
 **Tiempo Estimado:** 5-6h
@@ -214,6 +219,7 @@ interface IDocument {
 **Estado:** ✅ COMPLETADO (ver Fase 1)
 
 **Pendiente (mejoras futuras):**
+
 - Mapping ES con analizador español
 - Highlights en resultados
 - Filtros por categoría/tags en controller
@@ -229,12 +235,12 @@ interface IDocument {
 
 #### RFE-AI-006: OCR con Tesseract ⬜
 
-| Task | Estado | Estimado |
-|------|--------|----------|
-| Instalar Tesseract | ⬜ | 30min |
-| Implementar OCR service | ⬜ | 2h |
-| Integrar en text extraction | ⬜ | 1h |
-| Tests OCR | ⬜ | 1h |
+| Task                        | Estado | Estimado |
+| --------------------------- | ------ | -------- |
+| Instalar Tesseract          | ⬜     | 30min    |
+| Implementar OCR service     | ⬜     | 2h       |
+| Integrar en text extraction | ⬜     | 1h       |
+| Tests OCR                   | ⬜     | 1h       |
 
 **Tiempo Estimado:** 4-5h
 
@@ -242,12 +248,12 @@ interface IDocument {
 
 #### RFE-AI-007: Summarization ⬜
 
-| Task | Estado | Estimado |
-|------|--------|----------|
-| Implementar summarizeDocument() | ⬜ | 1.5h |
-| Endpoint /summarize | ⬜ | 1h |
-| Integrar en auto-procesamiento | ⬜ | 30min |
-| Tests | ⬜ | 1h |
+| Task                            | Estado | Estimado |
+| ------------------------------- | ------ | -------- |
+| Implementar summarizeDocument() | ⬜     | 1.5h     |
+| Endpoint /summarize             | ⬜     | 1h       |
+| Integrar en auto-procesamiento  | ⬜     | 30min    |
+| Tests                           | ⬜     | 1h       |
 
 **Tiempo Estimado:** 3-4h
 
@@ -264,6 +270,7 @@ interface IDocument {
 **Bloqueadores:** Ninguno
 
 **Tareas:**
+
 1. Extender Document model con campos AI (1h)
 2. Crear job processDocumentAI (2h)
 3. Integrar en upload controller (1h)
@@ -277,6 +284,7 @@ interface IDocument {
 **Bloqueadores:** Ninguno
 
 **Tareas:**
+
 1. Definir taxonomía categorías (30min)
 2. Implementar classifyDocument() en providers (2h)
 3. Integrar en pipeline (30min)
@@ -295,14 +303,15 @@ interface IDocument {
 
 ### Tests
 
-| Suite | Pasando | Fallando | Total |
-|-------|---------|----------|-------|
-| AI Providers (integration) | 31 ✅ | 0 | 31 |
-| Multitenancy RAG (integration) | 11 ✅ | 0 | 11 |
-| Search Service (unit) | 6 ✅ | 0 | 6 |
-| **TOTAL** | **48** ✅ | **0** | **48** |
+| Suite                          | Pasando   | Fallando | Total  |
+| ------------------------------ | --------- | -------- | ------ |
+| AI Providers (integration)     | 31 ✅     | 0        | 31     |
+| Multitenancy RAG (integration) | 11 ✅     | 0        | 11     |
+| Search Service (unit)          | 6 ✅      | 0        | 6      |
+| **TOTAL**                      | **48** ✅ | **0**    | **48** |
 
-**Cobertura:** 
+**Cobertura:**
+
 - Fase 0: 100% ✅
 - Fase 1: 90% ✅ (falta Atlas integration test real)
 

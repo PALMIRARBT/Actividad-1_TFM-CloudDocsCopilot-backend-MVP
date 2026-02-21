@@ -48,7 +48,7 @@ npm run dev
 npm run seed:dev
 ```
 
-**That's it!** The API is now running at http://localhost:4000
+**That's it!** The API is now running at <http://localhost:4000>
 
 > **Note:** The app automatically loads `.env.example` as defaults, so no manual `.env` setup is required for development.
 
@@ -113,7 +113,7 @@ docker-compose up -d
 
 ## 📁 Project Structure
 
-```
+```text
 ├── docs/
 │   ├── openapi/          # OpenAPI/Swagger specifications
 │   └── rfc/              # Technical design documents
