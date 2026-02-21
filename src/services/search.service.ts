@@ -36,11 +36,11 @@ export interface SearchResult {
 
 /**
  * Indexar un documento en Elasticsearch
- * 
+ *
  * ACTUALIZADO (RFE-AI-004): Ahora incluye:
  * - Campo 'content' para búsqueda full-text (antes 'extractedContent' nunca se indexaba)
  * - Campos AI: aiCategory, aiTags, aiProcessingStatus
- * 
+ *
  * @param document - Documento de MongoDB a indexar
  * @param extractedText - Contenido extraído del documento (opcional)
  */
@@ -61,11 +61,11 @@ export async function indexDocument(document: IDocument, extractedText?: string)
         organization: document.organization ? document.organization.toString() : null,
         folder: document.folder ? document.folder.toString() : null,
         uploadedAt: document.uploadedAt,
-        
+
         // 🔍 NUEVO: Contenido extraído para búsqueda full-text
         // Limitado a 100KB para no saturar Elasticsearch
         content: extractedText ? extractedText.slice(0, 100000) : null,
-        
+
         // 🤖 NUEVO: Campos AI para búsqueda facetada y filtrado (RFE-AI-002, RFE-AI-004)
         aiCategory: (document as any).aiCategory || null,
         aiTags: (document as any).aiTags || [],

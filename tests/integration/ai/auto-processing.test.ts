@@ -1,7 +1,7 @@
 /**
  * Tests de Integración: Auto-procesamiento de Documentos con IA
  * RFE-AI-002: Document Model + AI Pipeline
- * 
+ *
  * Verifica que:
  * 1. Documentos se marcan como 'pending' al subir
  * 2. processDocumentAI extrae texto correctamente
@@ -56,7 +56,7 @@ describe('Auto-processing AI Integration Tests', () => {
     it('should extract text and update document status to completed', async () => {
       // Arrange: Crear documento de prueba
       const testFilePath = path.join(testFilesDir, 'test-document.txt');
-      
+
       const doc = await DocumentModel.create({
         filename: 'test-document.txt',
         originalname: 'Test Document.txt',
@@ -78,7 +78,7 @@ describe('Auto-processing AI Integration Tests', () => {
 
       // Assert: Verificar que se extrajo texto y se actualizó estado
       const updatedDoc = await DocumentModel.findById(doc._id).select('+extractedText');
-      
+
       expect(updatedDoc).toBeTruthy();
       expect(updatedDoc!.aiProcessingStatus).toBe('completed');
       expect(updatedDoc!.extractedText).toBeTruthy();
@@ -108,7 +108,7 @@ describe('Auto-processing AI Integration Tests', () => {
 
       // Assert: Estado debe ser 'completed' pero sin texto extraído
       const updatedDoc = await DocumentModel.findById(doc._id).select('+extractedText');
-      
+
       expect(updatedDoc!.aiProcessingStatus).toBe('completed');
       expect(updatedDoc!.extractedText).toBeNull();
       expect(updatedDoc!.aiProcessedAt).toBeInstanceOf(Date);
@@ -138,7 +138,7 @@ describe('Auto-processing AI Integration Tests', () => {
 
       // Assert: Estado debe ser 'failed' con mensaje de error
       const updatedDoc = await DocumentModel.findById(doc._id);
-      
+
       expect(updatedDoc!.aiProcessingStatus).toBe('failed');
       expect(updatedDoc!.aiError).toBeTruthy();
       expect(updatedDoc!.aiError).toContain('not found'); // Error de archivo no encontrado
@@ -168,7 +168,7 @@ describe('Auto-processing AI Integration Tests', () => {
 
       // Assert: No debe cambiar nada
       const updatedDoc = await DocumentModel.findById(doc._id);
-      
+
       expect(updatedDoc!.aiProcessingStatus).toBe('completed');
       expect(updatedDoc!.aiProcessedAt).toEqual(originalProcessedAt);
     });
@@ -176,7 +176,7 @@ describe('Auto-processing AI Integration Tests', () => {
     it('should handle documents with no organization (skip chunk processing)', async () => {
       // Arrange: Documento sin organización
       const testFilePath = path.join(testFilesDir, 'test-document.txt');
-      
+
       const doc = await DocumentModel.create({
         filename: 'personal-doc.txt',
         originalname: 'Personal Doc.txt',
@@ -195,7 +195,7 @@ describe('Auto-processing AI Integration Tests', () => {
 
       // Assert: Debe completarse pero sin procesar chunks
       const updatedDoc = await DocumentModel.findById(doc._id).select('+extractedText');
-      
+
       expect(updatedDoc!.aiProcessingStatus).toBe('completed');
       expect(updatedDoc!.extractedText).toBeTruthy();
       expect(updatedDoc!.aiProcessedAt).toBeInstanceOf(Date);
@@ -206,7 +206,11 @@ describe('Auto-processing AI Integration Tests', () => {
     it('should support common document types', () => {
       expect(textExtractionService.isSupportedMimeType('text/plain')).toBe(true);
       expect(textExtractionService.isSupportedMimeType('application/pdf')).toBe(true);
-      expect(textExtractionService.isSupportedMimeType('application/vnd.openxmlformats-officedocument.wordprocessingml.document')).toBe(true);
+      expect(
+        textExtractionService.isSupportedMimeType(
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+      ).toBe(true);
       expect(textExtractionService.isSupportedMimeType('application/msword')).toBe(true);
       expect(textExtractionService.isSupportedMimeType('text/markdown')).toBe(true);
     });
@@ -223,7 +227,7 @@ describe('Auto-processing AI Integration Tests', () => {
     it('should track processing status through lifecycle', async () => {
       // Arrange: Documento inicial
       const testFilePath = path.join(testFilesDir, 'test-document.txt');
-      
+
       const doc = await DocumentModel.create({
         filename: 'lifecycle-test.txt',
         originalname: 'Lifecycle Test.txt',

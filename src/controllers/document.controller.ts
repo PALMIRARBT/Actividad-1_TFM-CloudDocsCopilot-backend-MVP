@@ -521,10 +521,7 @@ export async function getAIStatus(
     if (String(doc.uploadedBy) !== req.user!.id && !doc.isSharedWith(req.user!.id)) {
       // Si el documento pertenece a una organización, verificar membership
       if (doc.organization) {
-        const hasMembership = await hasActiveMembership(
-          req.user!.id,
-          doc.organization.toString()
-        );
+        const hasMembership = await hasActiveMembership(req.user!.id, doc.organization.toString());
         if (!hasMembership) {
           return next(new HttpError(403, 'Access denied'));
         }

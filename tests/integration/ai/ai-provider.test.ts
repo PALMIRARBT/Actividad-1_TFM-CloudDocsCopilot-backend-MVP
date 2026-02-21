@@ -1,6 +1,6 @@
 /**
  * Tests de integración para los proveedores de IA
- * 
+ *
  * Estos tests verifican que:
  * - El factory selecciona el proveedor correcto según AI_PROVIDER
  * - MockProvider funciona correctamente (para tests rápidos)
@@ -116,7 +116,9 @@ describe('MockAI Provider', () => {
 
   it('should summarize document', async () => {
     const provider = getAIProvider();
-    const result = await provider.summarizeDocument('Este es un documento largo con mucho contenido importante.');
+    const result = await provider.summarizeDocument(
+      'Este es un documento largo con mucho contenido importante.'
+    );
 
     expect(result.summary).toBeTruthy();
     expect(result.keyPoints).toBeInstanceOf(Array);

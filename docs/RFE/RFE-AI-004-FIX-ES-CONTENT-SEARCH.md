@@ -2,16 +2,16 @@
 
 ## 📋 Resumen
 
-| Campo | Valor |
-|-------|-------|
-| **Fecha** | Febrero 16, 2026 |
-| **Estado** | ✅ Implementado |
+| Campo                   | Valor                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| **Fecha**               | Febrero 16, 2026                                                                 |
+| **Estado**              | ✅ Implementado                                                                  |
 | **Issues relacionadas** | [#51 (US-204)](https://github.com/CloudDocs-Copilot/cloud-docs-web-ui/issues/51) |
-| **Épica** | Inteligencia Artificial (Core MVP) |
-| **Prioridad** | 🔴 Crítica (bug — búsqueda por contenido rota) |
-| **Estimación** | 5h |
-| **Tiempo real** | 2h |
-| **Repositorio** | `cloud-docs-api-service` |
+| **Épica**               | Inteligencia Artificial (Core MVP)                                               |
+| **Prioridad**           | 🔴 Crítica (bug — búsqueda por contenido rota)                                   |
+| **Estimación**          | 5h                                                                               |
+| **Tiempo real**         | 2h                                                                               |
+| **Repositorio**         | `cloud-docs-api-service`                                                         |
 
 ---
 
@@ -82,12 +82,12 @@ async indexDocument(document: IDocumentPopulated, extractedText?: string): Promi
       uploadedBy: document.uploadedBy?.toString(),
       folder: document.folder?.toString() || null,
       createdAt: document.createdAt,
-      
+
       // NUEVO: contenido extraído para búsqueda full-text
-      content: extractedText 
+      content: extractedText
         ? extractedText.slice(0, 100000)  // Limitar a 100KB para ES
         : null,
-      
+
       // NUEVO: campos AI para búsqueda facetada
       aiCategory: document.aiCategory || null,
       aiTags: document.aiTags || [],
@@ -112,7 +112,7 @@ async indexDocument(document: IDocumentPopulated, extractedText?: string): Promi
 
 async ensureMapping(): Promise<void> {
   const indexExists = await this.esClient.indices.exists({ index: this.indexName });
-  
+
   if (!indexExists) {
     await this.esClient.indices.create({
       index: this.indexName,
@@ -142,15 +142,15 @@ async ensureMapping(): Promise<void> {
             uploadedBy: { type: 'keyword' },
             folder: { type: 'keyword' },
             createdAt: { type: 'date' },
-            
+
             // NUEVO: contenido full-text con análisis español
-            content: { 
-              type: 'text', 
+            content: {
+              type: 'text',
               analyzer: 'spanish_analyzer',
               // No almacenar el texto original para ahorrar espacio
               store: false,
             },
-            
+
             // NUEVO: campos AI
             aiCategory: { type: 'keyword' },
             aiTags: { type: 'keyword' },  // keyword para filtros exactos
@@ -169,7 +169,7 @@ async ensureMapping(): Promise<void> {
 // Modificar src/services/search.service.ts → searchDocuments()
 
 async searchDocuments(
-  searchTerm: string, 
+  searchTerm: string,
   organizationId: string,
   filters?: { category?: string; tags?: string[]; status?: string }
 ): Promise<SearchResult[]> {
@@ -280,10 +280,10 @@ async updateDocumentIndex(
 
 ### Antes (roto)
 
-```
+```text
 Upload → indexDocument(metadata only) → ES tiene filename, mimeType
                                         NO tiene contenido
-                                        
+
 Search("factura 12345") → multi_match en [filename, extractedContent]
                           → extractedContent NO EXISTE en el índice
                           → Solo encuentra si filename contiene "factura"
@@ -291,7 +291,7 @@ Search("factura 12345") → multi_match en [filename, extractedContent]
 
 ### Después (correcto)
 
-```
+```text
 Upload → indexDocument(metadata) → ES tiene filename, mimeType
                                    (content todavía null)
 
@@ -321,7 +321,7 @@ async search(req: AuthRequest, res: Response) {
   try {
     const { q, category, tags, status } = req.query;
     const organizationId = req.user?.organizationId;
-    
+
     if (!q && !category && !tags) {
       return res.status(400).json({ error: 'Search query or filters required' });
     }
@@ -401,24 +401,25 @@ describe('ES Content Indexing', () => {
 
 ## ✅ Criterios de Aceptación
 
-| # | Criterio | Estado |
-|---|----------|--------|
-| 1 | `indexDocument()` incluye campo `content` con texto extraído | ✅ |
-| 2 | `searchDocuments()` busca en `content` (no `extractedContent`) | ✅ |
-| 3 | Búsqueda por contenido del documento retorna resultados correctos | ✅ |
-| 4 | `aiCategory` y `aiTags` se indexan en ES | ✅ |
-| 5 | Búsqueda soporta filtros por categoría y tags | ⏸️ Futuro |
-| 6 | `updateDocumentIndex()` permite re-indexación parcial tras pipeline AI | ⏸️ Futuro |
-| 7 | Content se trunca a 100KB en ES para no explotar el índice | ✅ |
-| 8 | La respuesta de búsqueda excluye `content` del body (_source) | ⏸️ Futuro |
-| 9 | Highlights devuelven fragmentos relevantes del contenido | ⏸️ Futuro |
-| 10 | ES mapping incluye analizador español para `content` | ⏸️ Futuro |
+| #   | Criterio                                                               | Estado    |
+| --- | ---------------------------------------------------------------------- | --------- |
+| 1   | `indexDocument()` incluye campo `content` con texto extraído           | ✅        |
+| 2   | `searchDocuments()` busca en `content` (no `extractedContent`)         | ✅        |
+| 3   | Búsqueda por contenido del documento retorna resultados correctos      | ✅        |
+| 4   | `aiCategory` y `aiTags` se indexan en ES                               | ✅        |
+| 5   | Búsqueda soporta filtros por categoría y tags                          | ⏸️ Futuro |
+| 6   | `updateDocumentIndex()` permite re-indexación parcial tras pipeline AI | ⏸️ Futuro |
+| 7   | Content se trunca a 100KB en ES para no explotar el índice             | ✅        |
+| 8   | La respuesta de búsqueda excluye `content` del body (\_source)         | ⏸️ Futuro |
+| 9   | Highlights devuelven fragmentos relevantes del contenido               | ⏸️ Futuro |
+| 10  | ES mapping incluye analizador español para `content`                   | ⏸️ Futuro |
 
 ---
 
 ## 🚀 Implementación Realizada
 
 ### Resumen
+
 Se corrigió el bug crítico donde el campo `extractedContent` se buscaba pero nunca se indexaba. Ahora el contenido extraído se indexa correctamente en el campo `content` junto con los campos AI.
 
 ### Cambios Realizados
@@ -426,6 +427,7 @@ Se corrigió el bug crítico donde el campo `extractedContent` se buscaba pero n
 #### 1. `src/services/search.service.ts`
 
 **`indexDocument()` - Actualizado**
+
 ```typescript
 export async function indexDocument(document: IDocument, extractedText?: string): Promise<void> {
   // ...
@@ -442,11 +444,11 @@ export async function indexDocument(document: IDocument, extractedText?: string)
       organization: document.organization ? document.organization.toString() : null,
       folder: document.folder ? document.folder.toString() : null,
       uploadedAt: document.uploadedAt,
-      
+
       // 🔍 NUEVO: Contenido extraído para búsqueda full-text
       // Limitado a 100KB para no saturar Elasticsearch
       content: extractedText ? extractedText.slice(0, 100000) : null,
-      
+
       // 🤖 NUEVO: Campos AI para búsqueda facetada y filtrado
       aiCategory: (document as any).aiCategory || null,
       aiTags: (document as any).aiTags || [],
@@ -457,17 +459,19 @@ export async function indexDocument(document: IDocument, extractedText?: string)
 ```
 
 **`searchDocuments()` - Corregido**
+
 ```typescript
 // ANTES (bug):
-fields: ['filename^3', 'originalname^2', 'extractedContent']
+fields: ['filename^3', 'originalname^2', 'extractedContent'];
 
 // DESPUÉS (corregido):
-fields: ['filename^3', 'originalname^2', 'content']
+fields: ['filename^3', 'originalname^2', 'content'];
 ```
 
 #### 2. `tests/unit/services/search.service.test.ts`
 
 **Tests Añadidos**
+
 ```typescript
 // ✅ Verifica que extractedText se indexa en campo 'content'
 it('indexDocument includes content field when extractedText is provided', async () => {
@@ -517,6 +521,7 @@ Tests:       6 passed, 6 total
 ### Trabajo Futuro
 
 Los siguientes criterios quedan como mejoras futuras:
+
 - **Filtros por categoría/tags**: Requiere actualizar `search.controller.ts` y frontend
 - **Actualización parcial** (`updateDocumentIndex()`): Para re-indexación tras AI pipeline
 - **Highlights**: Para mostrar fragmentos relevantes en resultados
@@ -540,7 +545,7 @@ Los siguientes criterios quedan como mejoras futuras:
 
 ## 📁 Archivos Afectados
 
-```
+```text
 src/services/search.service.ts         ← MODIFICAR: indexDocument, searchDocuments, nuevo updateDocumentIndex
 src/controllers/search.controller.ts   ← MODIFICAR: añadir soporte para filtros
 src/routes/search.routes.ts            ← SIN CAMBIOS (query params se pasan automáticamente)
@@ -550,7 +555,7 @@ src/routes/search.routes.ts            ← SIN CAMBIOS (query params se pasan au
 
 ## 🔗 RFEs Relacionadas
 
-| RFE | Relación |
-|-----|----------|
+| RFE        | Relación                                               |
+| ---------- | ------------------------------------------------------ |
 | RFE-AI-002 | El AI Pipeline llama `updateDocumentIndex()` en paso 4 |
 | RFE-AI-003 | Los campos `aiCategory` y `aiTags` que se indexan aquí |

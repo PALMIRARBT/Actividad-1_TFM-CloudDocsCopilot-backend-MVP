@@ -72,7 +72,8 @@ describe('Rate Limit Middleware', () => {
       };
 
       // Should fallback to 'unknown' when no IP is available
-      const ip = (reqWithoutIp as any).ip || (reqWithoutIp.socket as any).remoteAddress || 'unknown';
+      const ip =
+        (reqWithoutIp as any).ip || (reqWithoutIp.socket as any).remoteAddress || 'unknown';
       expect(ip).toBe('unknown');
     });
   });
@@ -100,7 +101,7 @@ describe('Rate Limit Middleware', () => {
 
     it('should handle failed login attempts', () => {
       mockResponse.statusCode = 401;
-      
+
       // Failed authentication should be counted
       expect(mockResponse.statusCode).toBe(401);
     });
@@ -108,7 +109,7 @@ describe('Rate Limit Middleware', () => {
     it('should track per-IP authentication attempts', () => {
       const req1 = { ...mockRequest, ip: '192.168.1.1' };
       const req2 = { ...mockRequest, ip: '192.168.1.2' };
-      
+
       expect(req1.ip).toBe('192.168.1.1');
       expect(req2.ip).toBe('192.168.1.2');
     });
@@ -131,28 +132,30 @@ describe('Rate Limit Middleware', () => {
         method: 'POST',
         path: '/api/documents'
       };
-      
+
       expect(postRequest.method).toBe('POST');
       expect(postRequest.path).toContain('/api/');
     });
 
     it('should track creation attempts per IP', () => {
       const reqWithIp = { ...mockRequest, ip: '10.0.0.1' };
-      
+
       // Should identify unique IPs for resource creation
       expect(reqWithIp.ip).toBeDefined();
     });
 
     it('should prevent resource creation abuse', () => {
       // Simulating multiple rapid POST requests
-      const requests = Array(5).fill(null).map((_, i) => ({
-        ip: '10.0.0.1',
-        method: 'POST',
-        timestamp: Date.now() + i * 100,
-        headers: {},
-        socket: { remoteAddress: '10.0.0.1' }
-      }));
-      
+      const requests = Array(5)
+        .fill(null)
+        .map((_, i) => ({
+          ip: '10.0.0.1',
+          method: 'POST',
+          timestamp: Date.now() + i * 100,
+          headers: {},
+          socket: { remoteAddress: '10.0.0.1' }
+        }));
+
       expect(requests.length).toBe(5);
       expect(requests.every(r => r.method === 'POST')).toBe(true);
     });
@@ -170,32 +173,34 @@ describe('Rate Limit Middleware', () => {
         method: 'POST',
         headers: { 'content-type': 'multipart/form-data' }
       };
-      
+
       expect(uploadRequest.method).toBe('POST');
       expect(uploadRequest.headers['content-type']).toContain('multipart/form-data');
     });
 
     it('should track upload attempts per IP', () => {
       const reqWithIp = { ...mockRequest, ip: '172.16.0.1' };
-      
+
       expect(reqWithIp.ip).toBeDefined();
     });
 
     it('should prevent upload spam', () => {
       // Should limit the number of uploads in a time window
-      const uploadRequests = Array(3).fill(null).map(() => ({
-        method: 'POST',
-        headers: { 'content-type': 'multipart/form-data' },
-        socket: { remoteAddress: '172.16.0.1' }
-      }));
-      
+      const uploadRequests = Array(3)
+        .fill(null)
+        .map(() => ({
+          method: 'POST',
+          headers: { 'content-type': 'multipart/form-data' },
+          socket: { remoteAddress: '172.16.0.1' }
+        }));
+
       expect(uploadRequests.length).toBe(3);
     });
 
     it('should differentiate upload endpoints from other requests', () => {
       const uploadRequest = { path: '/api/documents/upload' };
       const regularRequest = { path: '/api/documents' };
-      
+
       expect(uploadRequest.path).toContain('upload');
       expect(regularRequest.path).not.toContain('upload');
     });
@@ -209,34 +214,34 @@ describe('Rate Limit Middleware', () => {
 
     it('should create a custom rate limiter with specified config', () => {
       const customLimiter = createCustomRateLimiter(1, 50);
-      
+
       expect(customLimiter).toBeDefined();
       expect(typeof customLimiter).toBe('function');
     });
 
     it('should allow custom window durations', () => {
       const limiter = createCustomRateLimiter(5, 100);
-      
+
       expect(limiter).toBeDefined();
     });
 
     it('should allow custom request limits', () => {
       const limiter = createCustomRateLimiter(15, 25);
-      
+
       expect(limiter).toBeDefined();
     });
 
     it('should support custom messages', () => {
       const customMessage = 'Custom rate limit exceeded';
       const limiter = createCustomRateLimiter(1, 10, customMessage);
-      
+
       expect(limiter).toBeDefined();
     });
 
     it('should allow configuration override', () => {
       const limiter1 = createCustomRateLimiter(1, 10);
       const limiter2 = createCustomRateLimiter(2, 20);
-      
+
       expect(limiter1).toBeDefined();
       expect(limiter2).toBeDefined();
       expect(limiter1).not.toBe(limiter2);
@@ -251,7 +256,7 @@ describe('Rate Limit Middleware', () => {
 
     it('should handle authenticated user requests', () => {
       const authRequest = { ...mockRequest, user: { id: 'user123', email: 'test@example.com' } };
-      
+
       expect(authRequest.user).toBeDefined();
       expect(authRequest.user.id).toBe('user123');
     });
@@ -259,21 +264,21 @@ describe('Rate Limit Middleware', () => {
     it('should track limits per user when authenticated', () => {
       const user1Request = { ...mockRequest, user: { id: 'user1' } };
       const user2Request = { ...mockRequest, user: { id: 'user2' } };
-      
+
       expect(user1Request.user.id).toBe('user1');
       expect(user2Request.user.id).toBe('user2');
     });
 
     it('should fallback to IP when user is not authenticated', () => {
       const unauthRequest = { ...mockRequest, ip: '192.168.1.100' };
-      
+
       const key = (unauthRequest as any).user?.id || unauthRequest.ip;
       expect(key).toBe('192.168.1.100');
     });
 
     it('should handle requests without user or IP', () => {
       const minimalRequest = { socket: {}, headers: {} };
-      
+
       const key = (minimalRequest as any).user?.id || (minimalRequest as any).ip || 'unknown';
       expect(key).toBe('unknown');
     });
@@ -287,13 +292,13 @@ describe('Rate Limit Middleware', () => {
         error: 'Too Many Requests',
         message: 'Rate limit exceeded'
       });
-      
+
       expect(statusMock).toHaveBeenCalledWith(429);
     });
 
     it('should include retry-after header', () => {
       (mockResponse as any).getHeader = jest.fn().mockReturnValue('900');
-      
+
       const retryAfter = mockResponse.getHeader!('Retry-After');
       expect(retryAfter).toBe('900');
     });
@@ -304,7 +309,7 @@ describe('Rate Limit Middleware', () => {
         message: 'You have exceeded the allowed request limit. Please wait before trying again.',
         retryAfter: '900'
       };
-      
+
       expect(errorResponse.error).toBe('Too Many Requests');
       expect(errorResponse.message).toContain('exceeded');
       expect(errorResponse.retryAfter).toBeDefined();
@@ -312,20 +317,23 @@ describe('Rate Limit Middleware', () => {
 
     it('should set RateLimit-* headers', () => {
       const setHeader = mockResponse.setHeader as jest.Mock;
-      
+
       // Standard headers should be included
       setHeader('RateLimit-Limit', '100');
       setHeader('RateLimit-Remaining', '95');
       setHeader('RateLimit-Reset', Date.now() + 900000);
-      
+
       expect(setHeader).toHaveBeenCalled();
     });
 
     it('should not set legacy X-RateLimit-* headers', () => {
       const setHeader = mockResponse.setHeader as jest.Mock;
-      
+
       // Legacy headers should not be set
-      expect(setHeader).not.toHaveBeenCalledWith(expect.stringMatching(/^X-RateLimit-/), expect.anything());
+      expect(setHeader).not.toHaveBeenCalledWith(
+        expect.stringMatching(/^X-RateLimit-/),
+        expect.anything()
+      );
     });
   });
 });

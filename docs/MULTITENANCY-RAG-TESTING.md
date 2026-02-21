@@ -37,6 +37,7 @@ npm test -- tests/integration/ai/multitenancy-rag.test.ts
 ```
 
 **Resultado esperado:**
+
 ```
 Test Suites: 1 passed, 1 total
 Tests:       11 passed, 11 total
@@ -50,11 +51,13 @@ Time:        ~6-7 seconds
 **Implicación:** Los tests unitarios actuales NO pueden verificar que las búsquedas vectoriales realmente filtren por organizationId en tiempo de ejecución.
 
 **Lo que SÍ verificamos:**
+
 - ✅ El código pasa organizationId correctamente
 - ✅ Los chunks se guardan con organizationId
 - ✅ Las validaciones de parámetros funcionan
 
 **Lo que NO podemos verificar sin Atlas:**
+
 - ❌ Búsquedas vectoriales reales con filtros
 - ❌ Que $vectorSearch + filtro `{ organizationId: { $eq: org1 } }` funciona
 - ❌ Que no hay cross-org data leak en producción

@@ -13,7 +13,7 @@ import type {
 
 /**
  * Implementación del proveedor OpenAI
- * 
+ *
  * Usa la API de OpenAI para embeddings y chat completions.
  * Requiere OPENAI_API_KEY en las variables de entorno.
  */

@@ -4,7 +4,7 @@
 
 **Fecha:** Diciembre 2024  
 **Prioridad:** ALTA  
-**TypeScript Errors:** 0 ✅  
+**TypeScript Errors:** 0 ✅
 
 ---
 
@@ -15,6 +15,7 @@
 **Archivo:** `src/services/ai/embedding.service.ts`
 
 **Antes (OpenAI hardcoded):**
+
 ```typescript
 import OpenAIClient from '../../configurations/openai-config';
 
@@ -32,6 +33,7 @@ async generateEmbedding(text: string): Promise<number[]> {
 ```
 
 **Después (Provider abstraction):**
+
 ```typescript
 import { getAIProvider } from './providers';
 
@@ -57,6 +59,7 @@ getDimensions(): number {
 ```
 
 **Beneficios:**
+
 - ✅ Soporta OpenAI, Ollama y Mock sin cambios de código
 - ✅ Dimensiones dinámicas (1536 para OpenAI, 768 para Ollama)
 - ✅ Sin lógica hardcoded de OpenAI
@@ -71,37 +74,39 @@ getDimensions(): number {
 **Archivo:** `src/services/ai/llm.service.ts`
 
 **Antes (OpenAI hardcoded con mocking complejo):**
+
 ```typescript
 async generateResponse(prompt: string, options?: IGenerationOptions): Promise<string> {
   const envForce = process.env.USE_OPENAI_GLOBAL_MOCK === 'true';
   const globalCreate = (global as any).__OPENAI_CREATE__;
-  
+
   let openai: any;
   if (!envForce) {
     const OpenAIClientRuntime = require('../../configurations/openai-config').default;
     openai = OpenAIClientRuntime.getInstance();
   }
-  
+
   // ... lógica compleja de mocking
   // ... construcción manual de mensajes
   // ... manejo hardcoded de errores de OpenAI
-  
+
   const response = useGlobal
     ? await globalCreate({ model, messages, temperature, ... })
     : await openai.chat.completions.create({ model, messages, temperature, ... });
-    
+
   return response.choices[0]?.message?.content.trim();
 }
 ```
 
 **Después (Provider abstraction):**
+
 ```typescript
 import { getAIProvider } from './providers';
 
 async generateResponse(prompt: string, options?: IGenerationOptions): Promise<string> {
   const provider = getAIProvider();
   console.log(`[llm] Generating response with provider ${provider.name}...`);
-  
+
   const result = await provider.generateResponse(prompt, options);
   return result.response.trim();
 }
@@ -112,6 +117,7 @@ getModel(): string {
 ```
 
 **Beneficios:**
+
 - ✅ Eliminada toda la lógica de mocking compleja (USE_OPENAI_GLOBAL_MOCK, etc.)
 - ✅ Sin requires dinámicos ni chequeos de global
 - ✅ Código simplificado de 289 → ~150 líneas
@@ -130,6 +136,7 @@ getModel(): string {
 **Total:** 2 archivos (ambos simplificados significativamente)
 
 **Consumers (SIN cambios necesarios):**
+
 - ✅ `src/services/document-processor.service.ts` - API pública idéntica
 - ✅ `src/services/ai/rag.service.ts` - API pública idéntica
 - ✅ `src/controllers/ai.controller.ts` - No requiere cambios
@@ -142,12 +149,14 @@ getModel(): string {
 ### Tipos de Retorno Actualizados
 
 **Embedding Service:**
+
 - `generateEmbedding()`: Ahora extrae `result.embedding` de `EmbeddingResult`
 - `generateEmbeddings()`: Map sobre `results` para extraer `.embedding` de cada `EmbeddingResult`
 - `getModel()`: Usa `provider.getEmbeddingModel()` en lugar de constante
 - `getDimensions()`: Usa `provider.getEmbeddingDimensions()` (dinámico según provider)
 
 **LLM Service:**
+
 - `generateResponse()`: Extrae `result.response` de `ChatResult`
 - `getModel()`: Usa `provider.getChatModel()` en lugar de constante
 - `generateResponseStream()`: Simplificado para simular streaming con respuesta completa
@@ -155,6 +164,7 @@ getModel(): string {
 ### Manejo de Errores
 
 **Antes:**
+
 ```typescript
 // Errores hardcoded de OpenAI
 if (errorMessage.includes('API key')) {
@@ -166,10 +176,11 @@ if (errorMessage.includes('API key')) {
 ```
 
 **Después:**
+
 ```typescript
 // Providers lanzan HttpError directamente
 if (error instanceof HttpError) {
-  throw error;  // Re-throw provider errors
+  throw error; // Re-throw provider errors
 }
 // Solo error genérico si no viene del provider
 throw new HttpError(500, `Failed to generate...: ${errorMessage}`);
@@ -180,6 +191,7 @@ throw new HttpError(500, `Failed to generate...: ${errorMessage}`);
 ## Tests Esperados
 
 ### Tests que NO necesitan cambios:
+
 - ✅ `tests/unit/services/embedding.service.test.ts` - API pública mantenida
 - ✅ `tests/unit/services/embedding.service.error-validation.test.ts` - Validaciones iguales
 - ✅ `tests/unit/services/document-processor.service.test.ts` - Usa embeddingService.generateEmbeddings()
@@ -187,11 +199,13 @@ throw new HttpError(500, `Failed to generate...: ${errorMessage}`);
 - ✅ `tests/integration/ai/multitenancy-rag.test.ts` - Usa MockProvider automáticamente
 
 ### Tests que PUEDEN necesitar ajustes:
+
 - ⚠️ Tests que mockean OpenAIClient directamente
 - ⚠️ Tests que verifican llamadas específicas a openai.embeddings.create
 - ⚠️ Tests de llm.service que usan USE_OPENAI_GLOBAL_MOCK
 
 ### Estrategia de Mocking Actualizada:
+
 ```typescript
 // ANTES (complicado):
 global.__OPENAI_CREATE__ = jest.fn().mockResolvedValue(...);
@@ -230,13 +244,13 @@ resetAIProvider(); // Mock provider automático
 
 ## Compatibilidad con Providers
 
-| Feature | OpenAI | Ollama | Mock |
-|---------|--------|--------|------|
-| generateEmbedding | ✅ | ✅ | ✅ |
-| generateEmbeddings | ✅ | ✅ | ✅ |
-| generateResponse | ✅ | ✅ | ✅ |
-| Dimensiones | 1536 | 768 | 1536 |
-| Streaming (TODO) | Nativo | Emulado | Emulado |
+| Feature            | OpenAI | Ollama  | Mock    |
+| ------------------ | ------ | ------- | ------- |
+| generateEmbedding  | ✅     | ✅      | ✅      |
+| generateEmbeddings | ✅     | ✅      | ✅      |
+| generateResponse   | ✅     | ✅      | ✅      |
+| Dimensiones        | 1536   | 768     | 1536    |
+| Streaming (TODO)   | Nativo | Emulado | Emulado |
 
 ---
 
@@ -263,6 +277,6 @@ resetAIProvider(); // Mock provider automático
 
 **Implementado por:** Claude/Copilot  
 **Estado:** LISTO PARA TESTING ✅  
-**TypeScript:** 0 errores ✅  
+**TypeScript:** 0 errores ✅
 
 **Tiempo estimado ahorrado por migración:** 8-10 horas en futuro desarrollo/mantenimiento

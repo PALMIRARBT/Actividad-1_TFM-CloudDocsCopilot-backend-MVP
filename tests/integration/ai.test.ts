@@ -63,7 +63,12 @@ describeOrSkip('AI Endpoints', () => {
 
   afterEach(async () => {
     // Limpiar archivos de prueba
-    const testFilePath = path.join(process.cwd(), 'storage', organizationId?.toString() || 'test-org', 'test-ai-doc.txt');
+    const testFilePath = path.join(
+      process.cwd(),
+      'storage',
+      organizationId?.toString() || 'test-org',
+      'test-ai-doc.txt'
+    );
     if (fs.existsSync(testFilePath)) {
       fs.unlinkSync(testFilePath);
     }

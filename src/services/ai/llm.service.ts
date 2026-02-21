@@ -4,15 +4,15 @@ import { getAIProvider } from './providers';
 
 /**
  * Servicio para interactuar con Large Language Models (LLMs)
- * 
+ *
  * MIGRADO A PROVIDER ABSTRACTION (RFE-AI-001)
- * 
+ *
  * Este servicio ahora delega toda la lógica de generación de texto
  * al provider configurado (OpenAI, Ollama, Mock, etc.), permitiendo:
  * - Cambiar de proveedor sin modificar código
  * - Soportar múltiples modelos de chat
  * - Configuración dinámica según provider
- * 
+ *
  * Proveedores soportados:
  * - OpenAI: gpt-4o-mini, gpt-4o, gpt-4-turbo, etc.
  * - Ollama: llama3.2:3b, llama3.1, mistral, etc.
@@ -21,7 +21,7 @@ import { getAIProvider } from './providers';
 export class LlmService {
   /**
    * Genera una respuesta usando el modelo de chat del provider activo
-   * 
+   *
    * Delega al provider configurado via AI_PROVIDER env var.
    *
    * @param prompt - Prompt o pregunta para el modelo
@@ -38,9 +38,7 @@ export class LlmService {
     try {
       const provider = getAIProvider();
 
-      console.log(
-        `[llm] Generating response with provider ${provider.name}...`
-      );
+      console.log(`[llm] Generating response with provider ${provider.name}...`);
 
       // Delegar al provider - maneja toda la lógica de generación
       const result = await provider.generateResponse(prompt, options);
@@ -67,7 +65,7 @@ export class LlmService {
   /**
    * Genera una respuesta con streaming (para futuras implementaciones)
    * Útil para mostrar respuestas en tiempo real
-   * 
+   *
    * NOTA: Actualmente NO implementado en todos los providers.
    * Solo OpenAI soporta streaming nativo.
    * Otros providers pueden simular streaming procesando la respuesta completa.
@@ -126,7 +124,7 @@ export class LlmService {
 
   /**
    * Obtiene el modelo de chat utilizado por el provider activo
-   * 
+   *
    * Modelos según provider:
    * - OpenAI: gpt-4o-mini, gpt-4o, gpt-4-turbo, etc.
    * - Ollama: llama3.2:3b, llama3.1, mistral, etc.
@@ -141,7 +139,7 @@ export class LlmService {
 
   /**
    * Obtiene la temperatura por defecto del provider activo
-   * 
+   *
    * La temperatura controla la aleatoriedad de las respuestas:
    * - 0.0: Más determinístico y conservador
    * - 1.0: Más creativo y aleatorio
@@ -156,7 +154,7 @@ export class LlmService {
 
   /**
    * Obtiene el límite de tokens por defecto del provider activo
-   * 
+   *
    * Los tokens limitan la longitud de la respuesta generada.
    *
    * @returns Máximo de tokens (típicamente 1000)

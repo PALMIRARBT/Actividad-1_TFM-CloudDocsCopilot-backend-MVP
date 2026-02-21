@@ -1,8 +1,17 @@
 import { writeTestFile, buildDocumentObject } from '../helpers/fixtureBuilder';
 
 export async function createDocumentModel(DocumentModel: any, opts: any = {}) {
-  const file = writeTestFile({ organization: opts.organization, filename: opts.filename, content: opts.content || 'builder-content' });
-  const doc = buildDocumentObject({ ...opts, path: file.path, filename: file.filename, size: file.size });
+  const file = writeTestFile({
+    organization: opts.organization,
+    filename: opts.filename,
+    content: opts.content || 'builder-content'
+  });
+  const doc = buildDocumentObject({
+    ...opts,
+    path: file.path,
+    filename: file.filename,
+    size: file.size
+  });
   return DocumentModel.create(doc);
 }
 

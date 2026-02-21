@@ -568,7 +568,7 @@ describe('Document Controller', () => {
 
     it('should handle concurrent operations', async () => {
       mockRequest.params = { id: mockDocId };
-      
+
       const mockDocument = { _id: mockDocId, filename: 'test.pdf' };
       (documentService.findDocumentById as jest.Mock).mockResolvedValue(mockDocument);
 

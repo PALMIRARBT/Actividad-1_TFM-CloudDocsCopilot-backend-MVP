@@ -159,7 +159,7 @@ La búsqueda vectorial en MongoDB Atlas (`rag.service.ts`) **NO filtra por `orga
 export interface IDocumentChunk {
   _id?: ObjectId;
   documentId: string;
-  organizationId: string;  // 🆕 NUEVO CAMPO
+  organizationId: string; // 🆕 NUEVO CAMPO
   content: string;
   embedding: number[];
   createdAt: Date;
@@ -256,14 +256,14 @@ async search(
 ```typescript
 export async function askQuestion(req, res, next) {
   const { question, organizationId } = req.body;
-  
+
   // Validar membership (ya existe)
   const isActiveMember = await hasActiveMembership(req.user!.id, organizationId);
-  
+
   // Pasar organizationId a RAG
   const response = await ragService.answerQuestion(
     question,
-    organizationId  // 🆕 PASAR ORG ID
+    organizationId // 🆕 PASAR ORG ID
   );
 }
 ```
@@ -280,18 +280,18 @@ describe('RAG Multitenancy Security', () => {
     // Crear 2 orgs
     const org1 = await OrganizationBuilder.create();
     const org2 = await OrganizationBuilder.create();
-    
+
     // Documento en org1
     const doc1 = await DocumentBuilder.create({ organization: org1._id });
     await documentProcessor.processDocument(doc1._id, org1._id, 'Secret data org1');
-    
+
     // Documento en org2
     const doc2 = await DocumentBuilder.create({ organization: org2._id });
     await documentProcessor.processDocument(doc2._id, org2._id, 'Secret data org2');
-    
+
     // Buscar desde org1
     const results = await ragService.search('secret', org1._id.toString());
-    
+
     // Verificar que SOLO retorna chunks de org1
     expect(results.every(r => r.chunk.organizationId === org1._id.toString())).toBe(true);
   });
@@ -334,7 +334,7 @@ class EmbeddingService {
 ```typescript
 class EmbeddingService {
   async generateEmbedding(text: string): Promise<number[]> {
-    const provider = getAIProvider();  // 🆕 Usa factory
+    const provider = getAIProvider(); // 🆕 Usa factory
     const result = await provider.generateEmbedding(text);
     return result.embedding;
   }
@@ -408,7 +408,7 @@ import OpenAIClient from '...';
 
 // Después
 import { getAIProvider } from '...';
-process.env.AI_PROVIDER = 'mock';  // Para tests rápidos
+process.env.AI_PROVIDER = 'mock'; // Para tests rápidos
 ```
 
 **Archivos a modificar:**
@@ -482,7 +482,7 @@ const documentSchema = new Schema({
   extractedText: {
     type: String,
     default: null,
-    select: false  // No incluir por defecto (puede ser grande)
+    select: false // No incluir por defecto (puede ser grande)
   },
   aiProcessedAt: {
     type: Date,
@@ -510,7 +510,7 @@ const documentSchema = new Schema({
 ```typescript
 export async function processDocumentAI(documentId: string): Promise<void> {
   const doc = await DocumentModel.findById(documentId);
-  
+
   try {
     // 1. Actualizar estado a 'processing'
     doc.aiProcessingStatus = 'processing';
@@ -518,7 +518,7 @@ export async function processDocumentAI(documentId: string): Promise<void> {
 
     // 2. Extraer texto
     const extracted = await textExtractionService.extractText(doc.path, doc.mimeType);
-    
+
     // 3. Guardar texto extraído
     doc.extractedText = extracted.text;
     await doc.save();
@@ -564,19 +564,20 @@ export async function processDocumentAI(documentId: string): Promise<void> {
 export async function upload(req, res, next) {
   try {
     // ... lógica actual de upload ...
-    
+
     const document = await DocumentModel.create({
       filename,
       mimeType,
       // ...
-      aiProcessingStatus: 'pending'  // 🆕 Inicializar en pending
+      aiProcessingStatus: 'pending' // 🆕 Inicializar en pending
     });
 
     // 🆕 Disparar procesamiento asíncrono
     if (textExtractionService.isSupportedMimeType(document.mimeType)) {
       // No await - dispara y olvida
-      processDocumentAI(document._id.toString())
-        .catch(err => console.error('[upload] AI processing error:', err));
+      processDocumentAI(document._id.toString()).catch(err =>
+        console.error('[upload] AI processing error:', err)
+      );
     }
 
     res.status(201).json({
@@ -607,8 +608,9 @@ router.get('/:id/ai-status', authMiddleware, documentController.getAIStatus);
 
 ```typescript
 export async function getAIStatus(req, res, next) {
-  const document = await DocumentModel.findById(req.params.id)
-    .select('aiProcessingStatus aiCategory aiTags aiSummary aiProcessedAt aiError');
+  const document = await DocumentModel.findById(req.params.id).select(
+    'aiProcessingStatus aiCategory aiTags aiSummary aiProcessedAt aiError'
+  );
 
   if (!document) {
     return next(new HttpError(404, 'Document not found'));
@@ -641,7 +643,7 @@ async indexDocument(document: IDocument) {
     id: document._id.toString(),
     body: {
       // ... campos existentes ...
-      
+
       // 🆕 Campos AI
       aiCategory: document.aiCategory,
       aiTags: document.aiTags,
@@ -662,7 +664,7 @@ async indexDocument(document: IDocument) {
 describe('Auto-processing on Upload', () => {
   it('should auto-process document after upload', async () => {
     const file = createTestPDF('Test content');
-    
+
     const response = await request(app)
       .post('/api/documents/upload')
       .attach('file', file)
@@ -720,7 +722,7 @@ export const DOCUMENT_CATEGORIES = [
   'Otro'
 ] as const;
 
-export type DocumentCategory = typeof DOCUMENT_CATEGORIES[number];
+export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];
 ```
 
 ---
@@ -820,16 +822,16 @@ const documentMapping = {
   properties: {
     filename: { type: 'text' },
     mimeType: { type: 'keyword' },
-    
+
     // 🆕 Contenido completo
     extractedText: {
       type: 'text',
-      analyzer: 'spanish',  // Analizar en español
+      analyzer: 'spanish', // Analizar en español
       fields: {
         keyword: { type: 'keyword' }
       }
     },
-    
+
     // 🆕 Metadata AI
     aiCategory: { type: 'keyword' },
     aiTags: { type: 'keyword' },
@@ -847,7 +849,7 @@ const documentMapping = {
 ```typescript
 async function reindexAll() {
   const documents = await DocumentModel.find({ aiProcessingStatus: 'completed' });
-  
+
   for (const doc of documents) {
     await searchService.indexDocument(doc);
   }
@@ -861,16 +863,13 @@ async function reindexAll() {
 **Crear:** `src/services/hybrid-search.service.ts`
 
 ```typescript
-export async function hybridSearch(
-  query: string,
-  organizationId: string
-): Promise<SearchResult[]> {
+export async function hybridSearch(query: string, organizationId: string): Promise<SearchResult[]> {
   // 1. Búsqueda tradicional en Elasticsearch (BM25)
   const esResults = await searchService.search(query, organizationId);
-  
+
   // 2. Búsqueda vectorial en MongoDB Atlas
   const vectorResults = await ragService.search(query, organizationId);
-  
+
   // 3. Fusionar resultados (RRF - Reciprocal Rank Fusion)
   return mergeResults(esResults, vectorResults);
 }
@@ -920,12 +919,10 @@ export class OCRService {
   async extractTextFromScannedPDF(pdfPath: string): Promise<string> {
     // 1. Convertir PDF a imágenes
     const images = await pdf2pic(pdfPath);
-    
+
     // 2. OCR en cada imagen
-    const texts = await Promise.all(
-      images.map(img => tesseract.recognize(img))
-    );
-    
+    const texts = await Promise.all(images.map(img => tesseract.recognize(img)));
+
     // 3. Concatenar texto
     return texts.join('\n\n');
   }
@@ -942,14 +939,14 @@ export class OCRService {
 async extractFromPdf(filePath: string): Promise<ITextExtractionResult> {
   const buffer = fs.readFileSync(filePath);
   const data = await pdfParse(buffer);
-  
+
   // Si el texto está vacío o muy corto, intentar OCR
   if (data.text.trim().length < 100) {
     console.log('[text-extraction] PDF appears scanned, using OCR...');
     const ocrText = await ocrService.extractTextFromScannedPDF(filePath);
     return { text: ocrText, /* ... */ };
   }
-  
+
   return { text: data.text, /* ... */ };
 }
 ```
@@ -966,8 +963,8 @@ interface AIProvider {
 }
 
 interface SummarizationResult {
-  summary: string;      // 2-3 frases
-  keyPoints: string[];  // 3-5 puntos clave
+  summary: string; // 2-3 frases
+  keyPoints: string[]; // 3-5 puntos clave
 }
 ```
 

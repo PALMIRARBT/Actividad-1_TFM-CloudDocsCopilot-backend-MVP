@@ -10,9 +10,21 @@ export function ensureDirs() {
   if (!fs.existsSync(fixturesBase)) fs.mkdirSync(fixturesBase, { recursive: true });
 }
 
-export function writeTestFile(options: { organization?: string; filename?: string; content?: Buffer | string; mode?: number } = {}) {
+export function writeTestFile(
+  options: {
+    organization?: string;
+    filename?: string;
+    content?: Buffer | string;
+    mode?: number;
+  } = {}
+) {
   ensureDirs();
-  const { organization = `test-org-${Date.now()}`, filename, content = Buffer.from('fixture'), mode = 0o644 } = options;
+  const {
+    organization = `test-org-${Date.now()}`,
+    filename,
+    content = Buffer.from('fixture'),
+    mode = 0o644
+  } = options;
   const name = filename || `${Date.now()}-${crypto.randomBytes(4).toString('hex')}.bin`;
   const storageDir = path.join(process.cwd(), 'storage', organization);
   if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
@@ -29,7 +41,7 @@ export function writeTestFile(options: { organization?: string; filename?: strin
     path: filePath,
     fixturePath,
     size: buffer.length,
-    organization,
+    organization
   };
 }
 
@@ -37,8 +49,16 @@ export function buildDocumentObject(overrides: any = {}) {
   const id = overrides._id || new mongoose.Types.ObjectId();
   const org = overrides.organization || `test-org-${Date.now()}`;
   const file = overrides.path
-    ? { path: overrides.path, filename: overrides.filename || path.basename(overrides.path), size: overrides.size || 0 }
-    : writeTestFile({ organization: org, filename: overrides.filename, content: overrides.content });
+    ? {
+        path: overrides.path,
+        filename: overrides.filename || path.basename(overrides.path),
+        size: overrides.size || 0
+      }
+    : writeTestFile({
+        organization: org,
+        filename: overrides.filename,
+        content: overrides.content
+      });
 
   return {
     _id: id,
@@ -51,7 +71,7 @@ export function buildDocumentObject(overrides: any = {}) {
     folder: overrides.folder || null,
     createdAt: overrides.createdAt || new Date(),
     updatedAt: overrides.updatedAt || new Date(),
-    ...overrides,
+    ...overrides
   };
 }
 
@@ -60,25 +80,50 @@ export async function attachExtractedTextToModel(DocumentModel: any, docId: any,
   const update: any = {
     extractedText: text,
     aiProcessingStatus: 'completed',
-    aiProcessedAt: new Date(),
+    aiProcessedAt: new Date()
   };
   return DocumentModel.findByIdAndUpdate(docId, update, { new: true }).exec();
 }
 
-export async function createDocumentWithExtractedText(DocumentModel: any, opts: any = {}, extractedText: string = '') {
+export async function createDocumentWithExtractedText(
+  DocumentModel: any,
+  opts: any = {},
+  extractedText: string = ''
+) {
   if (!DocumentModel) throw new Error('DocumentModel is required');
-  const file = writeTestFile({ organization: opts.organization, filename: opts.filename, content: opts.content || 'builder-content' });
-  const doc = buildDocumentObject({ ...opts, path: file.path, filename: file.filename, size: file.size, extractedText });
+  const file = writeTestFile({
+    organization: opts.organization,
+    filename: opts.filename,
+    content: opts.content || 'builder-content'
+  });
+  const doc = buildDocumentObject({
+    ...opts,
+    path: file.path,
+    filename: file.filename,
+    size: file.size,
+    extractedText
+  });
   const created = await DocumentModel.create(doc);
   if (extractedText && extractedText.length > 0) {
-    await DocumentModel.findByIdAndUpdate(created._id, { aiProcessingStatus: 'completed', aiProcessedAt: new Date() }).exec();
+    await DocumentModel.findByIdAndUpdate(created._id, {
+      aiProcessingStatus: 'completed',
+      aiProcessedAt: new Date()
+    }).exec();
   }
   return created;
 }
 
 export async function setAiMetadata(DocumentModel: any, docId: any, metadata: any = {}) {
   if (!DocumentModel) throw new Error('DocumentModel is required');
-  const allowed = ['aiCategory', 'aiConfidence', 'aiTags', 'aiSummary', 'aiKeyPoints', 'aiProcessingStatus', 'aiError'];
+  const allowed = [
+    'aiCategory',
+    'aiConfidence',
+    'aiTags',
+    'aiSummary',
+    'aiKeyPoints',
+    'aiProcessingStatus',
+    'aiError'
+  ];
   const update: any = {};
   for (const k of Object.keys(metadata)) {
     if (allowed.includes(k)) update[k] = metadata[k];
@@ -100,7 +145,11 @@ export function writeOcrOutput(filePath: string, text: string) {
 /**
  * Write a fake embeddings JSON file for a document (used by tests mocking embedding store)
  */
-export function writeEmbeddingFixture(filePath: string, vectors: number[] | number[][], meta: any = {}) {
+export function writeEmbeddingFixture(
+  filePath: string,
+  vectors: number[] | number[][],
+  meta: any = {}
+) {
   const base = path.dirname(filePath);
   const name = `${path.basename(filePath)}.emb.json`;
   const out = path.join(base, name);
@@ -109,4 +158,13 @@ export function writeEmbeddingFixture(filePath: string, vectors: number[] | numb
   return out;
 }
 
-export default { ensureDirs, writeTestFile, buildDocumentObject, attachExtractedTextToModel, createDocumentWithExtractedText, setAiMetadata, writeOcrOutput, writeEmbeddingFixture };
+export default {
+  ensureDirs,
+  writeTestFile,
+  buildDocumentObject,
+  attachExtractedTextToModel,
+  createDocumentWithExtractedText,
+  setAiMetadata,
+  writeOcrOutput,
+  writeEmbeddingFixture
+};

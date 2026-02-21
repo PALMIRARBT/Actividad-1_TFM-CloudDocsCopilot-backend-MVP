@@ -259,7 +259,7 @@ export class RAGService {
               filter: {
                 // 🔐 CRITICAL: Filtros obligatorios para multitenancy
                 $and: [
-          { organizationId: { $eq: organizationId } },
+                  { organizationId: { $eq: organizationId } },
                   { documentId: { $eq: documentId } }
                 ]
               }

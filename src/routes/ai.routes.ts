@@ -72,11 +72,7 @@ router.delete(
  * @params  documentId - ID del documento
  * @returns { success: true, message: string, data: { category, confidence, tags } }
  */
-router.post(
-  '/documents/:documentId/classify',
-  generalRateLimiter,
-  aiController.classifyDocument
-);
+router.post('/documents/:documentId/classify', generalRateLimiter, aiController.classifyDocument);
 
 /**
  * @route   POST /api/ai/documents/:documentId/summarize
@@ -85,10 +81,6 @@ router.post(
  * @params  documentId - ID del documento
  * @returns { success: true, message: string, data: { summary, keyPoints } }
  */
-router.post(
-  '/documents/:documentId/summarize',
-  generalRateLimiter,
-  aiController.summarizeDocument
-);
+router.post('/documents/:documentId/summarize', generalRateLimiter, aiController.summarizeDocument);
 
 export default router;

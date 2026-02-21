@@ -569,9 +569,7 @@ describe('Folder Controller', () => {
 
       await rename(mockRequest as AuthRequest, mockResponse as Response, mockNext);
 
-      expect(mockNext).toHaveBeenCalledWith(
-        new HttpError(400, 'Name or displayName is required')
-      );
+      expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Name or displayName is required'));
     });
 
     it('should handle service errors', async () => {

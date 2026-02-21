@@ -688,7 +688,7 @@ export async function getUserRecentDocuments({
 
   const documents = await DocumentModel.find({
     organization: orgObjectId,
-    deletedAt: null, // Excluir documentos en papelera
+    deletedAt: null // Excluir documentos en papelera
   })
     .sort({ createdAt: -1 })
     .limit(limit)
@@ -938,12 +938,13 @@ export async function uploadDocument({
 
   // 🤖 RFE-AI-002: Disparar procesamiento AI asíncrono (no bloquea respuesta al usuario)
   if (textExtractionService.isSupportedMimeType(doc.mimeType)) {
-    processDocumentAI(doc._id.toString())
-      .catch((error: any) => {
-        console.error(`[upload] Failed to process document ${doc._id} with AI:`, error.message);
-      });
+    processDocumentAI(doc._id.toString()).catch((error: any) => {
+      console.error(`[upload] Failed to process document ${doc._id} with AI:`, error.message);
+    });
   } else {
-    console.log(`[upload] Document ${doc._id} has unsupported MIME type for AI processing: ${doc.mimeType}`);
+    console.log(
+      `[upload] Document ${doc._id} has unsupported MIME type for AI processing: ${doc.mimeType}`
+    );
   }
 
   // Indexar documento en Elasticsearch
@@ -992,11 +993,10 @@ export async function listDocuments(userId: string): Promise<IDocument[]> {
   }
 
   const userObjectId = new mongoose.Types.ObjectId(userId);
-  return DocumentModel.find({ 
+  return DocumentModel.find({
     uploadedBy: userObjectId,
     deletedAt: null // Excluir documentos en papelera
   }).populate('folder');
-  
 }
 
 export async function findDocumentById(id: string): Promise<IDocument | null> {

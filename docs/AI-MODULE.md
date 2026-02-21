@@ -35,7 +35,7 @@ El módulo de IA de CloudDocs implementa capacidades de **RAG (Retrieval-Augment
 
 ### Stack Tecnológico
 
-```s
+```text
 ┌─────────────────────────────────────────────────────────┐
 │                   CloudDocs Frontend                     │
 └────────────────────┬────────────────────────────────────┘

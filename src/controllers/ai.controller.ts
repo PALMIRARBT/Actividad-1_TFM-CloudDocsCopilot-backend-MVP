@@ -205,9 +205,7 @@ export async function processDocument(
       // Si no es owner, verificar si es admin de la organización
       const isActiveMember = await hasActiveMembership(userId, organizationId);
       if (!isActiveMember) {
-        return next(
-          new HttpError(403, 'Access denied: Only document owner can process documents')
-        );
+        return next(new HttpError(403, 'Access denied: Only document owner can process documents'));
       }
       // Aquí podrías agregar validación de rol admin si fuera necesario
       // const membership = await getMembership(userId, organizationId);
