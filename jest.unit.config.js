@@ -66,4 +66,14 @@ module.exports = {
   moduleNameMapper: {
     '^src/(.*)$': '<rootDir>/src/$1'
   }
+  ,
+  // Evitar que ts-jest ejecute diagnósticos de TypeScript en node_modules
+  // Esto previene errores de tipos de dependencias (ej. openai) durante los tests unitarios
+  globals: {
+    'ts-jest': {
+      diagnostics: false,
+      tsconfig: 'tsconfig.json',
+      isolatedModules: true
+    }
+  }
 };
