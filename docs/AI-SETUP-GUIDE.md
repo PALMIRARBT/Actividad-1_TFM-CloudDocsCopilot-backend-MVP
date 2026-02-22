@@ -23,7 +23,7 @@ CloudDocs utiliza un patrón de **abstracción de proveedores** que permite camb
 | **`ollama`** | Gratis | Ollama instalado (~3GB modelos) | `llama3.2:3b` + `nomic-embed-text` | Desarrollo local |
 | **`openai`** | Pago | API key + MongoDB Atlas | `gpt-4o-mini` + `text-embedding-3-small` | Producción |
 
-La selección se realiza mediante la variable `AI_PROVIDER` en `.env`:
+La selección se realiza mediante la variable `AI_PROVIDER` en `.env.local`:
 
 ```bash
 # Elegir proveedor: 'mock' | 'ollama' | 'openai'
@@ -39,7 +39,7 @@ El proveedor Mock devuelve respuestas determinísticas. Ideal para tests automat
 ### Configuración
 
 ```bash
-# En .env
+# En .env.local
 AI_PROVIDER=mock
 ```
 
@@ -117,7 +117,7 @@ curl http://localhost:11434/api/tags
 ### Paso 4: Configurar Variables de Entorno
 
 ```bash
-# En .env
+# En .env.local
 AI_PROVIDER=ollama
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_CHAT_MODEL=llama3.2:3b
@@ -158,7 +158,7 @@ La opción más potente, usa APIs de OpenAI para chat y embeddings.
 ### Paso 2: Configurar Variables de Entorno
 
 ```bash
-# En .env
+# En .env.local
 AI_PROVIDER=openai
 OPENAI_API_KEY=sk-tu-api-key-aqui
 ```
@@ -231,7 +231,7 @@ En MongoDB Atlas, ir a tu cluster > **Atlas Search** > **Create Search Index** >
 ### Paso 4: Configurar Variable de Entorno
 
 ```bash
-# En .env
+# En .env.local
 MONGO_ATLAS_URI=mongodb+srv://usuario:password@cluster0.xxxxx.mongodb.net/cloud_docs_ia
 ```
 
@@ -384,7 +384,7 @@ mongosh "mongodb+srv://user:pass@cluster.mongodb.net/cloud_docs_ia"
 
 ### Embeddings no se generan
 
-1. Verificar `AI_PROVIDER` en `.env`
+1. Verificar `AI_PROVIDER` en `.env.local`
 2. Si es `openai`: verificar que `OPENAI_API_KEY` es válida
 3. Si es `ollama`: verificar que Ollama está corriendo y modelos descargados
 4. Revisar logs del servidor para errores específicos

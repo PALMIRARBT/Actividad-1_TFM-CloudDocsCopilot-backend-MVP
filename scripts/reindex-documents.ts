@@ -7,13 +7,19 @@
 
 import mongoose from 'mongoose';
 import path from 'path';
+import fs from 'fs';
 import DocumentModel from '../src/models/document.model';
 import { indexDocument } from '../src/services/search.service';
 import dotenv from 'dotenv';
 
-// Cargar variables de entorno
-dotenv.config({ path: path.join(__dirname, '..', '.env.example') });
-dotenv.config({ path: path.join(__dirname, '..', '.env'), override: true });
+// Cargar variables de entorno (.env.example → .env → .env.local)
+const envFiles = ['.env.example', '.env', '.env.local'];
+for (const file of envFiles) {
+  const filePath = path.resolve(__dirname, '..', file);
+  if (fs.existsSync(filePath)) {
+    dotenv.config({ path: filePath, override: true });
+  }
+}
 
 async function reindexAllDocuments() {
   try {

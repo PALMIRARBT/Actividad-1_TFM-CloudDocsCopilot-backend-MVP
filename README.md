@@ -62,7 +62,11 @@ npm run seed:dev
 
 **That's it!** The API is now running at <http://localhost:4000>
 
-> **Note:** The app automatically loads `.env.example` as defaults, so no manual `.env` setup is required for development.
+> **Note:** The app automatically loads `.env.example` as defaults, so no manual `.env` setup is required for basic development. To override any variable, create a `.env.local` file (git-ignored):
+> ```bash
+> cp .env.example .env.local
+> # Edit only the variables you need to change
+> ```
 
 ### Enabling AI Features
 
@@ -84,14 +88,14 @@ brew install ollama
 ollama pull llama3.2:3b
 ollama pull nomic-embed-text
 
-# 3. Set provider in .env
-echo 'AI_PROVIDER=ollama' >> .env
+# 3. Set provider in .env.local
+echo 'AI_PROVIDER=ollama' >> .env.local
 ```
 
 **Quick start with Mock (testing, no setup):**
 
 ```bash
-echo 'AI_PROVIDER=mock' >> .env
+echo 'AI_PROVIDER=mock' >> .env.local
 ```
 
 > 📖 See [docs/AI-SETUP-GUIDE.md](docs/AI-SETUP-GUIDE.md) for complete instructions including OpenAI and MongoDB Atlas setup.
@@ -110,7 +114,8 @@ See [docs/MOCK-DATA.md](docs/MOCK-DATA.md) for complete test data documentation.
 
 ```bash
 # From the workspace root (parent directory)
-cp .env.example .env
+cp .env.example .env.local
+# Edit .env.local with your configuration
 docker-compose up -d
 
 # API available at http://localhost:4000

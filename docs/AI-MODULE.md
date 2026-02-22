@@ -608,7 +608,7 @@ Content-Type: application/json
 
 ### Variables de Entorno
 
-Agregar al archivo `.env`:
+Agregar al archivo `.env.local`:
 
 ```bash
 # MongoDB Atlas para búsqueda vectorial
@@ -833,7 +833,7 @@ it('should process document', async () => {
 ✅ **Variables de Entorno:**
 
 - API keys nunca en código
-- Uso de `.env` local
+- Uso de `.env.local` (git-ignored)
 - Variables separadas para test/producción
 
 ---
@@ -847,7 +847,7 @@ it('should process document', async () => {
 **Solución:**
 
 ```bash
-# .env
+# .env.local
 OPENAI_API_KEY=sk-proj-your-key-here
 ```
 
@@ -857,7 +857,7 @@ OPENAI_API_KEY=sk-proj-your-key-here
 
 **Solución:**
 
-1. Verificar `MONGO_ATLAS_URI` en `.env`
+1. Verificar `MONGO_ATLAS_URI` en `.env.local`
 2. En Atlas: Network Access → Add IP Address → Allow Access from Anywhere (0.0.0.0/0)
 3. Verificar usuario/contraseña en connection string
 

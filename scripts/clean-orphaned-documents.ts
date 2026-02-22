@@ -9,9 +9,14 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 
-// Cargar variables de entorno
-dotenv.config({ path: path.join(__dirname, '..', '.env.example') });
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+// Cargar variables de entorno (.env.example → .env → .env.local)
+const envFiles = ['.env.example', '.env', '.env.local'];
+for (const file of envFiles) {
+  const filePath = path.resolve(__dirname, '..', file);
+  if (fs.existsSync(filePath)) {
+    dotenv.config({ path: filePath, override: true });
+  }
+}
 
 // Importar modelo de Document
 import DocumentModel from '../src/models/document.model';
