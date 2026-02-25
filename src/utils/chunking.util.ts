@@ -6,20 +6,21 @@ import type { IChunkConfig, IChunkWithMetadata } from '../models/types/ai.types'
 export const CHUNK_CONFIG: IChunkConfig = {
   /**
    * Tamaño objetivo de cada chunk en palabras
+   * Reducido para optimizar velocidad de LLM (100 palabras ≈ 500-600 chars)
    */
-  TARGET_WORDS: 800,
+  TARGET_WORDS: 100,
 
   /**
    * Tamaño mínimo de un chunk en palabras
    * Chunks más pequeños se fusionan con el anterior
    */
-  MIN_WORDS: 100,
+  MIN_WORDS: 50,
 
   /**
    * Tamaño máximo de un chunk en palabras
-   * Evita chunks excesivamente grandes
+   * Evita chunks excesivamente grandes (150 palabras ≈ 750-900 chars)
    */
-  MAX_WORDS: 1000,
+  MAX_WORDS: 150,
 
   /**
    * Separadores de párrafo (en orden de prioridad)

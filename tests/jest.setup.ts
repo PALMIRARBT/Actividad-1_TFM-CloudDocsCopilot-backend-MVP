@@ -18,7 +18,19 @@ try {
 
 // Global Jest setup for tests
 // Mock pdf-parse to avoid loading native bindings in integration tests
-jest.mock('pdf-parse', () => ({ __esModule: true, default: jest.fn() }));
+jest.mock('pdf-parse', () => ({
+  __esModule: true,
+  default: jest.fn().mockResolvedValue({
+    numpages: 1,
+    text: 'Mocked PDF text content for testing',
+    info: {
+      Title: 'Test PDF',
+      Author: 'Test Author',
+      Creator: 'Test Creator',
+      Producer: 'Test Producer'
+    }
+  })
+}));
 // Mock mammoth to avoid loading heavy native/binary parsing code in tests
 jest.mock('mammoth', () => ({
   __esModule: true,
@@ -80,20 +92,26 @@ jest.mock('../src/configurations/elasticsearch-config', () => {
 });
 
 // Patch embedding service methods to avoid external API calls during tests
+// NOTE: With AI_PROVIDER='mock' in tests, the embedding service will use the mock provider
+// So these overrides are mostly redundant, but kept for backward compatibility with tests
+// that don't set AI_PROVIDER.
 {
   const EMBEDDING_DIMENSIONS = 1536;
   const makeVector = () => new Array(EMBEDDING_DIMENSIONS).fill(0.01);
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const embeddingModule = require('../src/services/ai/embedding.service');
   if (embeddingModule && embeddingModule.embeddingService) {
-    embeddingModule.embeddingService.generateEmbedding = jest.fn(async (_text: string) =>
-      makeVector()
-    );
-    embeddingModule.embeddingService.generateEmbeddings = jest.fn(async (_texts: string[]) =>
-      _texts.map(() => makeVector())
-    );
-    embeddingModule.embeddingService.getDimensions = jest.fn(() => EMBEDDING_DIMENSIONS);
-    embeddingModule.embeddingService.getModel = jest.fn(() => 'mock-embedding-model');
+    // Only override if methods are not already defined by the provider system
+    if (!process.env.AI_PROVIDER || process.env.AI_PROVIDER === '') {
+      embeddingModule.embeddingService.generateEmbedding = jest.fn(async (_text: string) =>
+        makeVector()
+      );
+      embeddingModule.embeddingService.generateEmbeddings = jest.fn(async (_texts: string[]) =>
+        _texts.map(() => makeVector())
+      );
+      embeddingModule.embeddingService.getDimensions = jest.fn(() => EMBEDDING_DIMENSIONS);
+      embeddingModule.embeddingService.getModel = jest.fn(() => 'mock-embedding-model');
+    }
   }
 }
 

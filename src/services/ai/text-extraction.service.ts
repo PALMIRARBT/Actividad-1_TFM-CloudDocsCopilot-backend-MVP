@@ -1,8 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import * as pdfParse from 'pdf-parse';
+import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 import HttpError from '../../models/error.model';
+
 // OCR configuration
 const OCR_ENABLED = process.env.OCR_ENABLED === 'true';
 const OCR_LANGUAGES = process.env.OCR_LANGUAGES || 'spa+eng';
@@ -158,8 +159,7 @@ export class TextExtractionService {
    */
   private async extractFromPdf(filePath: string): Promise<ITextExtractionResult> {
     const dataBuffer = await fs.promises.readFile(filePath);
-    // pdf-parse se importa como namespace, necesitamos usar .default
-    const data = await (pdfParse as any)(dataBuffer);
+    const data = await pdfParse(dataBuffer);
 
     // Extraer metadata si está disponible
     const metadata: ITextExtractionResult['metadata'] = {

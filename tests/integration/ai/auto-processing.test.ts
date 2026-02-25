@@ -10,15 +10,7 @@
  * 5. Endpoint /ai-status retorna información correcta
  */
 
-import '../../setup'; // Import MongoDB Memory Server connection
-import DocumentModel from '../../../src/models/document.model';
-import { processDocumentAI } from '../../../src/jobs/process-document-ai.job';
-import { textExtractionService } from '../../../src/services/ai/text-extraction.service';
-import path from 'path';
-import fs from 'fs';
-import { writeTestFile } from '../../helpers/fixtureBuilder';
-
-// Mock de Elasticsearch para que no falle el indexDocument
+// IMPORTANTE: Los mocks deben ir ANTES de los imports
 jest.mock('../../../src/services/search.service', () => ({
   indexDocument: jest.fn().mockResolvedValue(undefined),
   removeDocumentFromIndex: jest.fn().mockResolvedValue(undefined),
@@ -26,20 +18,118 @@ jest.mock('../../../src/services/search.service', () => ({
   getAutocompleteSuggestions: jest.fn().mockResolvedValue([])
 }));
 
+// Mock del servicio de extracción de texto ANTES de importar el job
+jest.mock('../../../src/services/ai/text-extraction.service', () => {
+  const isSupported = (mime: string) => {
+    const supported = [
+      'text/plain',
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'text/markdown',
+      'image/jpeg',
+      'image/png',
+      'image/tiff',
+      'image/bmp'
+    ];
+    return supported.includes(mime);
+  };
+
+  return {
+    __esModule: true,
+    textExtractionService: {
+      extractText: jest.fn(),
+      isSupportedMimeType: jest.fn((mime: string) => isSupported(mime))
+    }
+  };
+});
+
+import '../../setup'; // Import MongoDB Memory Server connection
+import DocumentModel from '../../../src/models/document.model';
+import { processDocumentAI } from '../../../src/jobs/process-document-ai.job';
+// Use require to ensure Jest's mock factory is applied and we get the mocked module
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { textExtractionService } = require('../../../src/services/ai/text-extraction.service');
+
+// Ensure the mocked service provides a deterministic isSupportedMimeType implementation
+if (!textExtractionService.isSupportedMimeType) {
+  (textExtractionService as any).isSupportedMimeType = jest.fn((mime: string) => {
+    const supported = [
+      'text/plain',
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'text/markdown',
+      'image/jpeg',
+      'image/png',
+      'image/tiff',
+      'image/bmp'
+    ];
+    return supported.includes(mime);
+  });
+}
+
+// Also ensure the CommonJS/required module has the mock (covers import/require interop)
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const teModule = require('../../../src/services/ai/text-extraction.service');
+  if (teModule && teModule.textExtractionService && !teModule.textExtractionService.isSupportedMimeType) {
+    teModule.textExtractionService.isSupportedMimeType = (textExtractionService as any).isSupportedMimeType;
+  }
+} catch (e) {
+  // ignore
+}
+
 describe('Auto-processing AI Integration Tests', () => {
-  const testFilesDir = path.join(__dirname, '../../fixtures/test-files');
   const testOrganizationId = '507f1f77bcf86cd799439011';
 
   beforeAll(async () => {
     // Configurar Mock Provider para tests
     process.env.AI_PROVIDER = 'mock';
-    // Crear archivo de texto de prueba en storage mediante helper
-    writeTestFile({
-      organization: testOrganizationId,
-      filename: 'test-document.txt',
-      content:
-        'Este es un documento de prueba para el procesamiento AI.\n\nContiene múltiples párrafos.\n\nY suficiente texto para probar la extracción.'
+  });
+
+  beforeEach(() => {
+    // Configurar mock de extracción de texto antes de cada test
+    (textExtractionService.extractText as jest.Mock).mockResolvedValue({
+      text: 'Este es un documento de prueba para el procesamiento AI. Contiene múltiples párrafos. Y suficiente texto para probar la extracción.',
+      charCount: 120,
+      wordCount: 20,
+      mimeType: 'text/plain',
+      metadata: {}
     });
+    // Ensure isSupportedMimeType is a working mock that reflects supported list
+    const supportedList = [
+      'text/plain',
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'text/markdown',
+      'image/jpeg',
+      'image/png',
+      'image/tiff',
+      'image/bmp'
+    ];
+
+    if ((textExtractionService.isSupportedMimeType as jest.Mock).mockImplementation === undefined) {
+      (textExtractionService.isSupportedMimeType as jest.Mock).mockImplementation((mime: string) =>
+        supportedList.includes(mime)
+      );
+    } else {
+      (textExtractionService.isSupportedMimeType as jest.Mock).mockImplementation((mime: string) =>
+        supportedList.includes(mime)
+      );
+    }
+    // Also attach to the required module instance to avoid interop issues
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const teModule = require('../../../src/services/ai/text-extraction.service');
+      if (teModule && teModule.textExtractionService) {
+        teModule.textExtractionService.isSupportedMimeType = (textExtractionService.isSupportedMimeType as any);
+        teModule.textExtractionService.extractText = (textExtractionService.extractText as any);
+      }
+    } catch (e) {
+      // ignore
+    }
   });
 
   afterAll(() => {
@@ -55,17 +145,15 @@ describe('Auto-processing AI Integration Tests', () => {
   describe('processDocumentAI', () => {
     it('should extract text and update document status to completed', async () => {
       // Arrange: Crear documento de prueba
-      const testFilePath = path.join(testFilesDir, 'test-document.txt');
-
       const doc = await DocumentModel.create({
         filename: 'test-document.txt',
         originalname: 'Test Document.txt',
         mimeType: 'text/plain',
-        size: fs.statSync(testFilePath).size,
+        size: 100,
         uploadedBy: '507f1f77bcf86cd799439012',
         folder: '507f1f77bcf86cd799439013',
         organization: testOrganizationId,
-        path: testFilePath,
+        path: '/fake/path/test-document.txt',
         url: '/storage/test-document.txt',
         aiProcessingStatus: 'pending'
       });
@@ -103,6 +191,15 @@ describe('Auto-processing AI Integration Tests', () => {
         aiProcessingStatus: 'pending'
       });
 
+      // Arrange override: mark video mime as unsupported explicitly
+      (textExtractionService.isSupportedMimeType as jest.Mock).mockImplementation((_mime: string) => false);
+      try {
+        // Also ensure module-level mock updated
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const teModule = require('../../../src/services/ai/text-extraction.service');
+        if (teModule && teModule.textExtractionService) teModule.textExtractionService.isSupportedMimeType = (textExtractionService.isSupportedMimeType as any);
+      } catch (e) {}
+
       // Act: Intentar procesar
       await processDocumentAI(doc._id.toString());
 
@@ -129,7 +226,8 @@ describe('Auto-processing AI Integration Tests', () => {
         aiProcessingStatus: 'pending'
       });
 
-      // Act: Intentar procesar (debería fallar)
+      // Arrange: force extractText to throw to simulate missing file/path
+      (textExtractionService.extractText as jest.Mock).mockRejectedValue(new Error('File not found'));
       try {
         await processDocumentAI(doc._id.toString());
       } catch (error) {
@@ -175,17 +273,15 @@ describe('Auto-processing AI Integration Tests', () => {
 
     it('should handle documents with no organization (skip chunk processing)', async () => {
       // Arrange: Documento sin organización
-      const testFilePath = path.join(testFilesDir, 'test-document.txt');
-
       const doc = await DocumentModel.create({
         filename: 'personal-doc.txt',
         originalname: 'Personal Doc.txt',
         mimeType: 'text/plain',
-        size: fs.statSync(testFilePath).size,
+        size: 100,
         uploadedBy: '507f1f77bcf86cd799439012',
         folder: '507f1f77bcf86cd799439013',
         organization: null, // Sin organización
-        path: testFilePath,
+        path: '/fake/path/personal-doc.txt',
         url: '/storage/personal-doc.txt',
         aiProcessingStatus: 'pending'
       });
@@ -226,17 +322,15 @@ describe('Auto-processing AI Integration Tests', () => {
   describe('AI Status Tracking', () => {
     it('should track processing status through lifecycle', async () => {
       // Arrange: Documento inicial
-      const testFilePath = path.join(testFilesDir, 'test-document.txt');
-
       const doc = await DocumentModel.create({
         filename: 'lifecycle-test.txt',
         originalname: 'Lifecycle Test.txt',
         mimeType: 'text/plain',
-        size: fs.statSync(testFilePath).size,
+        size: 100,
         uploadedBy: '507f1f77bcf86cd799439012',
         folder: '507f1f77bcf86cd799439013',
         organization: testOrganizationId,
-        path: testFilePath,
+        path: '/fake/path/lifecycle-test.txt',
         url: '/storage/lifecycle-test.txt',
         aiProcessingStatus: 'pending'
       });

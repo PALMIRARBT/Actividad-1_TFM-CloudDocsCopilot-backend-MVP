@@ -11,7 +11,7 @@ This document defines rules and guidelines for AI coding agents working on the C
 
 ## Directory Structure
 
-```
+```schema
 src/
 ├── configurations/     # External service configs (DB, CORS, ES)
 ├── controllers/        # HTTP request handlers - validate & delegate
@@ -155,7 +155,7 @@ router.post(
 
 ### Test Structure
 
-```
+```schema
 tests/
 ├── unit/              # Isolated unit tests
 │   ├── services/

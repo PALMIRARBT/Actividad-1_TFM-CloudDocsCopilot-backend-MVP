@@ -9,16 +9,16 @@
 
 ## 📑 Índice
 
-1. [Configuración Inicial](#configuración-inicial)
-2. [Módulo RAG (Retrieval-Augmented Generation)](#módulo-rag)
-3. [Módulo de Clasificación Automática](#módulo-clasificación)
-4. [Módulo de Resumen (Summarization)](#módulo-resumen)
-5. [Módulo OCR (Reconocimiento de Texto)](#módulo-ocr)
-6. [Módulo Elasticsearch (Búsqueda)](#módulo-elasticsearch)
-7. [Extracción de Texto](#módulo-extracción-texto)
-8. [Multitenancy y Seguridad](#módulo-multitenancy)
-9. [Procesamiento de Documentos](#módulo-procesamiento)
-10. [Integración End-to-End](#módulo-integración)
+1. [Configuración Inicial](#-configuración-inicial)
+2. [Módulo RAG (Retrieval-Augmented Generation)](#-módulo-rag-retrieval-augmented-generation)
+3. [Módulo de Clasificación Automática](#️-módulo-clasificación)
+4. [Módulo de Resumen (Summarization)](#-módulo-resumen-summarization)
+5. [Módulo OCR (Reconocimiento de Texto)](#️-módulo-ocr-reconocimiento-de-texto)
+6. [Módulo Elasticsearch (Búsqueda)](#-módulo-elasticsearch)
+7. [Extracción de Texto](#-módulo-extracción-texto)
+8. [Multitenancy y Seguridad](#-módulo-multitenancy-y-seguridad)
+9. [Procesamiento de Documentos](#-módulo-procesamiento-de-documentos)
+10. [Integración End-to-End](#-módulo-integración-end-to-end)
 
 ---
 
@@ -734,7 +734,7 @@ db.documents.findOne({ _id: ObjectId("...") })
 
 **Verificar en logs:**
 
-```
+```example
 [text-extraction] PDF returned empty text, attempting OCR fallback
 ```
 
@@ -1453,7 +1453,7 @@ Para cada prueba fallida, documentar:
 
 [text-extraction] Error extracting text: Cannot read property 'text' of undefined
 
-```
+```text
 
 **Ambiente:**
 - OS: Windows 11
