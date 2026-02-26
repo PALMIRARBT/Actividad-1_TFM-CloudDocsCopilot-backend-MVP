@@ -34,8 +34,9 @@ describe('URL Validation Middleware', () => {
       }
 
       let hostname: string | null = null;
+      let parsed: URL;
       try {
-        const parsed = new URL(url);
+        parsed = new URL(url);
         hostname = parsed.hostname.toLowerCase();
       } catch {
         // If URL parsing fails, treat the URL as invalid rather than relying on substring checks.
@@ -43,9 +44,10 @@ describe('URL Validation Middleware', () => {
       }
 
       if (
-        url.startsWith('https://ok.com') ||
-        url.startsWith('https://trusted.com') ||
-        hostname === 'cdn.example.com'
+        parsed.protocol === 'https:' &&
+        (hostname === 'ok.com' ||
+          hostname === 'trusted.com' ||
+          hostname === 'cdn.example.com')
       ) {
         return { isValid: true, errors: [] };
       }
