@@ -6,7 +6,6 @@ import { AuthRequest } from '../middlewares/auth.middleware';
 import * as documentService from '../services/document.service';
 import HttpError from '../models/error.model';
 import { validateDownloadPath } from '../utils/path-sanitizer';
-import { hasActiveMembership } from '../services/membership.service';
 
 /**
  * Controlador para subir un nuevo documento
@@ -143,6 +142,51 @@ export async function getRecent(
   }
 }
 
+async function hasOrgAdminAccess(userId: string, organizationId: string): Promise<boolean> {
+  try {
+    // Avoid changing static imports: require at runtime
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const membershipService = require('../services/membership.service');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const membershipModel = require('../models/membership.model');
+
+    const hasAnyRole = membershipService.hasAnyRole as (
+      userId: string,
+      organizationId: string,
+      allowedRoles: any[]
+    ) => Promise<boolean>;
+
+    const MembershipRole = membershipModel.MembershipRole as any;
+
+    return await hasAnyRole(userId, organizationId, [MembershipRole.OWNER, MembershipRole.ADMIN]);
+  } catch {
+    return false;
+  }
+}
+
+async function hasDocumentAccess(userId: string, doc: any): Promise<boolean> {
+  // Org documents: private by default (owner/sharedWith/admin)
+  if (doc.organization) {
+    if (doc.uploadedBy?.toString?.() === userId) return true;
+
+    const isShared =
+      doc.sharedWith?.some?.((id: any) => id?.toString?.() === userId) ||
+      (typeof doc.isSharedWith === 'function' && doc.isSharedWith(userId));
+
+    if (isShared) return true;
+
+    const orgId = doc.organization.toString();
+    return await hasOrgAdminAccess(userId, orgId);
+  }
+
+  // Personal documents: owner or sharedWith
+  return (
+    doc.uploadedBy?.toString?.() === userId ||
+    doc.sharedWith?.some?.((id: any) => id?.toString?.() === userId) ||
+    (typeof doc.isSharedWith === 'function' && doc.isSharedWith(userId))
+  );
+}
+
 /**
  * Controlador para obtener un documento por ID
  */
@@ -154,24 +198,7 @@ export async function getById(req: AuthRequest, res: Response, next: NextFunctio
       return next(new HttpError(404, 'Document not found'));
     }
 
-    // Verificar acceso:
-    // - Si pertenece a una organización: cualquier miembro ACTIVO de esa organización puede acceder.
-    // - Si es personal (sin organización): solo owner o sharedWith.
-    let hasAccess = false;
-
-    if (doc.organization) {
-      hasAccess = await hasActiveMembership(req.user!.id, doc.organization.toString());
-    } else {
-      const userIdStr = req.user!.id;
-      hasAccess =
-        doc.uploadedBy.toString() === userIdStr ||
-        doc.sharedWith?.some((userId) => {
-          if (typeof userId === 'object' && userId !== null && '_id' in userId) {
-            return String(userId._id) === userIdStr;
-          }
-          return String(userId) === userIdStr;
-        }) || false;
-    }
+    const hasAccess = await hasDocumentAccess(req.user!.id, doc);
 
     if (!hasAccess) {
       return next(new HttpError(403, 'Access denied to this document'));
@@ -290,24 +317,7 @@ export async function download(req: AuthRequest, res: Response, next: NextFuncti
       return next(new HttpError(404, 'Document not found'));
     }
 
-    // Verificar acceso:
-    // - Si pertenece a una organización: cualquier miembro ACTIVO de esa organización puede acceder.
-    // - Si es personal (sin organización): solo owner o sharedWith.
-    let hasAccess = false;
-
-    if (doc.organization) {
-      hasAccess = await hasActiveMembership(req.user!.id, doc.organization.toString());
-    } else {
-      const userIdStr = req.user!.id;
-      hasAccess =
-        doc.uploadedBy.toString() === userIdStr ||
-        doc.sharedWith?.some((userId) => {
-          if (typeof userId === 'object' && userId !== null && '_id' in userId) {
-            return String(userId._id) === userIdStr;
-          }
-          return String(userId) === userIdStr;
-        }) || false;
-    }
+    const hasAccess = await hasDocumentAccess(req.user!.id, doc);
 
     if (!hasAccess) {
       return next(new HttpError(403, 'Access denied to this document'));
@@ -350,24 +360,7 @@ export async function preview(req: AuthRequest, res: Response, next: NextFunctio
       return next(new HttpError(404, 'Document not found'));
     }
 
-    // Verificar acceso:
-    // - Si pertenece a una organización: cualquier miembro ACTIVO de esa organización puede acceder.
-    // - Si es personal (sin organización): solo owner o sharedWith.
-    let hasAccess = false;
-
-    if (doc.organization) {
-      hasAccess = await hasActiveMembership(req.user!.id, doc.organization.toString());
-    } else {
-      const userIdStr = req.user!.id;
-      hasAccess =
-        doc.uploadedBy.toString() === userIdStr ||
-        doc.sharedWith?.some((userId) => {
-          if (typeof userId === 'object' && userId !== null && '_id' in userId) {
-            return String(userId._id) === userIdStr;
-          }
-          return String(userId) === userIdStr;
-        }) || false;
-    }
+    const hasAccess = await hasDocumentAccess(req.user!.id, doc);
 
     if (!hasAccess) {
       return next(new HttpError(403, 'Access denied to this document'));
@@ -550,17 +543,10 @@ export async function getAIStatus(
       return next(new HttpError(404, 'Document not found'));
     }
 
-    // Verificar que el usuario tiene acceso al documento
-    if (String(doc.uploadedBy) !== req.user!.id && !doc.isSharedWith(req.user!.id)) {
-      // Si el documento pertenece a una organización, verificar membership
-      if (doc.organization) {
-        const hasMembership = await hasActiveMembership(req.user!.id, doc.organization.toString());
-        if (!hasMembership) {
-          return next(new HttpError(403, 'Access denied'));
-        }
-      } else {
-        return next(new HttpError(403, 'Access denied'));
-      }
+    const hasAccess = await hasDocumentAccess(req.user!.id, doc);
+
+    if (!hasAccess) {
+      return next(new HttpError(403, 'Access denied'));
     }
 
     res.json({
