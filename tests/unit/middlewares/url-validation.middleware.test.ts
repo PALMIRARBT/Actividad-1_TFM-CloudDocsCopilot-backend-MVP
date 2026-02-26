@@ -49,8 +49,20 @@ describe('URL Validation Middleware', () => {
         return { isValid: false, errors: ['Unsupported protocol'] };
       }
 
-      if (url.includes('evil.com')) {
-        return { isValid: false, errors: ['Suspicious domain'] };
+      try {
+        const parsed = new URL(url);
+        const hostname = parsed.hostname.toLowerCase();
+        if (
+          hostname === 'evil.com' ||
+          hostname.endsWith('.evil.com')
+        ) {
+          return { isValid: false, errors: ['Suspicious domain'] };
+        }
+      } catch {
+        // Fallback to substring check if URL parsing fails
+        if (url.includes('evil.com')) {
+          return { isValid: false, errors: ['Suspicious domain'] };
+        }
       }
 
       return { isValid: false, errors: ['invalid'] };
