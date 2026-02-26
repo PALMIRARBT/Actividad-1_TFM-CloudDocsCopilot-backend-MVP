@@ -4,7 +4,7 @@
  */
 
 import * as fs from 'fs/promises';
-import { PDFParse } from 'pdf-parse';
+import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 
 /**
@@ -17,9 +17,8 @@ export async function extractTextFromPDF(filePath: string): Promise<string> {
     // Leer archivo PDF
     const dataBuffer = await fs.readFile(filePath);
     
-    // Usar PDFParse (v2+)
-    const parser = new PDFParse({ data: dataBuffer });
-    const result = await parser.getText();
+    // Usar pdf-parse (v1.x)
+    const result = await pdfParse(dataBuffer);
     
     // Limpiar y normalizar el texto
     let text = result.text
