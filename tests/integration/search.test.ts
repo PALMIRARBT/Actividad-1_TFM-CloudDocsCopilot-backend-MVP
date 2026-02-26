@@ -15,10 +15,12 @@ describe('Search API - Elasticsearch Integration', () => {
   let authToken: string;
   let userId: string;
   let organizationId: string;
-  let documentIds: string[] = [];
   let testDocuments: any[] = [];
 
-  beforeAll(async () => {
+  // Setup test data before each test (setup.ts clears collections after each test)
+  beforeEach(async () => {
+    // Reset testDocuments array
+    testDocuments = [];
     // Crear usuario de prueba
     const user = await UserModel.create({
       name: 'Search Tester',
@@ -78,7 +80,6 @@ describe('Search API - Elasticsearch Integration', () => {
         folder: folder._id,
         uploadedAt: new Date()
       });
-      documentIds.push(document._id.toString());
       testDocuments.push({
         id: document._id.toString(),
         filename: document.filename,
@@ -96,30 +97,30 @@ describe('Search API - Elasticsearch Integration', () => {
       role: user.role,
       tokenVersion: 0
     });
-  });
 
-  // Configure search service mock before each test (mocks are reset between tests)
-  beforeEach(() => {
     // Configure search service mock to return test documents based on query
+    // searchDocuments receives a SearchParams object: { query, userId, organizationId, mimeType, limit, offset, ... }
     (searchService.searchDocuments as jest.Mock).mockImplementation(
-      async (query: string, orgId: string, options?: any) => {
-        const q = query.toLowerCase();
+      async (params: { query: string; organizationId?: string; mimeType?: string; limit?: number; offset?: number }) => {
+        const q = params.query.toLowerCase();
         let results = testDocuments.filter(doc => 
           doc.originalname.toLowerCase().includes(q) ||
           doc.filename.toLowerCase().includes(q)
         );
         
         // Apply mimeType filter if provided
-        if (options?.mimeType) {
-          results = results.filter(doc => doc.mimeType === options.mimeType);
+        if (params.mimeType) {
+          results = results.filter(doc => doc.mimeType === params.mimeType);
         }
         
         // Apply organization filter
-        results = results.filter(doc => doc.organization === orgId);
+        if (params.organizationId) {
+          results = results.filter(doc => doc.organization === params.organizationId);
+        }
         
         // Apply pagination
-        const offset = options?.offset || 0;
-        const limit = options?.limit || 10;
+        const offset = params.offset || 0;
+        const limit = params.limit || 10;
         const paginatedResults = results.slice(offset, offset + limit);
         
         return {
@@ -130,13 +131,14 @@ describe('Search API - Elasticsearch Integration', () => {
       }
     );
 
+    // getAutocompleteSuggestions receives: (query, userId, organizationId?, limit?)
     (searchService.getAutocompleteSuggestions as jest.Mock).mockImplementation(
-      async (query: string, _orgId: string, limit?: number) => {
+      async (query: string, _userId: string, _organizationId?: string, limit: number = 5) => {
         const q = query.toLowerCase();
         const suggestions = testDocuments
           .filter(doc => doc.originalname.toLowerCase().includes(q))
           .map(doc => doc.originalname)
-          .slice(0, limit || 5);
+          .slice(0, limit);
         return suggestions;
       }
     );
