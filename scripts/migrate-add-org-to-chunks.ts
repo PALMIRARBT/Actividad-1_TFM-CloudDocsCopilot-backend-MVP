@@ -31,7 +31,7 @@ for (const file of envFiles) {
 const COLLECTION_NAME = 'document_chunks';
 
 interface DocumentChunkMigration {
-  _id: any;
+  _id: mongoose.Types.ObjectId;
   documentId: string;
   organizationId?: string; // Puede no existir aún
 }
@@ -142,8 +142,9 @@ async function migrateChunks() {
             `✅ Documento ${documentId.substring(0, 8)}... → ${result.modifiedCount} chunks actualizados (org: ${organizationId.substring(0, 8)}...)`
           );
         }
-      } catch (error) {
-        console.error(`❌ Error procesando documento ${documentId}:`, error);
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error(`❌ Error procesando documento ${documentId}: ${msg}`);
         errors++;
       }
     }
@@ -171,8 +172,9 @@ async function migrateChunks() {
         `⚠️  Aún quedan ${remainingChunksWithoutOrg} chunks sin organizationId (probablemente de documentos eliminados)`
       );
     }
-  } catch (error) {
-    console.error('\n❌ Error fatal en migración:', error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('\n❌ Error fatal en migración:', msg);
     throw error;
   } finally {
     // Cerrar conexiones

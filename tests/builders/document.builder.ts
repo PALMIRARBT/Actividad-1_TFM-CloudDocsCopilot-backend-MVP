@@ -8,7 +8,7 @@ export async function createDocumentModel(DocumentModel: any, opts: any = {}) {
   });
   const doc = buildDocumentObject({
     ...opts,
-    path: file.path,
+    path: file.relativePath, // Use relative path for DB storage
     filename: file.filename,
     size: file.size
   });

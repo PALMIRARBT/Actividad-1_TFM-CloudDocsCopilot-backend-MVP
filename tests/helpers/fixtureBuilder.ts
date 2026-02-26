@@ -36,9 +36,14 @@ export function writeTestFile(
   const fixturePath = path.join(fixturesDir, name);
   fs.writeFileSync(fixturePath, buffer, { mode });
 
+  // Calculate relative path from storage base
+  const storageBase = path.join(process.cwd(), 'storage');
+  const relativePath = path.relative(storageBase, filePath);
+
   return {
     filename: name,
     path: filePath,
+    relativePath: relativePath.replace(/\\/g, '/'), // Normalize to forward slashes
     fixturePath,
     size: buffer.length,
     organization
@@ -51,6 +56,7 @@ export function buildDocumentObject(overrides: any = {}) {
   const file = overrides.path
     ? {
         path: overrides.path,
+        relativePath: overrides.path, // When provided directly, assume it's already relative
         filename: overrides.filename || path.basename(overrides.path),
         size: overrides.size || 0
       }
@@ -63,7 +69,7 @@ export function buildDocumentObject(overrides: any = {}) {
   return {
     _id: id,
     filename: overrides.filename || file.filename,
-    path: file.path,
+    path: file.relativePath, // Use relative path for DB
     mimeType: overrides.mimeType || 'application/octet-stream',
     size: file.size,
     uploadedBy: overrides.uploadedBy || new mongoose.Types.ObjectId(),
@@ -98,8 +104,7 @@ export async function createDocumentWithExtractedText(
   });
   const doc = buildDocumentObject({
     ...opts,
-    path: file.path,
-    filename: file.filename,
+    path: file.relativePath || file.path, // Use relative path\n    filename: file.filename,
     size: file.size,
     extractedText
   });

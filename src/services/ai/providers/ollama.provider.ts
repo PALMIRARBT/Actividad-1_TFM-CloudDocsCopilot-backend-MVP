@@ -133,44 +133,71 @@ export class OllamaProvider implements AIProvider {
     const model = options?.model ?? this.chatModel;
     const systemMessage = options?.systemMessage;
 
-    try {
-      console.log(`[ollama-provider] Generating response with ${model}...`);
+    // Implement retry logic for transient "fetch failed" / network errors
+    // Configurable via OLLAMA_MAX_RETRIES (default: 1 for tests, 3 for dev/prod)
+    const maxRetries = process.env.OLLAMA_MAX_RETRIES 
+      ? parseInt(process.env.OLLAMA_MAX_RETRIES, 10) 
+      : (process.env.NODE_ENV === 'test' ? 1 : 3);
+    const baseDelay = 300; // ms
 
-      const response = await this.client.generate({
-        model,
-        prompt: prompt.trim(),
-        system: systemMessage?.trim(),
-        options: {
-          temperature,
-          num_predict: maxTokens
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[ollama-provider] Generating response with ${model} (attempt ${attempt})...`);
+
+        const response = await this.client.generate({
+          model,
+          prompt: prompt.trim(),
+          system: systemMessage?.trim(),
+          options: {
+            temperature,
+            num_predict: maxTokens,
+            num_ctx: 2048 // Optimizado para prompts ~4000 chars (suficiente, no excesivo)
+          }
+        });
+
+        if (!response || !response.response) {
+          throw new Error('No content in Ollama response');
         }
-      });
 
-      if (!response.response) {
-        throw new Error('No content in Ollama response');
-      }
+        return {
+          response: response.response.trim(),
+          model,
+          tokens: {
+            prompt: response.prompt_eval_count || 0,
+            completion: response.eval_count || 0,
+            total: (response.prompt_eval_count || 0) + (response.eval_count || 0)
+          }
+        };
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[ollama-provider] Error generating response (attempt ${attempt}):`, errorMessage);
 
-      return {
-        response: response.response.trim(),
-        model,
-        tokens: {
-          prompt: response.prompt_eval_count || 0,
-          completion: response.eval_count || 0,
-          total: (response.prompt_eval_count || 0) + (response.eval_count || 0)
+        // If final attempt, map to a helpful HttpError
+        if (attempt === maxRetries) {
+          if (errorMessage.includes('not found') || errorMessage.includes('model')) {
+            throw new HttpError(500, `Ollama model ${model} not found. Run: ollama pull ${model}`);
+          } else if (errorMessage.includes('connection') || errorMessage.includes('ECONNREFUSED')) {
+            throw new HttpError(503, 'Ollama server not running. Start it with: ollama serve');
+          } else if (errorMessage.includes('fetch failed') || errorMessage.includes('network')) {
+            throw new HttpError(
+              503,
+              `Failed to generate response: network error or Ollama busy. Check Ollama logs and resources (RAM/CPU). Last error: ${errorMessage}`
+            );
+          }
+
+          // Generic failure
+          throw new HttpError(500, `Failed to generate response: ${errorMessage}`);
         }
-      };
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[ollama-provider] Error generating response:', errorMessage);
 
-      if (errorMessage.includes('not found') || errorMessage.includes('model')) {
-        throw new HttpError(500, `Ollama model ${model} not found. Run: ollama pull ${model}`);
-      } else if (errorMessage.includes('connection') || errorMessage.includes('ECONNREFUSED')) {
-        throw new HttpError(503, 'Ollama server not running. Start it with: ollama serve');
+        // Otherwise wait and retry with exponential backoff
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        await new Promise(res => setTimeout(res, delay));
+        // then retry
       }
-
-      throw new HttpError(500, `Failed to generate response: ${errorMessage}`);
     }
+
+    // Should not reach here
+    throw new HttpError(500, 'Failed to generate response: unknown error after retries');
   }
 
   /**
@@ -221,7 +248,8 @@ Responde ÚNICAMENTE con un objeto JSON válido (sin markdown, sin explicaciones
    * Resume un documento usando Llama
    */
   async summarizeDocument(text: string): Promise<SummarizationResult> {
-    const prompt = `Resume el siguiente documento en 2-3 frases y extrae 3-5 puntos clave más importantes.
+    try {
+      const prompt = `Resume el siguiente documento en 2-3 frases y extrae 3-5 puntos clave más importantes.
 
 Texto del documento (primeros 4000 caracteres):
 ${text.substring(0, 4000)}
@@ -232,27 +260,35 @@ Responde ÚNICAMENTE con un objeto JSON válido (sin markdown, sin explicaciones
   "keyPoints": ["punto1", "punto2", "punto3"]
 }`;
 
-    const result = await this.generateResponse(prompt, {
-      temperature: 0.3,
-      maxTokens: 500
-    });
+      console.log('[ollama-provider] Requesting summarization...');
+      const result = await this.generateResponse(prompt, {
+        temperature: 0.3,
+        maxTokens: 500
+      });
 
-    try {
+      console.log('[ollama-provider] Raw Ollama response:', result.response.substring(0, 200));
+
       // Limpiar markdown si existe
       let jsonStr = result.response.trim();
       jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
 
       const parsed = JSON.parse(jsonStr);
+      
+      if (!parsed.summary || !Array.isArray(parsed.keyPoints)) {
+        throw new Error('Invalid summary structure: missing summary or keyPoints');
+      }
+
+      console.log('[ollama-provider] Summary generated successfully');
       return {
-        summary: parsed.summary || 'No se pudo generar resumen',
-        keyPoints: parsed.keyPoints || []
+        summary: parsed.summary,
+        keyPoints: parsed.keyPoints
       };
-    } catch (error) {
-      console.error('[ollama-provider] Failed to parse summary:', result.response);
-      return {
-        summary: 'Error al generar resumen',
-        keyPoints: []
-      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[ollama-provider] Summarization error:', errorMessage);
+      
+      // Re-throw para que el job capture el error real
+      throw new HttpError(500, `Failed to generate summary: ${errorMessage}`);
     }
   }
 

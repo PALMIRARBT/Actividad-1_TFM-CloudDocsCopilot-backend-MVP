@@ -1,4 +1,4 @@
-import { MongoClient, Db } from 'mongodb';
+import { MongoClient, Db, MongoClientOptions } from 'mongodb';
 
 /**
  * Cliente MongoDB Atlas para vector search y embeddings
@@ -14,6 +14,14 @@ import { MongoClient, Db } from 'mongodb';
  * Se obtiene de la variable de entorno MONGO_ATLAS_URI
  */
 const MONGO_ATLAS_URI = process.env.MONGO_ATLAS_URI || '';
+
+/**
+ * Flag para permitir certificados TLS inválidos (SOLO para desarrollo/testing)
+ * En Windows, OpenSSL puede tener problemas con certificados CA de Atlas
+ * Set MONGO_ATLAS_ALLOW_INVALID_TLS=true SOLO si tienes problemas de certificados
+ * NUNCA usar en producción
+ */
+const ALLOW_INVALID_TLS = process.env.MONGO_ATLAS_ALLOW_INVALID_TLS === 'true';
 
 /**
  * Nombre de la base de datos en Atlas
@@ -40,6 +48,7 @@ let database: Db | null = null;
 export async function getDb(): Promise<Db> {
   // Si ya tenemos una conexión, reutilizarla
   if (database && client) {
+    console.log('[atlas] ♻️  Reusing existing connection');
     return database;
   }
 
@@ -49,15 +58,32 @@ export async function getDb(): Promise<Db> {
   }
 
   try {
-    console.log('[atlas] Connecting to MongoDB Atlas...');
+    const connStart = Date.now();
+    console.log('[atlas] 🔌 Connecting to MongoDB Atlas...');
 
     // Crear nuevo cliente con opciones recomendadas
-    client = new MongoClient(MONGO_ATLAS_URI, {
+    // Opciones TLS robustas para Windows + Node.js
+    const clientOptions: MongoClientOptions = {
       maxPoolSize: 10,
       minPoolSize: 2,
       serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000
-    });
+      socketTimeoutMS: 45000,
+      // Opciones TLS para compatibilidad Windows
+      tls: true,
+      tlsAllowInvalidCertificates: ALLOW_INVALID_TLS, // Solo true si env var está activada
+      tlsAllowInvalidHostnames: false,
+      // Retry writes para operaciones más robustas
+      retryWrites: true,
+      retryReads: true
+    };
+
+    if (ALLOW_INVALID_TLS) {
+      console.warn(
+        '[atlas] ⚠️  WARNING: TLS certificate validation is DISABLED. Only use in development!'
+      );
+    }
+
+    client = new MongoClient(MONGO_ATLAS_URI, clientOptions);
 
     // Conectar al cluster
     await client.connect();
@@ -68,7 +94,7 @@ export async function getDb(): Promise<Db> {
     // Verificar conexión con ping
     await database.command({ ping: 1 });
 
-    console.log('[atlas] MongoDB Atlas connected successfully');
+    console.log(`[atlas] ✅ MongoDB Atlas connected successfully in ${Date.now() - connStart}ms`);
 
     return database;
   } catch (error: unknown) {

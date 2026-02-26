@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import path from 'path';
 import crypto from 'crypto';
 import DocumentModel, { IDocument } from '../models/document.model';
 import DeletionAuditModel, { DeletionAction, DeletionStatus } from '../models/deletion-audit.model';
@@ -293,28 +294,38 @@ class DeletionService {
     const passes = this.getPassesForMethod(method, options.passes);
 
     try {
+      // Construir ruta absoluta del archivo en storage
+      const storageRoot = path.join(process.cwd(), 'storage');
+      const relativeStoragePath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+      const absolutePath = path.join(storageRoot, relativeStoragePath);
+
+      console.log(`[deletion] Attempting to delete file at: ${absolutePath}`);
+
       // Verificar que el archivo existe
-      const stats = await fs.stat(filePath);
+      const stats = await fs.stat(absolutePath);
       const fileSize = stats.size;
 
       // Ejecutar pasadas de sobrescritura
       for (let pass = 0; pass < passes; pass++) {
         const data = this.generateOverwriteData(pass, fileSize, method);
-        await fs.writeFile(filePath, data);
+        await fs.writeFile(absolutePath, data);
         // Forzar sincronización en disco usando writeFileSync temporal
         const fsSync = require('fs');
-        const fd = fsSync.openSync(filePath, 'r+');
+        const fd = fsSync.openSync(absolutePath, 'r+');
         fsSync.fsyncSync(fd);
         fsSync.closeSync(fd);
       }
 
       // Eliminar el archivo
-      await fs.unlink(filePath);
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
+      await fs.unlink(absolutePath);
+      console.log(`[deletion] Successfully deleted file: ${absolutePath}`);
+    } catch (error: unknown) {
+      const err = error as NodeJS.ErrnoException;
+      if (err.code === 'ENOENT') {
         // El archivo ya no existe, continuar
-        console.warn(`File not found during secure deletion: ${filePath}`);
+        console.warn(`[deletion] File not found during secure deletion: ${filePath}`);
       } else {
+        console.error(`[deletion] Error deleting file ${filePath}:`, err.message);
         throw error;
       }
     }

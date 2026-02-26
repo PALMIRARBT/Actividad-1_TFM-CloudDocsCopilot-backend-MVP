@@ -1,10 +1,10 @@
 import { Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
+import path from 'path';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { ragService } from '../services/ai/rag.service';
 import { documentProcessor } from '../services/document-processor.service';
 import { textExtractionService } from '../services/ai/text-extraction.service';
-import { EMBEDDING_DIMENSIONS } from '../models/types/ai.types';
 import DocumentModel from '../models/document.model';
 import HttpError from '../models/error.model';
 import { hasActiveMembership } from '../services/membership.service';
@@ -220,7 +220,10 @@ export async function processDocument(
     res.json({
       success: true,
       message: 'Document processed successfully',
-      data: { ...result, dimensions: (result as any).dimensions ?? EMBEDDING_DIMENSIONS }
+      data: {
+        ...result,
+        dimensions: result.dimensions || 1536 // Ensure dimensions is always present
+      }
     });
   } catch (err) {
     next(err);
@@ -318,7 +321,7 @@ export async function extractDocumentText(
     if (!document) {
       return next(new HttpError(404, 'Document not found'));
     }
-
+ 
     // Validar acceso al documento
     const userId = req.user!.id;
     const isOwner = String(document.uploadedBy) === String(userId);
@@ -346,9 +349,14 @@ export async function extractDocumentText(
         )
       );
     }
-
+    
+    // Construir path absoluto del documento en el filesystem
+    const storageBase = path.join(process.cwd(), 'storage');
+    const relativePath = document.path?.startsWith('/') ? document.path.substring(1) : document.path || '';
+    const absolutePath = path.join(storageBase, relativePath);
+    
     // Extraer texto del documento
-    const result = await textExtractionService.extractText(document.path, document.mimeType);
+    const result = await textExtractionService.extractText(absolutePath, document.mimeType);
 
     console.log(
       `[ai-controller] Extracted text from document ${documentId}: ${result.charCount} chars`

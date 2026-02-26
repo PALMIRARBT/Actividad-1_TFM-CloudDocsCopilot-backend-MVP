@@ -23,12 +23,12 @@ describeOrSkip('AI Endpoints', () => {
   let documentId: string;
 
   beforeAll(() => {
-    // Force LLM to use global OpenAI mock
-    process.env.USE_OPENAI_GLOBAL_MOCK = 'true';
+    // Force AI provider to mock for tests
+    process.env.AI_PROVIDER = 'mock';
   });
 
   afterAll(() => {
-    delete process.env.USE_OPENAI_GLOBAL_MOCK;
+    delete process.env.AI_PROVIDER;
   });
 
   beforeEach(async () => {

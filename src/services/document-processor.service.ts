@@ -110,15 +110,17 @@ export class DocumentProcessor {
         `[processor] Successfully processed document ${documentId}: ${chunks.length} chunks in ${processingTime}ms`
       );
 
+      const dimensions =
+        typeof embeddingService.getDimensions === 'function'
+          ? embeddingService.getDimensions()
+          : 1536;
+
       return {
         documentId,
         chunksCreated: result.insertedCount,
         totalWords,
         processingTime,
-        dimensions:
-          typeof embeddingService.getDimensions === 'function'
-            ? embeddingService.getDimensions()
-            : 1536
+        dimensions: dimensions || 1536 // Fallback if undefined
       };
     } catch (error: unknown) {
       // Si es un HttpError de embedding service, propagarlo

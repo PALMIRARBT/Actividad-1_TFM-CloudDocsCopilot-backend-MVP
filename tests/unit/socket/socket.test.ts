@@ -1,28 +1,104 @@
-import type http from 'http';
+// Note: these are unit tests for the socket module, not integration tests. We mock socket.io and jsonwebtoken to test socket.ts logic in isolation without needing a real server or real JWTs.
+import http from 'http';
+
+// Simple smoke tests before mocks are applied
+describe('socket module - basic safety', () => {
+  beforeEach(() => {
+    jest.resetModules();
+  });
+
+  it('emitToUser and emitToOrg are safe when not initialized', () => {
+    // Arrange: Load module fresh with no initialization
+    const { emitToUser, emitToOrg } = require('../../../src/socket/socket');
+
+    // Act & Assert: should not throw
+    expect(() => emitToUser('u1', 'e', { x: 1 })).not.toThrow();
+    expect(() => emitToOrg('org1', 'e', { x: 1 })).not.toThrow();
+  });
+
+  it('initSocket returns a Server instance when JWT_SECRET provided', () => {
+    // Arrange
+    process.env.JWT_SECRET = 'test-secret';
+    process.env.ALLOWED_ORIGINS = '';
+    const { initSocket } = require('../../../src/socket/socket');
+    const server = http.createServer();
+
+    // Act
+    const io = initSocket(server as unknown as http.Server);
+
+    // Assert
+    expect(io).toBeDefined();
+    server.close();
+  });
+
+  it('initSocket returns same instance on second call', () => {
+    // Arrange
+    process.env.JWT_SECRET = 'test-secret';
+    const { initSocket } = require('../../../src/socket/socket');
+    const server = http.createServer();
+
+    // Act
+    const io1 = initSocket(server as unknown as http.Server);
+    const io2 = initSocket(server as unknown as http.Server);
+
+    // Assert
+    expect(io1).toBe(io2);
+    server.close();
+  });
+
+  it('extract token flow via initSocket middleware indirectly', () => {
+    // Arrange
+    process.env.JWT_SECRET = 'test-secret';
+    process.env.ALLOWED_ORIGINS = 'http://localhost';
+    const { initSocket } = require('../../../src/socket/socket');
+    const server = http.createServer();
+
+    // Act & Assert
+    expect(() => initSocket(server as unknown as http.Server)).not.toThrow();
+    server.close();
+  });
+});
+
+
 
 const serverToEmitMock = jest.fn();
 
-let lastServerInstance: any = null;
-let lastCtorArgs: any[] | null = null;
+let lastServerInstance: ServerMock | null = null;
+let lastCtorArgs: [unknown, unknown] | null = null;
+
+interface ServerMock {
+  opts: unknown;
+  middlewares: Array<(socket: unknown, next: (err?: Error) => void) => void>;
+  handlers: Record<string, (socket: unknown) => void>;
+  to: jest.Mock;
+  use: (fn: (socket: unknown, next: (err?: Error) => void) => void) => void;
+  on: (event: string, fn: (socket: unknown) => void) => void;
+}
+
+interface ServerOptions {
+  cors: {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void;
+  };
+}
 
 jest.mock('socket.io', () => {
   class ServerMock {
-    public opts: any;
-    public middlewares: any[] = [];
-    public handlers: Record<string, Function> = {};
+    public opts: unknown;
+    public middlewares: Array<(socket: unknown, next: (err?: Error) => void) => void> = [];
+    public handlers: Record<string, (socket: unknown) => void> = {};
     public to = jest.fn().mockReturnValue({ emit: serverToEmitMock });
 
-    constructor(_server: any, opts: any) {
+    constructor(_server: unknown, opts: unknown) {
       this.opts = opts;
       lastCtorArgs = [_server, opts];
       lastServerInstance = this;
     }
 
-    use(fn: any) {
+    use(fn: (socket: unknown, next: (err?: Error) => void) => void): void {
       this.middlewares.push(fn);
     }
 
-    on(event: string, fn: Function) {
+    on(event: string, fn: (socket: unknown) => void): void {
       this.handlers[event] = fn;
     }
   }
@@ -65,8 +141,19 @@ describe('socket/socket (unit)', () => {
     process.env = originalEnv;
   });
 
-  function makeSocket(overrides: any = {}) {
-    const socket: any = {
+  interface MockSocket {
+    handshake: {
+      headers: Record<string, unknown>;
+      auth: Record<string, unknown>;
+    };
+    data: Record<string, unknown>;
+    join: jest.Mock;
+    emit: jest.Mock;
+    on: jest.Mock;
+  }
+
+  function makeSocket(overrides: Partial<MockSocket> = {}): MockSocket {
+    const socket: MockSocket = {
       handshake: {
         headers: {},
         auth: {}
@@ -103,7 +190,7 @@ describe('socket/socket (unit)', () => {
 
     mod.initSocket({} as http.Server);
 
-    const opts = lastCtorArgs![1];
+    const opts = lastCtorArgs![1] as ServerOptions;
     const originFn = opts.cors.origin;
 
     const cb = jest.fn();
@@ -120,7 +207,7 @@ describe('socket/socket (unit)', () => {
 
     mod.initSocket({} as http.Server);
 
-    const opts = lastCtorArgs![1];
+    const opts = lastCtorArgs![1] as ServerOptions;
     const originFn = opts.cors.origin;
 
     const cb = jest.fn();
@@ -142,7 +229,7 @@ describe('socket/socket (unit)', () => {
 
     mod.initSocket({} as http.Server);
 
-    const opts = lastCtorArgs![1];
+    const opts = lastCtorArgs![1] as ServerOptions;
     const originFn = opts.cors.origin;
 
     const cb = jest.fn();
@@ -159,7 +246,7 @@ describe('socket/socket (unit)', () => {
 
     mod.initSocket({} as http.Server);
 
-    const opts = lastCtorArgs![1];
+    const opts = lastCtorArgs![1] as ServerOptions;
     const originFn = opts.cors.origin;
 
     const cb = jest.fn();
@@ -180,7 +267,7 @@ describe('socket/socket (unit)', () => {
 
     mod.initSocket({} as http.Server);
 
-    const mw = lastServerInstance.middlewares[0];
+    const mw = lastServerInstance!.middlewares[0];
     const socket = makeSocket();
     const next = jest.fn();
 
@@ -202,7 +289,7 @@ describe('socket/socket (unit)', () => {
 
     mod.initSocket({} as http.Server);
 
-    const mw = lastServerInstance.middlewares[0];
+    const mw = lastServerInstance!.middlewares[0];
     const socket = makeSocket({
       handshake: {
         headers: { authorization: 'Bearer abc' },
@@ -227,7 +314,7 @@ describe('socket/socket (unit)', () => {
 
     mod.initSocket({} as http.Server);
 
-    const mw = lastServerInstance.middlewares[0];
+    const mw = lastServerInstance!.middlewares[0];
     const socket = makeSocket({
       handshake: {
         headers: { authorization: 'Bearer abc' },
@@ -252,7 +339,7 @@ describe('socket/socket (unit)', () => {
 
     mod.initSocket({} as http.Server);
 
-    const mw = lastServerInstance.middlewares[0];
+    const mw = lastServerInstance!.middlewares[0];
     const socket = makeSocket({
       handshake: {
         headers: { authorization: 'Bearer token123' },
@@ -276,7 +363,7 @@ describe('socket/socket (unit)', () => {
 
     mod.initSocket({} as http.Server);
 
-    const mw = lastServerInstance.middlewares[0];
+    const mw = lastServerInstance!.middlewares[0];
     const socket = makeSocket({
       handshake: {
         headers: {},
@@ -300,7 +387,7 @@ describe('socket/socket (unit)', () => {
 
     mod.initSocket({} as http.Server);
 
-    const mw = lastServerInstance.middlewares[0];
+    const mw = lastServerInstance!.middlewares[0];
     const socket = makeSocket({
       handshake: {
         headers: { cookie: 'a=1; token=jwt%2Etoken%2Ehere; b=2' },
@@ -324,7 +411,7 @@ describe('socket/socket (unit)', () => {
 
     mod.initSocket({} as http.Server);
 
-    const onConn = lastServerInstance.handlers['connection'];
+    const onConn = lastServerInstance!.handlers['connection'];
     expect(typeof onConn).toBe('function');
 
     const socket = makeSocket({ data: { userId: 'u1' } });
@@ -351,7 +438,7 @@ describe('socket/socket (unit)', () => {
 
     mod.emitToUser('u1', 'notification:new', { hello: 'world' });
 
-    expect(lastServerInstance.to).toHaveBeenCalledWith('user:u1');
+    expect(lastServerInstance!.to).toHaveBeenCalledWith('user:u1');
     expect(serverToEmitMock).toHaveBeenCalledWith('notification:new', { hello: 'world' });
   });
 
@@ -366,7 +453,7 @@ describe('socket/socket (unit)', () => {
 
     mod.emitToOrg('org1', 'org:event', { ok: true });
 
-    expect(lastServerInstance.to).toHaveBeenCalledWith('org:org1');
+    expect(lastServerInstance!.to).toHaveBeenCalledWith('org:org1');
     expect(serverToEmitMock).toHaveBeenCalledWith('org:event', { ok: true });
   });
 });

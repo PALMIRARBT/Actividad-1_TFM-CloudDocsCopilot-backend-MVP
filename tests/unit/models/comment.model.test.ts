@@ -83,7 +83,7 @@ describe('Comment Model', () => {
           // document missing
           createdBy: userId,
           content: 'Test'
-        } as any)
+        })
       ).rejects.toThrow('Documento es requerido');
     });
 
@@ -95,7 +95,7 @@ describe('Comment Model', () => {
           document: documentId,
           // createdBy missing
           content: 'Test'
-        } as any)
+        })
       ).rejects.toThrow('createdBy es requerido');
     });
 
@@ -107,7 +107,7 @@ describe('Comment Model', () => {
           document: documentId,
           createdBy: userId
           // content missing
-        } as any)
+        })
       ).rejects.toThrow('Contenido es requerido');
     });
 
@@ -170,7 +170,7 @@ describe('Comment Model', () => {
         content: 'JSON'
       });
 
-      const json = comment.toJSON() as any;
+      const json = comment.toJSON() as Record<string, unknown>;
 
       // transform: delete ret._id
       expect(json._id).toBeUndefined();
@@ -181,7 +181,9 @@ describe('Comment Model', () => {
       // virtuals: true -> por default Mongoose incluye "id" virtual
       // (si tu config global lo desactiva, puedes quitar esta aserción)
       expect(typeof json.id).toBe('string');
-      expect(json.id.length).toBeGreaterThan(0);
+      if (typeof json.id === 'string') {
+        expect(json.id.length).toBeGreaterThan(0);
+      }
     });
 
     it('toObject should remove _id and versionKey, keep virtuals', async () => {
@@ -193,12 +195,14 @@ describe('Comment Model', () => {
         content: 'OBJ'
       });
 
-      const obj = comment.toObject() as any;
+      const obj = comment.toObject() as Record<string, unknown>;
 
       expect(obj._id).toBeUndefined();
       expect(obj.__v).toBeUndefined();
       expect(typeof obj.id).toBe('string');
-      expect(obj.id.length).toBeGreaterThan(0);
+      if (typeof obj.id === 'string') {
+        expect(obj.id.length).toBeGreaterThan(0);
+      }
     });
   });
 

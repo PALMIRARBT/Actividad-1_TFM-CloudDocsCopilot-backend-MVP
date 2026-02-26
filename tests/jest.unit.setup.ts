@@ -11,7 +11,19 @@
 require('dotenv').config();
 
 // Mock pdf-parse to avoid loading native bindings in tests
-jest.mock('pdf-parse', () => ({ __esModule: true, default: jest.fn() }));
+jest.mock('pdf-parse', () => ({
+  __esModule: true,
+  default: jest.fn().mockResolvedValue({
+    numpages: 1,
+    text: 'Mocked PDF text content for testing',
+    info: {
+      Title: 'Test PDF',
+      Author: 'Test Author',
+      Creator: 'Test Creator',
+      Producer: 'Test Producer'
+    }
+  })
+}));
 
 // Mock mammoth to avoid loading heavy native/binary parsing code in unit tests
 jest.mock('mammoth', () => ({
