@@ -1,3 +1,43 @@
+import { splitIntoChunks, countWords, addChunkMetadata, CHUNK_CONFIG, truncateContext } from '../../../src/utils/chunking.util';
+
+describe('chunking.util', () => {
+  test('countWords returns 0 for empty string', () => {
+    expect(countWords('')).toBe(0);
+  });
+
+  test('countWords counts words correctly', () => {
+    expect(countWords('one two   three')).toBe(3);
+  });
+
+  test('splitIntoChunks returns whole text when short', () => {
+    const short = 'a b c';
+    const chunks = splitIntoChunks(short, 10);
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0]).toBe(short);
+  });
+
+  test('splitIntoChunks splits long text into chunks', () => {
+    const words = new Array(CHUNK_CONFIG.TARGET_WORDS * 3).fill('word').join(' ');
+    const chunks = splitIntoChunks(words);
+    expect(chunks.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('addChunkMetadata returns metadata objects', () => {
+    const chunks = ['one two', 'three four five'];
+    const meta = addChunkMetadata(chunks);
+    expect(meta[0]).toHaveProperty('text', 'one two');
+    expect(meta[0]).toHaveProperty('wordCount');
+    expect(meta[1].wordCount).toBeGreaterThanOrEqual(3);
+  });
+
+  test('truncateContext respects maxTokens', () => {
+    const chunks = ['a'.repeat(400), 'b'.repeat(400)];
+    // estimateTokens ~ length/4 so 200 tokens accommodate roughly first chunk
+    const truncated = truncateContext(chunks, 200);
+    expect(truncated.length).toBeGreaterThanOrEqual(1);
+    expect(truncated.join('')).toContain('a');
+  });
+});
 /**
  * Unit tests for Chunking Utility
  */

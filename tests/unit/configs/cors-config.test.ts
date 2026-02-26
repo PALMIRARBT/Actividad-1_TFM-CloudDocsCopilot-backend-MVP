@@ -13,7 +13,7 @@ describe('cors-config', () => {
   it('returns development options by default and allows localhost origin', () => {
     process.env.NODE_ENV = 'development';
     const opts = getCorsOptions();
-    const originFn: any = opts.origin;
+    const originFn = opts.origin as (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void;
     const cb = jest.fn();
     originFn('http://localhost:3000', cb);
     expect(cb).toHaveBeenCalledWith(null, true);
@@ -22,7 +22,7 @@ describe('cors-config', () => {
   it('development allows no origin (e.g., curl)', () => {
     process.env.NODE_ENV = 'development';
     const opts = getCorsOptions();
-    const originFn: any = opts.origin;
+    const originFn = opts.origin as (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void;
     const cb = jest.fn();
     originFn(undefined, cb);
     expect(cb).toHaveBeenCalledWith(null, true);
@@ -31,7 +31,7 @@ describe('cors-config', () => {
   it('production blocks when ALLOWED_ORIGINS not set', () => {
     process.env.NODE_ENV = 'production';
     const opts = getCorsOptions();
-    const originFn: any = opts.origin;
+    const originFn = opts.origin as (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void;
     const cb = jest.fn();
     originFn('https://evil.com', cb);
     expect(cb).toHaveBeenCalled();
@@ -41,7 +41,7 @@ describe('cors-config', () => {
     process.env.NODE_ENV = 'production';
     process.env.ALLOWED_ORIGINS = 'https://app.example.com,https://www.example.com';
     const opts = getCorsOptions();
-    const originFn: any = opts.origin;
+    const originFn = opts.origin as (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void;
     const cb = jest.fn();
     originFn('https://app.example.com', cb);
     expect(cb).toHaveBeenCalledWith(null, true);
@@ -52,7 +52,7 @@ describe('cors-config', () => {
     process.env.ALLOWED_ORIGINS = 'https://app.example.com';
     process.env.ALLOW_NO_ORIGIN = 'false';
     const opts = getCorsOptions();
-    const originFn: any = opts.origin;
+    const originFn = opts.origin as (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void;
     const cb = jest.fn();
     originFn(undefined, cb);
     expect(cb).toHaveBeenCalled();

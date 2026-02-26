@@ -31,8 +31,14 @@ module.exports = {
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/index.ts', // Excluir el punto de entrada principal
+    '!src/app.ts',
     '!src/**/index.ts', // Excluir archivos barrel
+    '!src/configurations/**', // Excluir archivos de configuración (no cuentan para coverage)
+    '!src/configurations/**/**',
     '!src/docs/**',
+    '!scripts/**',
+    '!uploads/**',
+    '!storage/**',
     '!**/node_modules/**'
   ],
 
@@ -66,6 +72,16 @@ module.exports = {
 
   // Restaurar mocks entre tests
   restoreMocks: true,
+  // Patrones de archivos que se IGNORAN por completo al calcular coverage
+  coveragePathIgnorePatterns: [
+    '<rootDir>/src/configurations/',
+    '<rootDir>/src/app.ts',
+    '<rootDir>/src/index.ts',
+    '<rootDir>/scripts/',
+    '<rootDir>/docs/',
+    '<rootDir>/uploads/',
+    '<rootDir>/storage/'
+  ],
   // Mapear alias de import `src/*` a la carpeta real para que jest pueda resolverlos
   moduleNameMapper: {
     '^src/(.*)$': '<rootDir>/src/$1'

@@ -8,6 +8,9 @@
     "dev": "nodemon --exec ts-node src/index.ts",
     "dev:watch": "ts-node src/index.ts",
     "format": "npx prettier --write .",
+    "lint": "eslint src tests --ext .ts",
+    "lint:fix": "eslint src tests --ext .ts --fix",
+    "lint:check": "eslint src tests --ext .ts --max-warnings 0",
     "test": "cross-env NODE_ENV=test jest --detectOpenHandles --runInBand",
     "test:unit": "cross-env NODE_ENV=test jest --config jest.unit.config.js --detectOpenHandles --runInBand",
     "test:integration": "cross-env NODE_ENV=test jest --testPathPattern=tests/integration --detectOpenHandles --runInBand",
@@ -18,8 +21,7 @@
     "test:coverage:unit:ci": "cross-env NODE_ENV=test COVERAGE_DIR=coverage/unit jest --config jest.unit.config.js --coverage --runInBand",
     "test:ci": "npm run test:coverage:main && npm run test:coverage:unit:ci && npm run test:ci:report",
     "test:ci:report": "node scripts/merge-coverage.js",
-    "seed:dev": "ts-node scripts/seed-dev.ts"
-    ,
+    "seed:dev": "ts-node scripts/seed-dev.ts",
     "reprocess-chunks": "ts-node scripts/reprocess-chunks.ts"
   },
   "dependencies": {
@@ -50,6 +52,7 @@
     "tesseract.js": "^2.1.5"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie": "^0.6.0",
     "@types/cookie-parser": "^1.4.10",
@@ -66,13 +69,17 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/supertest": "^6.0.3",
     "@types/swagger-ui-express": "^4.1.8",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
     "cross-env": "^10.1.0",
+    "eslint": "^10.0.2",
     "jest": "^29.7.0",
     "mongodb-memory-server": "^11.0.1",
     "nodemon": "^3.1.10",
     "supertest": "^6.3.3",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1"
   }
 }

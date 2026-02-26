@@ -243,3 +243,32 @@ export function addChunkMetadata(chunks: string[]): IChunkWithMetadata[] {
  * Exportar función de conteo de palabras para uso externo
  */
 export { countWords };
+
+/**
+ * Trunca un contexto (array de chunks) para que no exceda un número máximo
+ * aproximado de tokens. Usa una estimación heurística de tokens ~ chars/4.
+ *
+ * @param chunks - array de strings
+ * @param maxTokens - límite aproximado de tokens
+ * @returns subset de chunks que encaja en el límite (al menos 1)
+ */
+export function truncateContext(chunks: string[], maxTokens: number): string[] {
+  if (!Array.isArray(chunks) || chunks.length === 0) return [];
+
+  const estimateTokens = (s: string) => Math.max(1, Math.ceil(s.length / 4));
+
+  const out: string[] = [];
+  let used = 0;
+
+  for (const c of chunks) {
+    const t = estimateTokens(c);
+    if (used + t > maxTokens) break;
+    out.push(c);
+    used += t;
+  }
+
+  // Ensure at least one chunk is returned to keep callers safe
+  if (out.length === 0 && chunks.length > 0) out.push(chunks[0]);
+
+  return out;
+}

@@ -11,16 +11,18 @@ The `AGENTS.md` file contains the complete set of coding standards, patterns, an
 ## Key Reminders for Claude
 
 1. **Type Safety**: Never use `any` type - use `unknown` with type guards or specific types
-2. **Architecture**: Follow layered architecture (Routes → Controllers → Services → Models)
-3. **Error Handling**: Always use `HttpError` for API errors with proper status codes
-4. **Testing**: All code changes must include tests and pass `npm test`
-5. **Security**: Validate all inputs, sanitize paths, never trust user data
-6. **Async/Await**: Use proper try-catch blocks, no sync operations in request handlers
-7. **Naming**: Follow conventions in AGENTS.md (kebab-case files, camelCase functions, etc.)
-8. **Business Logic**: Keep it in services, not controllers
+2. **Linting**: Run `npm run lint` - all `any` usage will fail linting
+3. **Architecture**: Follow layered architecture (Routes → Controllers → Services → Models)
+4. **Error Handling**: Always use `HttpError` for API errors with proper status codes
+5. **Testing**: All code changes must include tests and pass `npm test`
+6. **Security**: Validate all inputs, sanitize paths, never trust user data
+7. **Async/Await**: Use proper try-catch blocks, no sync operations in request handlers
+8. **Naming**: Follow conventions in AGENTS.md (kebab-case files, camelCase functions, etc.)
+9. **Business Logic**: Keep it in services, not controllers
 
 ## Before Committing
 
+- [ ] Linting passes: `npm run lint` (NO `any` types allowed)
 - [ ] All tests pass: `npm test`
 - [ ] Build succeeds: `npm run build`
 - [ ] No `any` types in code

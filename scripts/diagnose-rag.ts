@@ -117,13 +117,13 @@ async function diagnose() {
       console.log(`  testOrg type: ${typeof testOrg}`);
 
       // Helper para ejecutar búsqueda vectorial con distintos filtros
-      async function runVectorSearch(filter: any, desc: string) {
+      async function runVectorSearch(filter: unknown, desc: string) {
         console.log(`\n-- Ejecutando búsqueda vectorial (${desc}) --`);
         try {
-          const pipeline: any[] = [
+          const pipeline: Array<Record<string, unknown>> = [
             {
-                $vectorSearch: {
-                  index: process.env.MONGO_ATLAS_VECTOR_INDEX || 'default',
+              $vectorSearch: {
+                index: process.env.MONGO_ATLAS_VECTOR_INDEX || 'default',
                 path: 'embedding',
                 queryVector: queryEmbedding,
                 numCandidates: 50,
@@ -136,20 +136,23 @@ async function diagnose() {
 
           // Si se pasó filtro, inyectarlo en $vectorSearch
           if (filter) {
-            pipeline[0].$vectorSearch.filter = filter;
+            const first = pipeline[0] as Record<string, unknown>;
+            const vs = first['$vectorSearch'] as Record<string, unknown>;
+            vs['filter'] = filter;
           }
 
           const res = await collection.aggregate(pipeline).toArray();
           console.log(`  Resultados: ${res.length}`);
           if (res.length > 0) {
-            const t = res[0];
+            const t = res[0] as Record<string, unknown>;
             console.log(`  Top score: ${t.score}`);
             console.log(`  Top docId: ${t.documentId}`);
             console.log(`  Top content: ${t.content}...`);
           }
           return res;
-        } catch (err: any) {
-          console.log(`  ERROR: ${err.message}`);
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.log(`  ERROR: ${msg}`);
           return null;
         }
       }
@@ -177,9 +180,10 @@ async function diagnose() {
       console.log(' - Verifica que el campo `embedding` esté poblado y con la misma longitud que espera el índice');
       console.log(' - Verifica tipos (string vs ObjectId) de `organizationId` y usa el tipo correcto en el filtro');
 
-    } catch (searchError: any) {
-      console.log(`\n❌ ERROR EN BÚSQUEDA: ${searchError.message}`);
-      if (searchError.message.includes('index')) {
+    } catch (searchError: unknown) {
+      const msg = searchError instanceof Error ? searchError.message : String(searchError);
+      console.log(`\n❌ ERROR EN BÚSQUEDA: ${msg}`);
+      if (msg.includes('index')) {
         console.log('\n→ El índice "default" NO existe en MongoDB Atlas.');
         console.log('→ Sigue las instrucciones arriba para crearlo.');
       }
@@ -188,8 +192,9 @@ async function diagnose() {
     console.log('\n' + '═'.repeat(50));
     console.log('✅ DIAGNÓSTICO COMPLETADO\n');
 
-  } catch (error: any) {
-    console.error('❌ Error:', error.message);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('❌ Error:', msg);
   } finally {
     await mongoose.disconnect();
     process.exit(0);

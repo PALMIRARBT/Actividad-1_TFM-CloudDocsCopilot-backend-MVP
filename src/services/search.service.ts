@@ -46,7 +46,7 @@ export interface SearchResult {
  */
 export async function indexDocument(document: IDocument, extractedText?: string): Promise<void> {
   try {
-    const client = getEsModule().getInstance();
+    const client = getEsClient();
 
     await client.index({
       index: 'documents',
@@ -88,7 +88,7 @@ export async function indexDocument(document: IDocument, extractedText?: string)
  */
 export async function removeDocumentFromIndex(documentId: string): Promise<void> {
   try {
-    const client = getEsModule().getInstance();
+    const client = getEsClient();
 
     await client.delete({
       index: 'documents',
@@ -111,7 +111,7 @@ export async function removeDocumentFromIndex(documentId: string): Promise<void>
  */
 export async function searchDocuments(params: SearchParams): Promise<SearchResult> {
   try {
-    const client = getEsModule().getInstance();
+    const client = getEsClient();
     const {
       query,
       userId,
@@ -197,7 +197,7 @@ export async function getAutocompleteSuggestions(
   limit: number = 5
 ): Promise<string[]> {
   try {
-    const client = getEsModule().getInstance();
+    const client = getEsClient();
 
     const result = await client.search({
       index: 'documents',

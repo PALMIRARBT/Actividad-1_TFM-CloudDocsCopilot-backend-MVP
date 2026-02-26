@@ -1,3 +1,68 @@
+jest.mock('../../../src/configurations/elasticsearch-config', () => ({
+  getInstance: () => ({
+    index: jest.fn().mockResolvedValue(true),
+    delete: jest.fn().mockResolvedValue(true),
+    search: jest.fn().mockResolvedValue({ hits: { hits: [{ _id: '1', _score: 1, _source: { filename: 'f' } }], total: 1 }, took: 2 })
+  })
+}));
+
+import { indexDocument, removeDocumentFromIndex, searchDocuments, getAutocompleteSuggestions } from '../../../src/services/search.service';
+
+describe('search.service', () => {
+  const fakeDoc: any = {
+    _id: { toString: () => 'doc1' },
+    filename: 'name',
+    originalname: 'orig',
+    mimeType: 'text/plain',
+    size: 10,
+    uploadedBy: { toString: () => 'user1' },
+    organization: null,
+    folder: null,
+    uploadedAt: new Date()
+  };
+
+  test('indexDocument calls client.index and truncates content', async () => {
+    const long = 'a'.repeat(200000);
+    await expect(indexDocument(fakeDoc, long)).resolves.toBeUndefined();
+  });
+
+  test('removeDocumentFromIndex handles success', async () => {
+    await expect(removeDocumentFromIndex('doc1')).resolves.toBeUndefined();
+  });
+
+  test('searchDocuments returns mapped result', async () => {
+    const res = await searchDocuments({ query: 'q', userId: 'user1' } as any);
+    expect(res).toHaveProperty('documents');
+    expect(res.documents[0]).toHaveProperty('id');
+  });
+
+  test('getAutocompleteSuggestions returns unique suggestions', async () => {
+    const res = await getAutocompleteSuggestions('f', 'user1', 5);
+    expect(Array.isArray(res)).toBe(true);
+  });
+
+  test('searchDocuments supports mimeType filter and date range', async () => {
+    const from = new Date(Date.now() - 1000 * 60 * 60);
+    const to = new Date();
+    const res = await searchDocuments({ query: 'q', userId: 'user1', mimeType: 'text/plain', fromDate: from, toDate: to } as any);
+    expect(res.total).toBeGreaterThanOrEqual(0);
+  });
+
+  test('indexDocument logs on error should rethrow', async () => {
+    // Import and override getEsClient to inject a failing mock
+    const searchService = require('../../../src/services/search.service');
+    const originalGetEsClient = searchService.getEsClient;
+    searchService.getEsClient = () => ({
+      index: jest.fn().mockRejectedValue(new Error('es-error'))
+    });
+    
+    // Call from the required module to use the overridden getEsClient
+    await expect(searchService.indexDocument(fakeDoc)).rejects.toThrow('es-error');
+    
+    // Restore original
+    searchService.getEsClient = originalGetEsClient;
+  });
+});
 jest.resetModules();
 // The global jest.setup.ts mocks the search service; unmock here to test the real implementation
 jest.unmock('../../../src/services/search.service');

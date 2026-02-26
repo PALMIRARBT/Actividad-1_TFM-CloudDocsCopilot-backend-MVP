@@ -1,3 +1,54 @@
+jest.mock('../../..//src/services/deletion.service', () => ({
+  deletionService: { autoDeleteExpiredDocuments: jest.fn() }
+}));
+
+jest.mock('node-cron', () => ({ schedule: jest.fn((expr: string, fn: any) => { fn(); return { stop: jest.fn() }; }) }));
+
+import { runAutoDeletionNow, startAutoDeletionJob } from '../../../src/jobs/auto-deletion.job';
+import { deletionService } from '../../../src/services/deletion.service';
+import cron from 'node-cron';
+
+describe('auto-deletion.job', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('runAutoDeletionNow calls deletionService and returns number', async () => {
+    (deletionService.autoDeleteExpiredDocuments as jest.Mock).mockResolvedValue(5);
+    const res = await runAutoDeletionNow();
+    expect(res).toBe(5);
+  });
+
+  test('runAutoDeletionNow throws when service fails', async () => {
+    (deletionService.autoDeleteExpiredDocuments as jest.Mock).mockRejectedValue(new Error('fail'));
+    await expect(runAutoDeletionNow()).rejects.toThrow('fail');
+  });
+
+  test('startAutoDeletionJob schedules cron with default expression', () => {
+    process.env.AUTO_DELETE_CRON = '';
+    startAutoDeletionJob();
+    expect((cron as any).schedule).toHaveBeenCalled();
+  });
+
+  test('startAutoDeletionJob schedules cron with env expression', () => {
+    process.env.AUTO_DELETE_CRON = '*/5 * * * *';
+    startAutoDeletionJob();
+    expect((cron as any).schedule).toHaveBeenCalledWith('*/5 * * * *', expect.any(Function));
+  });
+
+  test('cron handler calls deletionService', () => {
+    (deletionService.autoDeleteExpiredDocuments as jest.Mock).mockResolvedValue(0);
+    startAutoDeletionJob();
+    expect(deletionService.autoDeleteExpiredDocuments).toHaveBeenCalled();
+  });
+
+  test('logs on schedule (sanity)', () => {
+    const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    startAutoDeletionJob();
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+});
 import { runAutoDeletionNow, startAutoDeletionJob } from '../../../src/jobs/auto-deletion.job';
 
 jest.mock('../../../src/services/deletion.service', () => ({

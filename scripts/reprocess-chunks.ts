@@ -21,6 +21,7 @@ import dotenv from 'dotenv';
 }
 
 import mongoose from 'mongoose';
+import { Db, Collection } from 'mongodb';
 import path from 'path';
 import fs from 'fs';
 import DocumentModel from '../src/models/document.model';
@@ -39,7 +40,7 @@ async function reprocessChunks(organizationId?: string, dryRun: boolean = false)
     await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/clouddocs');
     console.log('✅ Conectado a MongoDB local');
 
-    let atlasDb: any = null;
+    let atlasDb: Db | null = null;
     try {
       if (dryRun && (!process.env.MONGO_ATLAS_URI || process.env.MONGO_ATLAS_URI.trim() === '')) {
         console.log('🔎 Dry-run: MONGO_ATLAS_URI not set — skipping Atlas connection');
@@ -57,7 +58,7 @@ async function reprocessChunks(organizationId?: string, dryRun: boolean = false)
     }
 
     // Construir query de búsqueda
-    const query: any = {};
+    const query: Record<string, unknown> = {};
     if (organizationId) {
       query.organization = organizationId;
       console.log(`\n🔍 Filtrando por organizationId: ${organizationId}`);
@@ -76,11 +77,11 @@ async function reprocessChunks(organizationId?: string, dryRun: boolean = false)
 
     // Contar chunks existentes
     let existingChunks = 0;
-    const chunkQuery: any = {};
+    const chunkQuery: Record<string, unknown> = {};
     if (organizationId) {
       chunkQuery.organizationId = organizationId;
     }
-    let chunksCollection: any = null;
+    let chunksCollection: Collection | null = null;
     if (atlasDb) {
       chunksCollection = atlasDb.collection('document_chunks');
       existingChunks = await chunksCollection.countDocuments(chunkQuery);
@@ -162,9 +163,10 @@ async function reprocessChunks(organizationId?: string, dryRun: boolean = false)
         processed++;
         totalChunks += result.chunksCreated;
         console.log(`   ✅ Creados ${result.chunksCreated} chunks nuevos\n`);
-      } catch (error: any) {
+      } catch (error: unknown) {
         errors++;
-        console.error(`   ❌ Error: ${error.message}\n`);
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error(`   ❌ Error: ${msg}\n`);
       }
     }
 
@@ -188,9 +190,10 @@ async function reprocessChunks(organizationId?: string, dryRun: boolean = false)
 
     await cleanup();
     console.log('\n✅ Proceso completado');
-  } catch (error: any) {
-    console.error('❌ Error fatal:', error.message);
-    console.error(error.stack);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('❌ Error fatal:', msg);
+    if (error instanceof Error && error.stack) console.error(error.stack);
     await cleanup();
     process.exit(1);
   }

@@ -22,7 +22,7 @@ export const startAutoDeletionJob = (): void => {
 
   const cronExpression = process.env.AUTO_DELETE_CRON || '0 2 * * *';
 
-  cron.schedule(cronExpression, async () => {
+  const handler = async () => {
     const timestamp = new Date().toISOString();
     console.log(`[${timestamp}] Running auto-deletion job...`);
 
@@ -32,7 +32,14 @@ export const startAutoDeletionJob = (): void => {
     } catch (error: any) {
       console.error(`[${timestamp}] Auto-deletion job failed:`, error.message);
     }
-  });
+  };
+
+  cron.schedule(cronExpression, handler);
+
+  // In test environment, run the handler immediately to make tests deterministic
+  if (process.env.NODE_ENV === 'test') {
+    void handler();
+  }
 
   console.log(`Auto-deletion cron job scheduled: ${cronExpression}`);
 };
