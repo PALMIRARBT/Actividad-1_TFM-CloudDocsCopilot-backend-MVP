@@ -85,45 +85,83 @@ export async function shareDocument({
 
   const doc = await DocumentModel.findById(id);
   if (!doc) throw new Error('Document not found');
+
   if (String(doc.uploadedBy) !== String(userId)) throw new HttpError(403, 'Forbidden');
 
-  // Si el documento pertenece a una organización, por defecto ya es visible para todos los miembros activos.
-  // Mantener endpoint por compatibilidad, pero no es necesario para "org-wide access".
+  // Filtra el owner de la lista de usuarios con los que compartir
+  const filteredIds = uniqueIds.filter(id => String(id) !== String(userId));
+  if (filteredIds.length === 0) {
+    throw new HttpError(400, 'Cannot share document with yourself as the owner');
+  }
+
+  // Org context: validate recipients are ACTIVE members in the same active org as actor
   if (doc.organization) {
+    const activeOrgId = await getActiveOrganization(userId);
+    if (!activeOrgId) {
+      throw new HttpError(
+        403,
+        'No active organization. Please create or join an organization first.'
+      );
+    }
+
+    if (doc.organization.toString() !== activeOrgId) {
+      throw new HttpError(403, 'Document does not belong to your active organization');
+    }
+
+    const allowedRecipientIds: string[] = [];
+    for (const recipientId of filteredIds) {
+      const membership = await getMembership(recipientId, activeOrgId);
+      if (membership) {
+        allowedRecipientIds.push(recipientId);
+      }
+    }
+
+    if (allowedRecipientIds.length === 0) {
+      throw new HttpError(400, 'No valid users found to share with');
+    }
+
+    const allowedObjectIds = allowedRecipientIds.map(id => new mongoose.Types.ObjectId(id));
+
+    const updated = await DocumentModel.findByIdAndUpdate(
+      id,
+      { $addToSet: { sharedWith: { $each: allowedObjectIds } } },
+      { new: true }
+    );
+
+    // Notifications: only to selected recipients (persisted + realtime)
     try {
       const actor = await User.findById(userId).select('name email').lean();
       const actorName = (actor as any)?.name || (actor as any)?.email || 'Alguien';
 
-      await notificationService.notifyOrganizationMembers({
-        actorUserId: userId,
-        type: 'DOC_SHARED',
-        documentId: doc._id.toString(),
-        message: `${actorName} compartió "${doc.originalname || 'un documento'}"`,
-        metadata: {
-          originalname: doc.originalname,
-          folderId: doc.folder?.toString?.(),
-          actorName
-        },
-        emitter: (recipientUserId, payload) => {
-          emitToUser(recipientUserId, 'notification:new', payload);
-        }
-      });
+      for (const recipientId of allowedRecipientIds) {
+        await notificationService.createNotificationForUser({
+          organizationId: activeOrgId,
+          recipientUserId: recipientId,
+          actorUserId: userId,
+          type: 'DOC_SHARED',
+          entityKind: 'document',
+          entityId: doc._id.toString(),
+          message: `${actorName} compartió "${doc.originalname || 'un documento'}" contigo`,
+          metadata: {
+            originalname: doc.originalname,
+            folderId: doc.folder?.toString?.(),
+            actorName
+          },
+          emitter: (recipientUserId, payload) => {
+            emitToUser(recipientUserId, 'notification:new', payload);
+          }
+        });
+      }
     } catch (e: any) {
       console.error('Failed to create notification (DOC_SHARED):', e.message);
     }
 
-    return doc;
+    return updated;
   }
 
-  // Filtra el owner de la lista de usuarios con los que compartir
-  const filteredIds = uniqueIds.filter(id => String(id) !== String(userId));
-  if (filteredIds.length === 0)
-    throw new HttpError(400, 'Cannot share document with yourself as the owner');
-
-  // Convertir strings a ObjectIds para prevenir inyección NoSQL
+  // Personal docs (legacy): only share to existing users
   const filteredObjectIds = filteredIds.map(id => new mongoose.Types.ObjectId(id));
 
-  // Opcionalmente, filtra solo usuarios existentes
   const existingUsers = await User.find({ _id: { $in: filteredObjectIds } }, { _id: 1 }).lean();
   const existingIds = existingUsers.map(u => u._id);
   if (existingIds.length === 0) throw new HttpError(400, 'No valid users found to share with');
@@ -133,12 +171,12 @@ export async function shareDocument({
     { $addToSet: { sharedWith: { $each: existingIds } } },
     { new: true }
   );
+
   return updated;
 }
 
 /**
  * Lista documentos compartidos al usuario (por otros usuarios) en su organización activa
- * NOTA: Se filtra únicamente por organización y se excluyen los documentos subidos por el usuario.
  */
 export async function listSharedDocumentsToUser(userId: string): Promise<IDocument[]> {
   if (!isValidObjectId(userId)) {
@@ -158,6 +196,7 @@ export async function listSharedDocumentsToUser(userId: string): Promise<IDocume
 
   const docs = await DocumentModel.find({
     organization: orgObjectId,
+    sharedWith: userObjectId,
     uploadedBy: { $ne: userObjectId },
     isDeleted: false
   })
@@ -955,26 +994,7 @@ export async function uploadDocument({
     // No lanzar error para no bloquear la creación del documento
   }
 
-  // Notificación (persistida) a miembros de la organización (excluye al actor)
-  if (doc.organization) {
-    try {
-      await notificationService.notifyOrganizationMembers({
-        actorUserId: userId,
-        type: 'DOC_UPLOADED',
-        documentId: doc._id.toString(),
-        message: `${user.name || user.email} subió "${doc.originalname}"`,
-        metadata: {
-          originalname: doc.originalname,
-          folderId: doc.folder?.toString?.()
-        },
-        emitter: (recipientUserId, payload) => {
-          emitToUser(recipientUserId, 'notification:new', payload);
-        }
-      });
-    } catch (e: any) {
-      console.error('Failed to create notification (DOC_UPLOADED):', e.message);
-    }
-  }
+  // NOTE: Upload is private by default now -> do NOT notify entire org on upload.
 
   return doc;
 }
