@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthRequest } from '../../../src/middlewares/auth.middleware';
 import {
   register,
@@ -45,7 +45,7 @@ describe('Auth Controller', () => {
       const mockUser = { id: '123', name: 'Test User', email: 'test@example.com' };
       (authService.registerUser as jest.Mock).mockResolvedValue(mockUser);
 
-      await register(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await register(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(authService.registerUser).toHaveBeenCalledWith(mockRequest.body);
       expect(mockResponse.status).toHaveBeenCalledWith(201);
@@ -62,7 +62,7 @@ describe('Auth Controller', () => {
         password: 'SecurePass123!'
       };
 
-      await register(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await register(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(
         new HttpError(400, 'Missing required fields (name, email, password)')
@@ -76,7 +76,7 @@ describe('Auth Controller', () => {
         password: 'SecurePass123!'
       };
 
-      await register(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await register(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(
         new HttpError(400, 'Missing required fields (name, email, password)')
@@ -89,7 +89,7 @@ describe('Auth Controller', () => {
         email: 'test@example.com'
       };
 
-      await register(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await register(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(
         new HttpError(400, 'Missing required fields (name, email, password)')
@@ -106,7 +106,7 @@ describe('Auth Controller', () => {
       const error = new Error('duplicate key error');
       (authService.registerUser as jest.Mock).mockRejectedValue(error);
 
-      await register(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await register(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(409, 'Email already registered'));
     });
@@ -121,7 +121,7 @@ describe('Auth Controller', () => {
       const error = new Error('Invalid email format');
       (authService.registerUser as jest.Mock).mockRejectedValue(error);
 
-      await register(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await register(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Invalid email format'));
     });
@@ -136,7 +136,7 @@ describe('Auth Controller', () => {
       const error = new Error('Name must contain only alphanumeric characters and spaces');
       (authService.registerUser as jest.Mock).mockRejectedValue(error);
 
-      await register(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await register(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Invalid name format'));
     });
@@ -187,7 +187,7 @@ describe('Auth Controller', () => {
       };
       (authService.loginUser as jest.Mock).mockResolvedValue(mockResult);
 
-      await login(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await login(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(authService.loginUser).toHaveBeenCalledWith(mockRequest.body);
       expect(mockResponse.cookie).toHaveBeenCalledWith(
@@ -208,7 +208,7 @@ describe('Auth Controller', () => {
     it('should return 400 when email is missing', async () => {
       mockRequest.body = { password: 'SecurePass123!' };
 
-      await login(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await login(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Missing required fields'));
       expect(authService.loginUser).not.toHaveBeenCalled();
@@ -217,7 +217,7 @@ describe('Auth Controller', () => {
     it('should return 400 when password is missing', async () => {
       mockRequest.body = { email: 'test@example.com' };
 
-      await login(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await login(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Missing required fields'));
     });
@@ -231,7 +231,7 @@ describe('Auth Controller', () => {
       const error = new Error('User not found');
       (authService.loginUser as jest.Mock).mockRejectedValue(error);
 
-      await login(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await login(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(404, 'Invalid credentials'));
     });
@@ -245,7 +245,7 @@ describe('Auth Controller', () => {
       const error = new Error('Invalid password');
       (authService.loginUser as jest.Mock).mockRejectedValue(error);
 
-      await login(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await login(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(401, 'Invalid credentials'));
     });
@@ -259,7 +259,7 @@ describe('Auth Controller', () => {
       const error = new Error('User account is not active');
       (authService.loginUser as jest.Mock).mockRejectedValue(error);
 
-      await login(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await login(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(403, 'Account is not active'));
     });
@@ -279,7 +279,7 @@ describe('Auth Controller', () => {
       };
       (authService.loginUser as jest.Mock).mockResolvedValue(mockResult);
 
-      await login(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await login(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockResponse.cookie).toHaveBeenCalledWith(
         'token',
@@ -316,7 +316,7 @@ describe('Auth Controller', () => {
 
   describe('logout', () => {
     it('should clear token cookie successfully', async () => {
-      await logout(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await logout(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockResponse.clearCookie).toHaveBeenCalledWith(
         'token',
@@ -333,7 +333,7 @@ describe('Auth Controller', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
 
-      await logout(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await logout(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockResponse.clearCookie).toHaveBeenCalledWith(
         'token',
@@ -352,7 +352,7 @@ describe('Auth Controller', () => {
         throw error;
       });
 
-      await logout(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await logout(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(error);
     });
@@ -365,7 +365,7 @@ describe('Auth Controller', () => {
       const mockResult = { userId: '123', userAlreadyActive: false };
       (authService.confirmUserAccount as jest.Mock).mockResolvedValue(mockResult);
 
-      await confirmAccount(mockRequest, mockResponse as Response, mockNext);
+      await confirmAccount(mockRequest as unknown as Request, mockResponse as unknown as Response, mockNext);
 
       expect(authService.confirmUserAccount).toHaveBeenCalledWith('valid-token-123');
       expect(mockResponse.redirect).toHaveBeenCalledWith(
@@ -380,7 +380,7 @@ describe('Auth Controller', () => {
       const mockResult = { userId: '123', userAlreadyActive: true };
       (authService.confirmUserAccount as jest.Mock).mockResolvedValue(mockResult);
 
-      await confirmAccount(mockRequest, mockResponse as Response, mockNext);
+      await confirmAccount(mockRequest as unknown as Request, mockResponse as unknown as Response, mockNext);
 
       expect(mockResponse.redirect).toHaveBeenCalledWith(
         302,
@@ -391,7 +391,7 @@ describe('Auth Controller', () => {
     it('should return 400 when token is missing', async () => {
       mockRequest.params = {};
 
-      await confirmAccount(mockRequest, mockResponse as Response, mockNext);
+      await confirmAccount(mockRequest as unknown as Request, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Token is required'));
     });
@@ -403,7 +403,7 @@ describe('Auth Controller', () => {
         new Error('Invalid or expired token')
       );
 
-      await confirmAccount(mockRequest, mockResponse as Response, mockNext);
+      await confirmAccount(mockRequest as unknown as Request, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Invalid or expired token'));
     });
@@ -416,7 +416,7 @@ describe('Auth Controller', () => {
       const mockResult = { userId: '123', userAlreadyActive: false };
       (authService.confirmUserAccount as jest.Mock).mockResolvedValue(mockResult);
 
-      await confirmAccount(mockRequest, mockResponse as Response, mockNext);
+      await confirmAccount(mockRequest as unknown as Request, mockResponse as unknown as Response, mockNext);
 
       expect(mockResponse.redirect).toHaveBeenCalledWith(
         302,
@@ -433,7 +433,7 @@ describe('Auth Controller', () => {
 
       (authService.requestPasswordReset as jest.Mock).mockResolvedValue(undefined);
 
-      await forgotPassword(mockRequest, mockResponse as Response, mockNext);
+      await forgotPassword(mockRequest as unknown as Request, mockResponse as unknown as Response, mockNext);
 
       expect(authService.requestPasswordReset).toHaveBeenCalledWith('test@example.com');
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -444,7 +444,7 @@ describe('Auth Controller', () => {
     it('should return 400 when email is missing', async () => {
       mockRequest.body = {};
 
-      await forgotPassword(mockRequest, mockResponse as Response, mockNext);
+      await forgotPassword(mockRequest as unknown as Request, mockResponse as unknown as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Missing required fields'));
     });
@@ -454,7 +454,7 @@ describe('Auth Controller', () => {
 
       (authService.requestPasswordReset as jest.Mock).mockResolvedValue(undefined);
 
-      await forgotPassword(mockRequest, mockResponse as Response, mockNext);
+      await forgotPassword(mockRequest as unknown as Request, mockResponse as unknown as Response, mockNext);
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         message: 'Check your email, a link has been sent'
@@ -472,7 +472,7 @@ describe('Auth Controller', () => {
 
       (authService.resetPassword as jest.Mock).mockResolvedValue(undefined);
 
-      await resetPasswordController(mockRequest, mockResponse as Response, mockNext);
+      await resetPasswordController(mockRequest as unknown as Request, mockResponse as Response, mockNext);
 
       expect(authService.resetPassword).toHaveBeenCalledWith(mockRequest.body);
       expect(mockResponse.clearCookie).toHaveBeenCalledWith('token', expect.any(Object));
@@ -487,7 +487,7 @@ describe('Auth Controller', () => {
         confirmPassword: 'NewSecurePass123!'
       };
 
-      await resetPasswordController(mockRequest, mockResponse as Response, mockNext);
+      await resetPasswordController(mockRequest as unknown as Request, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Missing required fields'));
     });
@@ -498,7 +498,7 @@ describe('Auth Controller', () => {
         confirmPassword: 'NewSecurePass123!'
       };
 
-      await resetPasswordController(mockRequest, mockResponse as Response, mockNext);
+      await resetPasswordController(mockRequest as unknown as Request, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Missing required fields'));
     });
@@ -509,7 +509,7 @@ describe('Auth Controller', () => {
         newPassword: 'NewSecurePass123!'
       };
 
-      await resetPasswordController(mockRequest, mockResponse as Response, mockNext);
+      await resetPasswordController(mockRequest as unknown as Request, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Missing required fields'));
     });
@@ -523,7 +523,7 @@ describe('Auth Controller', () => {
 
       (authService.resetPassword as jest.Mock).mockResolvedValue(undefined);
 
-      await resetPasswordController(mockRequest, mockResponse as Response, mockNext);
+      await resetPasswordController(mockRequest as unknown as Request, mockResponse as Response, mockNext);
 
       expect(mockResponse.clearCookie).toHaveBeenCalledWith(
         'token',
