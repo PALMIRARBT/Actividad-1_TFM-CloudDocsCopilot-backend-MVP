@@ -34,7 +34,7 @@ class ElasticsearchClient {
         sniffOnStart: false
       });
 
-      console.log(`✅ Elasticsearch client initialized: ${esNode}`);
+      console.warn(`✅ Elasticsearch client initialized: ${esNode}`);
     }
 
     return ElasticsearchClient.instance;
@@ -47,7 +47,7 @@ class ElasticsearchClient {
     try {
       const client = ElasticsearchClient.getInstance();
       const health = await client.cluster.health();
-      console.log(`✅ Elasticsearch cluster status: ${health.status}`);
+      console.warn(`✅ Elasticsearch cluster status: ${health.status}`);
       return true;
     } catch (error: unknown) {
       console.error('❌ Elasticsearch connection failed:', getErrorMessage(error));
@@ -120,9 +120,9 @@ class ElasticsearchClient {
           }
         });
 
-        console.log(`✅ Elasticsearch index '${indexName}' created successfully`);
+        console.warn(`✅ Elasticsearch index '${indexName}' created successfully`);
       } else {
-        console.log(`ℹ️  Elasticsearch index '${indexName}' already exists`);
+        console.warn(`ℹ️  Elasticsearch index '${indexName}' already exists`);
       }
     } catch (error: unknown) {
       console.error(`❌ Error creating Elasticsearch index:`, getErrorMessage(error));

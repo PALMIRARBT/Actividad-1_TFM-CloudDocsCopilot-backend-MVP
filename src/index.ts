@@ -43,7 +43,7 @@ async function start(): Promise<void> {
         );
       }
     } else {
-      console.log('ℹ️  Elasticsearch disabled. Search functionality will be limited.');
+      console.warn('ℹ️  Elasticsearch disabled. Search functionality will be limited.');
     }
 
     // Iniciar job de eliminación automática
@@ -58,7 +58,7 @@ async function start(): Promise<void> {
     // Attach Socket.IO to server
     initSocket(server);
 
-    server.listen(PORT, () => console.log(`Backend server listening on port ${PORT}`));
+    server.listen(PORT, () => console.warn(`Backend server listening on port ${PORT}`));
 
     // Pre-warm LLM model for Ollama to reduce first-request latency
     // Skip in test environment to avoid interfering with tests
@@ -70,13 +70,13 @@ async function start(): Promise<void> {
           void (async (): Promise<void> => {
             try {
               const provider = getAIProvider();
-              console.log('[prewarm] Detected Ollama provider, attempting pre-warm...');
+              console.warn('[prewarm] Detected Ollama provider, attempting pre-warm...');
               await provider.checkConnection();
               // Small dummy prompt to load model into memory
               const warmPrompt = 'Hola.';
               const warmOptions = { maxTokens: 8 } as const;
               await provider.generateResponse(warmPrompt, warmOptions as unknown as Record<string, unknown>);
-              console.log('[prewarm] Ollama pre-warm completed');
+              console.warn('[prewarm] Ollama pre-warm completed');
             } catch (e: unknown) {
               console.warn('[prewarm] Ollama pre-warm failed:', e instanceof Error ? e.message : String(e));
             }

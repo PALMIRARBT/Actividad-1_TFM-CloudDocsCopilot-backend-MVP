@@ -31,11 +31,11 @@ export const startAutoDeletionJob = (): void => {
 
   const handler = async () => {
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] Running auto-deletion job...`);
+    console.warn(`[${timestamp}] Running auto-deletion job...`);
 
     try {
       const deletedCount = await deletionService.autoDeleteExpiredDocuments();
-      console.log(`[${timestamp}] Auto-deletion completed. Deleted ${deletedCount} documents.`);
+      console.warn(`[${timestamp}] Auto-deletion completed. Deleted ${deletedCount} documents.`);
     } catch (error: unknown) {
       console.error(`[${timestamp}] Auto-deletion job failed:`, getErrorMessage(error));
     }
@@ -48,15 +48,15 @@ export const startAutoDeletionJob = (): void => {
     void handler();
   }
 
-  console.log(`Auto-deletion cron job scheduled: ${cronExpression}`);
+  console.warn(`Auto-deletion cron job scheduled: ${cronExpression}`);
 };
 
 /**
  * Job manual: Ejecuta eliminación automática inmediatamente (para testing)
  */
 export const runAutoDeletionNow = async (): Promise<number> => {
-  console.log('Running manual auto-deletion...');
+  console.warn('Running manual auto-deletion...');
   const deletedCount = await deletionService.autoDeleteExpiredDocuments();
-  console.log(`Manual auto-deletion completed. Deleted ${deletedCount} documents.`);
+  console.warn(`Manual auto-deletion completed. Deleted ${deletedCount} documents.`);
   return deletedCount;
 };

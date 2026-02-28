@@ -54,7 +54,7 @@ export async function getDb(): Promise<Db> {
     if (!currentUri || currentUri.trim() === '') {
       throw new Error('MONGO_ATLAS_URI is not configured in environment variables');
     }
-    console.log('[atlas] ♻️  Reusing existing connection');
+    console.warn('[atlas] ♻️  Reusing existing connection');
     return database;
   }
 
@@ -66,7 +66,7 @@ export async function getDb(): Promise<Db> {
 
   try {
     const connStart = Date.now();
-    console.log('[atlas] 🔌 Connecting to MongoDB Atlas...');
+    console.warn('[atlas] 🔌 Connecting to MongoDB Atlas...');
 
     // Crear nuevo cliente con opciones recomendadas
     // Opciones TLS robustas para Windows + Node.js
@@ -101,7 +101,7 @@ export async function getDb(): Promise<Db> {
     // Verificar conexión con ping
     await database.command({ ping: 1 });
 
-    console.log(`[atlas] ✅ MongoDB Atlas connected successfully in ${Date.now() - connStart}ms`);
+    console.warn(`[atlas] ✅ MongoDB Atlas connected successfully in ${Date.now() - connStart}ms`);
 
     return database;
   } catch (error: unknown) {
@@ -124,7 +124,7 @@ export async function closeAtlasConnection(): Promise<void> {
   if (client) {
     try {
       await client.close();
-      console.log('[atlas] MongoDB Atlas connection closed');
+      console.warn('[atlas] MongoDB Atlas connection closed');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('[atlas] Error closing MongoDB Atlas connection:', errorMessage);

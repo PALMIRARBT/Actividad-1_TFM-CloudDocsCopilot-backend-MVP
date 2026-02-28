@@ -37,7 +37,7 @@ function getErrorMessage(error: unknown): string {
  */
 export async function processDocumentAI(documentId: string): Promise<void> {
   const startTime = Date.now();
-  console.log(`[ai-job] Starting AI processing for document ${documentId}...`);
+  console.warn(`[ai-job] Starting AI processing for document ${documentId}...`);
 
   try {
     // 1. Obtener documento
@@ -49,12 +49,12 @@ export async function processDocumentAI(documentId: string): Promise<void> {
 
     // Verificar que no esté ya procesado o en procesamiento
     if (doc.aiProcessingStatus === 'completed') {
-      console.log(`[ai-job] Document ${documentId} already processed, skipping`);
+      console.warn(`[ai-job] Document ${documentId} already processed, skipping`);
       return;
     }
 
     if (doc.aiProcessingStatus === 'processing') {
-      console.log(`[ai-job] Document ${documentId} already being processed, skipping`);
+      console.warn(`[ai-job] Document ${documentId} already being processed, skipping`);
       return;
     }
 
@@ -63,7 +63,7 @@ export async function processDocumentAI(documentId: string): Promise<void> {
     await doc.save();
 
     // 3. Extraer texto del documento
-    console.log(`[ai-job] Extracting text from ${doc.mimeType} file...`);
+    console.warn(`[ai-job] Extracting text from ${doc.mimeType} file...`);
 
     // Verificar si el tipo MIME es soportado
     let isSupported = false;
@@ -88,7 +88,7 @@ export async function processDocumentAI(documentId: string): Promise<void> {
     }
 
     if (!isSupported) {
-      console.log(`[ai-job] Document ${documentId} has unsupported MIME type: ${doc.mimeType}`);
+      console.warn(`[ai-job] Document ${documentId} has unsupported MIME type: ${doc.mimeType}`);
       doc.aiProcessingStatus = 'completed'; // Marcar como completado sin procesar
       doc.aiProcessedAt = new Date();
       await doc.save();
@@ -103,7 +103,7 @@ export async function processDocumentAI(documentId: string): Promise<void> {
     const extractionResult = await textExtractionService.extractText(absolutePath, doc.mimeType);
 
     if (!extractionResult.text || extractionResult.text.trim().length === 0) {
-      console.log(`[ai-job] No text extracted from document ${documentId}`);
+      console.warn(`[ai-job] No text extracted from document ${documentId}`);
       doc.aiProcessingStatus = 'completed';
       doc.aiProcessedAt = new Date();
       await doc.save();
@@ -114,32 +114,32 @@ export async function processDocumentAI(documentId: string): Promise<void> {
     doc.extractedText = extractionResult.text;
     await doc.save();
 
-    console.log(
+    console.warn(
       `[ai-job] Extracted ${extractionResult.text.length} characters from document ${documentId}`
     );
 
     // 5. Procesar chunks + embeddings (vector search)
     if (doc.organization) {
-      console.log(`[ai-job] Processing chunks and embeddings for document ${documentId}...`);
+      console.warn(`[ai-job] Processing chunks and embeddings for document ${documentId}...`);
       const processingResult = await documentProcessor.processDocument(
         String(doc._id),
         doc.organization.toString(),
         extractionResult.text
       );
-      console.log(
+      console.warn(
         `[ai-job] Created ${processingResult.chunksCreated} chunks for document ${documentId}`
       );
     } else {
-      console.log(
+      console.warn(
         `[ai-job] Skipping chunk processing - document ${documentId} has no organization`
       );
     }
 
     // 6. Indexar en Elasticsearch con contenido
     try {
-      console.log(`[ai-job] Indexing document ${documentId} in Elasticsearch...`);
+      console.warn(`[ai-job] Indexing document ${documentId} in Elasticsearch...`);
       await indexDocument(doc, extractionResult.text);
-      console.log(`[ai-job] Document ${documentId} indexed successfully`);
+      console.warn(`[ai-job] Document ${documentId} indexed successfully`);
     } catch (esError: unknown) {
       // No fallar todo el procesamiento si Elasticsearch falla
       console.error(
@@ -150,13 +150,13 @@ export async function processDocumentAI(documentId: string): Promise<void> {
 
     // 7. Clasificar documento (RFE-AI-003)
     try {
-      console.log(`[ai-job] Classifying document ${documentId}...`);
+      console.warn(`[ai-job] Classifying document ${documentId}...`);
       const provider = getAIProvider();
       const classification = await provider.classifyDocument(extractionResult.text);
       doc.aiCategory = classification.category;
       doc.aiConfidence = classification.confidence;
       doc.aiTags = classification.tags;
-      console.log(
+      console.warn(
         `[ai-job] Document ${documentId} classified as "${classification.category}" (confidence: ${classification.confidence})`
       );
     } catch (classifyError: unknown) {
@@ -167,12 +167,12 @@ export async function processDocumentAI(documentId: string): Promise<void> {
 
     // 8. Generar resumen (RFE-AI-007)
     try {
-      console.log(`[ai-job] Summarizing document ${documentId}...`);
+      console.warn(`[ai-job] Summarizing document ${documentId}...`);
       const provider = getAIProvider();
       const summary = await provider.summarizeDocument(extractionResult.text);
       doc.aiSummary = summary.summary;
       doc.aiKeyPoints = summary.keyPoints;
-      console.log(`[ai-job] Document ${documentId} summarized successfully`);
+      console.warn(`[ai-job] Document ${documentId} summarized successfully`);
     } catch (summarizeError: unknown) {
       // No fallar todo el procesamiento si resumen falla
       const errorMsg = summarizeError instanceof Error ? summarizeError.message : 'Unknown error';
@@ -192,7 +192,7 @@ export async function processDocumentAI(documentId: string): Promise<void> {
     await doc.save();
 
     const duration = Date.now() - startTime;
-    console.log(`[ai-job] ✅ Document ${documentId} processed successfully in ${duration}ms`);
+    console.warn(`[ai-job] ✅ Document ${documentId} processed successfully in ${duration}ms`);
   } catch (error: unknown) {
     const duration = Date.now() - startTime;
     console.error(
@@ -228,7 +228,7 @@ export async function processDocumentAI(documentId: string): Promise<void> {
  * @returns Número de documentos procesados exitosamente
  */
 export async function processPendingDocuments(limit: number = 10): Promise<number> {
-  console.log(`[ai-job] Processing up to ${limit} pending documents...`);
+  console.warn(`[ai-job] Processing up to ${limit} pending documents...`);
 
   try {
     // Buscar documentos con estado 'pending' o 'failed'
@@ -241,11 +241,11 @@ export async function processPendingDocuments(limit: number = 10): Promise<numbe
       .lean();
 
     if (documents.length === 0) {
-      console.log('[ai-job] No pending documents found');
+      console.warn('[ai-job] No pending documents found');
       return 0;
     }
 
-    console.log(`[ai-job] Found ${documents.length} pending documents`);
+    console.warn(`[ai-job] Found ${documents.length} pending documents`);
 
     let successCount = 0;
 
@@ -259,7 +259,7 @@ export async function processPendingDocuments(limit: number = 10): Promise<numbe
       }
     }
 
-    console.log(
+    console.warn(
       `[ai-job] Batch processing completed: ${successCount}/${documents.length} successful`
     );
     return successCount;
@@ -277,7 +277,7 @@ export async function processPendingDocuments(limit: number = 10): Promise<numbe
  * @returns Promise<void>
  */
 export async function reprocessDocument(documentId: string): Promise<void> {
-  console.log(`[ai-job] Reprocessing document ${documentId}...`);
+  console.warn(`[ai-job] Reprocessing document ${documentId}...`);
 
   const doc = await DocumentModel.findById(documentId);
 
