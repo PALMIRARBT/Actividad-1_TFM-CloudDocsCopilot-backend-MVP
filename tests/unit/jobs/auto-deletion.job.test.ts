@@ -1,12 +1,11 @@
+import { runAutoDeletionNow, startAutoDeletionJob } from '../../../src/jobs/auto-deletion.job';
 jest.mock('../../..//src/services/deletion.service', () => ({
   deletionService: { autoDeleteExpiredDocuments: jest.fn() }
 }));
 
-jest.mock('node-cron', () => ({ schedule: jest.fn((expr: string, fn: any) => { fn(); return { stop: jest.fn() }; }) }));
+jest.mock('node-cron', () => ({ schedule: jest.fn((expr: string, fn: () => void) => { fn(); return { stop: jest.fn() }; }) }));
 
-import { runAutoDeletionNow, startAutoDeletionJob } from '../../../src/jobs/auto-deletion.job';
-import { deletionService } from '../../../src/services/deletion.service';
-import cron from 'node-cron';
+
 
 describe('auto-deletion.job', () => {
   beforeEach(() => {
@@ -27,13 +26,13 @@ describe('auto-deletion.job', () => {
   test('startAutoDeletionJob schedules cron with default expression', () => {
     process.env.AUTO_DELETE_CRON = '';
     startAutoDeletionJob();
-    expect((cron as any).schedule).toHaveBeenCalled();
+    expect((cron as unknown as { schedule: jest.Mock }).schedule).toHaveBeenCalled();
   });
 
   test('startAutoDeletionJob schedules cron with env expression', () => {
     process.env.AUTO_DELETE_CRON = '*/5 * * * *';
     startAutoDeletionJob();
-    expect((cron as any).schedule).toHaveBeenCalledWith('*/5 * * * *', expect.any(Function));
+    expect((cron as unknown as { schedule: jest.Mock }).schedule).toHaveBeenCalledWith('*/5 * * * *', expect.any(Function));
   });
 
   test('cron handler calls deletionService', () => {
@@ -49,7 +48,7 @@ describe('auto-deletion.job', () => {
     spy.mockRestore();
   });
 });
-import { runAutoDeletionNow, startAutoDeletionJob } from '../../../src/jobs/auto-deletion.job';
+
 
 jest.mock('../../../src/services/deletion.service', () => ({
   deletionService: {
@@ -60,8 +59,10 @@ jest.mock('../../../src/services/deletion.service', () => ({
 // avoid unused parameter names in mock to satisfy TS noUnusedLocals
 jest.mock('node-cron', () => ({ schedule: jest.fn(() => ({ stop: jest.fn() })) }));
 
-const { deletionService } = require('../../../src/services/deletion.service');
-const cron = require('node-cron');
+const { deletionService } = jest.requireMock('../../../src/services/deletion.service') as unknown as {
+  deletionService: { autoDeleteExpiredDocuments: jest.Mock };
+};
+const cron = jest.requireMock('node-cron') as unknown as { schedule: jest.Mock };
 
 describe('auto-deletion job', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -87,7 +88,7 @@ describe('auto-deletion job', () => {
     startAutoDeletionJob();
 
     expect(cron.schedule).toHaveBeenCalled();
-    const callArg = (cron.schedule as jest.Mock).mock.calls[0][0];
+    const callArg = ((cron.schedule as unknown as jest.Mock).mock.calls[0][0]) as string;
     expect(typeof callArg).toBe('string');
   });
 

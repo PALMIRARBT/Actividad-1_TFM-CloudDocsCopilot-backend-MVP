@@ -1,9 +1,17 @@
 import { jest } from '@jest/globals';
+import fs from 'fs';
 
 jest.resetModules();
 
-const fs = require('fs');
-const { textExtractionService } = require('../../../../src/services/ai/text-extraction.service');
+type TextExtractionServiceType = {
+  countWords: (text: string) => number;
+  isSupportedMimeType: (mime: string) => boolean;
+  getSupportedMimeTypes: () => string[];
+  extractFromTextAsync: (filePath: string, mimeType: string) => Promise<{ text: string; wordCount: number; mimeType: string }>;
+};
+
+import { textExtractionService as importedTextExtractionService } from '../../../../src/services/ai/text-extraction.service';
+const textExtractionService = importedTextExtractionService as unknown as TextExtractionServiceType;
 
 describe('TextExtractionService (unit, deterministic)', () => {
   beforeEach(() => {
@@ -11,20 +19,21 @@ describe('TextExtractionService (unit, deterministic)', () => {
   });
 
   it('countWords via private method works', () => {
-    const n = (textExtractionService as any).countWords('one two  three');
+    const n = textExtractionService.countWords('one two  three');
     expect(n).toBe(3);
   });
 
   it('isSupportedMimeType and getSupportedMimeTypes', () => {
-    expect((textExtractionService as any).isSupportedMimeType('text/plain')).toBe(true);
-    expect(Array.isArray((textExtractionService as any).getSupportedMimeTypes())).toBe(true);
+    expect(textExtractionService.isSupportedMimeType('text/plain')).toBe(true);
+    expect(Array.isArray(textExtractionService.getSupportedMimeTypes())).toBe(true);
   });
 
   it('extractFromTextAsync reads file and returns expected shape', async () => {
-    // Mock fs.promises.readFile
-    jest.spyOn(fs.promises, 'readFile' as any).mockResolvedValueOnce('hello world');
+    // Mock fs.promises.readFile with proper typing
+    type FSProms = { readFile: (path: string, enc?: string) => Promise<string | Buffer> };
+    jest.spyOn(fs.promises as unknown as FSProms, 'readFile').mockResolvedValueOnce('hello world');
 
-    const res = await (textExtractionService as any).extractFromTextAsync('file.txt', 'text/plain');
+    const res = await textExtractionService.extractFromTextAsync('file.txt', 'text/plain');
     expect(res.text).toBe('hello world');
     expect(res.wordCount).toBeGreaterThan(0);
     expect(res.mimeType).toBe('text/plain');

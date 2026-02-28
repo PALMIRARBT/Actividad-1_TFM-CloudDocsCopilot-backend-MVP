@@ -6,8 +6,10 @@ import { ragService } from '../../../src/services/ai/rag.service';
 import { embeddingService } from '../../../src/services/ai/embedding.service';
 import { llmService } from '../../../src/services/ai/llm.service';
 import { buildPrompt } from '../../../src/services/ai/prompt.builder';
-import { getDb } from '../../../src/configurations/database-config/mongoAtlas';
+// `getDb` will be obtained from the mocked module at runtime to ensure it's a jest.Mock
+let getDb: unknown;
 import HttpError from '../../../src/models/error.model';
+import mongoose from 'mongoose';
 
 // Mock dependencies
 jest.mock('../../../src/services/ai/embedding.service');
@@ -16,18 +18,26 @@ jest.mock('../../../src/services/ai/prompt.builder');
 jest.mock('../../../src/configurations/database-config/mongoAtlas');
 
 describe('RAGService', () => {
-  let mockCollection: any;
+  const doc1Id = new mongoose.Types.ObjectId();
+  const doc123Id = new mongoose.Types.ObjectId();
+  const chunk1Id = new mongoose.Types.ObjectId();
+  const chunk2Id = new mongoose.Types.ObjectId();
+  let mockCollection: unknown;
   let mockAggregate: jest.Mock;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
 
     mockAggregate = jest.fn();
     mockCollection = {
       aggregate: mockAggregate
-    };
+    } as unknown;
 
-    (getDb as jest.Mock).mockReturnValue({
+    // Obtain the mocked `getDb` implementation from the mocked module via dynamic import
+    const mocked = await import('../../../src/configurations/database-config/mongoAtlas') as { getDb: jest.Mock };
+    getDb = mocked.getDb;
+
+    (getDb as jest.Mock).mockResolvedValue({
       collection: jest.fn().mockReturnValue(mockCollection)
     });
   });
@@ -37,15 +47,15 @@ describe('RAGService', () => {
       const mockEmbedding = Array(1536).fill(0.5);
       const mockDBResults = [
         {
-          _id: 'chunk1',
-          documentId: 'doc1',
+          _id: chunk1Id,
+          documentId: doc1Id,
           content: 'This is a test chunk about AI',
           chunkIndex: 0,
           score: 0.95
         },
         {
-          _id: 'chunk2',
-          documentId: 'doc1',
+          _id: chunk2Id,
+          documentId: doc1Id,
           content: 'Machine learning is fascinating',
           chunkIndex: 1,
           score: 0.85
@@ -63,6 +73,7 @@ describe('RAGService', () => {
       expect(results).toHaveLength(2);
       expect(results[0].chunk.content).toContain('test chunk');
       expect(results[0].score).toBe(0.95);
+      expect(results[0].chunk.documentId.toString()).toBe(doc1Id.toString());
       expect(embeddingService.generateEmbedding).toHaveBeenCalledWith('What is AI?');
       expect(mockAggregate).toHaveBeenCalled();
     });
@@ -94,10 +105,10 @@ describe('RAGService', () => {
 
       // Verify aggregate was called with correct pipeline including limit
       expect(mockAggregate).toHaveBeenCalled();
-      const pipeline = mockAggregate.mock.calls[0][0];
-      const limitStage = pipeline.find((stage: any) => stage.$limit);
+      const pipeline = mockAggregate.mock.calls[0][0] as unknown as Array<Record<string, unknown>>;
+      const limitStage = pipeline.find((stage: unknown) => (stage as { $limit?: number }).$limit !== undefined);
       expect(limitStage).toBeDefined();
-      expect(limitStage.$limit).toBe(10);
+      expect((limitStage as { $limit?: number }).$limit).toBe(10);
     });
 
     it('should handle embedding generation errors', async () => {
@@ -131,10 +142,10 @@ describe('RAGService', () => {
 
       await ragService.search('Test', 'org123', 5);
 
-      const pipeline = mockAggregate.mock.calls[0][0];
-      const limitStage = pipeline.find((stage: any) => stage.$limit);
+      const pipeline = mockAggregate.mock.calls[0][0] as unknown as Array<Record<string, unknown>>;
+      const limitStage = pipeline.find((stage: unknown) => (stage as { $limit?: number }).$limit !== undefined);
       expect(limitStage).toBeDefined();
-      expect(limitStage.$limit).toBe(5);
+      expect((limitStage as { $limit?: number }).$limit).toBe(5);
     });
   });
 
@@ -143,8 +154,8 @@ describe('RAGService', () => {
       const mockEmbedding = Array(1536).fill(0.5);
       const mockResults = [
         {
-          _id: 'chunk1',
-          documentId: 'doc123',
+          _id: chunk1Id,
+          documentId: doc123Id,
           content: 'Specific document content',
           chunkIndex: 0,
           score: 0.9
@@ -157,16 +168,16 @@ describe('RAGService', () => {
         toArray: jest.fn().mockResolvedValue(mockResults)
       });
 
-      const results = await ragService.searchInDocument('Query', 'org123', 'doc123', 5);
+      const results = await ragService.searchInDocument('Query', 'org123', doc123Id.toString(), 5);
 
       // results are returned as ISearchResult[] with chunk and score
-      expect(results[0].chunk.documentId).toBe('doc123');
+      expect(results[0].chunk.documentId.toString()).toBe(doc123Id.toString());
       expect(results[0].chunk.content).toBe('Specific document content');
       expect(results[0].score).toBe(0.9);
 
-      const pipeline = mockAggregate.mock.calls[0][0];
-      const matchStage = pipeline.find((stage: any) => stage.$match);
-      expect(matchStage.$match.documentId).toBe('doc123');
+      const pipeline = mockAggregate.mock.calls[0][0] as unknown as Array<Record<string, unknown>>;
+      const matchStage = pipeline.find((stage: unknown) => (stage as { $match?: Record<string, unknown> }).$match !== undefined);
+      expect((matchStage as { $match: Record<string, unknown> }).$match.documentId).toEqual(doc123Id);
     });
 
     it('should return empty array if document has no chunks', async () => {
@@ -188,8 +199,8 @@ describe('RAGService', () => {
     it('should generate answer using RAG', async () => {
       const mockChunks = [
         {
-          _id: 'chunk1',
-          documentId: 'doc1',
+          _id: chunk1Id,
+          documentId: doc1Id,
           content: 'AI is artificial intelligence',
           chunkIndex: 0,
           score: 0.95
@@ -215,7 +226,7 @@ describe('RAGService', () => {
       expect(result.answer).toBe('AI stands for Artificial Intelligence.');
       expect(result.chunks).toBeInstanceOf(Array);
       expect(result.chunks).toHaveLength(1);
-      expect(result.chunks![0].documentId).toBe('doc1');
+      expect(result.chunks![0].documentId.toString()).toBe(doc1Id.toString());
       expect(result.chunks![0].content).toBe('AI is artificial intelligence');
       expect(result.chunks![0].score).toBe(0.95);
     });
@@ -243,7 +254,7 @@ describe('RAGService', () => {
     it('should handle LLM errors', async () => {
       const mockEmbedding = Array(1536).fill(0.5);
       const mockChunks = [
-        { _id: 'chunk1', documentId: 'doc1', content: 'Some context', chunkIndex: 0, score: 0.9 }
+        { _id: chunk1Id, documentId: doc1Id, content: 'Some context', chunkIndex: 0, score: 0.9 }
       ];
 
       (embeddingService.generateEmbedding as jest.Mock).mockResolvedValue(mockEmbedding);
@@ -266,7 +277,7 @@ describe('RAGService', () => {
       const mockChunks = [
         {
           _id: 'chunk1',
-          documentId: 'doc123',
+          documentId: doc123Id,
           content: 'Document specific content',
           chunkIndex: 0,
           score: 0.9
@@ -288,14 +299,14 @@ describe('RAGService', () => {
       const result = await ragService.answerQuestionInDocument(
         'What does the document say?',
         'org123',
-        'doc123',
+        doc123Id.toString(),
         5
       );
 
       expect(result.answer).toBe('Answer about the document.');
       expect(result.chunks).toBeInstanceOf(Array);
       expect(result.chunks).toHaveLength(1);
-      expect(result.chunks![0].documentId).toBe('doc123');
+      expect(result.chunks![0].documentId.toString()).toBe(doc123Id.toString());
       expect(result.chunks![0].content).toBe('Document specific content');
     });
 

@@ -37,7 +37,7 @@ describe('chunking.util', () => {
 
   it('addChunkMetadata returns metadata with correct counts', () => {
     const chunks = ['one two three', 'four five'];
-    const meta = addChunkMetadata(chunks as any);
+    const meta = addChunkMetadata(chunks as unknown as string[]);
     expect(meta.length).toBe(2);
     expect(meta[0].wordCount).toBe(3);
     expect(meta[1].wordCount).toBe(2);

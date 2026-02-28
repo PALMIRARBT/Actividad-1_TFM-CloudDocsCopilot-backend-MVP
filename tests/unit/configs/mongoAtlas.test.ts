@@ -5,22 +5,27 @@
 // Use dynamic require inside tests to pick up env changes and module reset
 
 // Mock MongoDB
+import type { Db, MongoClient } from 'mongodb';
+
 jest.mock('mongodb', () => {
-  const mockDb = {
+  const mockDb: Partial<Db> = {
     collection: jest.fn(),
-    command: jest.fn().mockResolvedValue({ ok: 1 })
+    command: jest.fn().mockResolvedValue({ ok: 1 }) as unknown as Db['command']
   };
 
-  const mockClient = {
-    db: jest.fn().mockReturnValue(mockDb),
-    connect: jest.fn().mockResolvedValue(undefined),
-    close: jest.fn().mockResolvedValue(undefined)
+  const mockClient: Partial<MongoClient> = {
+    db: jest.fn().mockReturnValue(mockDb) as unknown as MongoClient['db'],
+    connect: jest.fn().mockResolvedValue(undefined) as unknown as MongoClient['connect'],
+    close: jest.fn().mockResolvedValue(undefined) as unknown as MongoClient['close']
   };
 
   return {
-    MongoClient: jest.fn().mockImplementation(() => mockClient)
+    MongoClient: jest.fn().mockImplementation(() => mockClient as unknown as MongoClient)
   };
 });
+
+// Use the real mongoAtlas module for these unit tests (override global test setup mock)
+jest.unmock('../../../src/configurations/database-config/mongoAtlas');
 
 // Tests that work without actual MongoDB connection (error handling tests)
 // Connection-dependent tests moved to mongoAtlas.connected.test.ts
@@ -42,21 +47,27 @@ describe('MongoDB Atlas Configuration', () => {
   describe('connectToMongoAtlas (getDb)', () => {
     it('should connect successfully with valid URI', async () => {
       process.env.MONGO_ATLAS_URI = 'mongodb+srv://user:pass@cluster.mongodb.net/test';
-      const { getDb } = require('../../../src/configurations/database-config/mongoAtlas');
+      const { getDb } = (await import('../../../src/configurations/database-config/mongoAtlas')) as unknown as {
+        getDb: () => Promise<unknown>;
+      };
       await expect(getDb()).resolves.not.toThrow();
     });
 
     it('should throw error when URI is not configured', async () => {
       delete process.env.MONGO_ATLAS_URI;
 
-      const { getDb } = require('../../../src/configurations/database-config/mongoAtlas');
+      const { getDb } = (await import('../../../src/configurations/database-config/mongoAtlas')) as unknown as {
+        getDb: () => Promise<unknown>;
+      };
       await expect(getDb()).rejects.toThrow('MONGO_ATLAS_URI');
     });
 
     it('should throw error with empty URI', async () => {
       process.env.MONGO_ATLAS_URI = '';
 
-      const { getDb } = require('../../../src/configurations/database-config/mongoAtlas');
+      const { getDb } = (await import('../../../src/configurations/database-config/mongoAtlas')) as unknown as {
+        getDb: () => Promise<unknown>;
+      };
       await expect(getDb()).rejects.toThrow();
     });
 
@@ -78,21 +89,27 @@ describe('MongoDB Atlas Configuration', () => {
         }))
       }));
 
-      const { getDb } = require('../../../src/configurations/database-config/mongoAtlas');
+      const { getDb } = (await import('../../../src/configurations/database-config/mongoAtlas')) as unknown as {
+        getDb: () => Promise<unknown>;
+      };
       await expect(getDb()).rejects.toThrow('Connection failed');
     });
 
     it('should reject whitespace-only URI', async () => {
       process.env.MONGO_ATLAS_URI = '   ';
 
-      const { getDb } = require('../../../src/configurations/database-config/mongoAtlas');
+      const { getDb } = (await import('../../../src/configurations/database-config/mongoAtlas')) as unknown as {
+        getDb: () => Promise<unknown>;
+      };
       await expect(getDb()).rejects.toThrow();
     });
   });
 
   describe('getClient (getClient/getDb)', () => {
-    it('should throw error when accessing client before connection', () => {
-      const { getClient } = require('../../../src/configurations/database-config/mongoAtlas');
+    it('should throw error when accessing client before connection', async () => {
+      const { getClient } = (await import('../../../src/configurations/database-config/mongoAtlas')) as unknown as {
+        getClient: () => unknown;
+      };
 
       expect(() => getClient()).not.toThrow();
     });
@@ -102,7 +119,9 @@ describe('MongoDB Atlas Configuration', () => {
     it('should handle disconnect when not connected', async () => {
       const {
         closeAtlasConnection
-      } = require('../../../src/configurations/database-config/mongoAtlas');
+      } = (await import('../../../src/configurations/database-config/mongoAtlas')) as unknown as {
+        closeAtlasConnection: () => Promise<void>;
+      };
 
       // Should not throw even if not connected
       await expect(closeAtlasConnection()).resolves.not.toThrow();
@@ -129,7 +148,10 @@ describe('MongoDB Atlas Configuration', () => {
       const {
         getDb,
         closeAtlasConnection
-      } = require('../../../src/configurations/database-config/mongoAtlas');
+      } = (await import('../../../src/configurations/database-config/mongoAtlas')) as unknown as {
+        getDb: () => Promise<unknown>;
+        closeAtlasConnection: () => Promise<void>;
+      };
 
       await getDb();
 

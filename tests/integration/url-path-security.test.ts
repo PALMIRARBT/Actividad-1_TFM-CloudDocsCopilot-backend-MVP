@@ -121,9 +121,13 @@ describe('Security - URL and Path Validation', () => {
         .attach('file', testFile, 'file<>:|?.txt');
 
       // El nombre debe ser sanitizado automáticamente por Multer (UUID)
-      if (response.status === 201 && response.body.filename) {
-        expect(response.body.filename).not.toMatch(/[<>:"|?*]/);
-        expect(response.body.filename).toMatch(/^[0-9a-f-]+\.txt$/i);
+      if (response.status === 201) {
+        const body = response.body as unknown as Record<string, unknown>;
+        if (body['filename']) {
+          const filename = body['filename'] as string;
+          expect(filename).not.toMatch(/[<>:\"|?*]/);
+          expect(filename).toMatch(/^[0-9a-f-]+\.txt$/i);
+        }
       }
     });
   });
@@ -215,7 +219,8 @@ describe('Security - URL and Path Validation', () => {
         .attach('file', testFile, 'download-test.txt');
 
       if (uploadResponse.status === 201) {
-        documentId = uploadResponse.body._id;
+        const b = uploadResponse.body as unknown as Record<string, unknown>;
+        documentId = (b['_id'] as string) || (b['id'] as string) || '';
       }
     });
 

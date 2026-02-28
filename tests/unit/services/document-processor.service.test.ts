@@ -4,7 +4,6 @@
 
 import { documentProcessor } from '../../../src/services/document-processor.service';
 import { embeddingService } from '../../../src/services/ai/embedding.service';
-import { getDb } from '../../../src/configurations/database-config/mongoAtlas';
 import { splitIntoChunks } from '../../../src/utils/chunking.util';
 import HttpError from '../../../src/models/error.model';
 
@@ -15,6 +14,8 @@ jest.mock('../../../src/utils/chunking.util');
 
 describe('DocumentProcessor (updated)', () => {
   let mockCollection: any;
+  // `getDb` will be obtained from the mocked module at runtime to ensure it's a jest.Mock
+  let getDb: unknown;
   let mockInsertMany: jest.Mock;
   let mockDeleteMany: jest.Mock;
   let mockFind: jest.Mock;
@@ -22,7 +23,7 @@ describe('DocumentProcessor (updated)', () => {
   let mockCountDocuments: jest.Mock;
   let mockDistinct: jest.Mock;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
 
     mockInsertMany = jest.fn().mockResolvedValue({ insertedCount: 2 });
@@ -40,14 +41,16 @@ describe('DocumentProcessor (updated)', () => {
       countDocuments: mockCountDocuments,
       distinct: mockDistinct
     };
+    // Obtain the mocked `getDb` implementation from the mocked module via dynamic import
+    const mocked = await import('../../../src/configurations/database-config/mongoAtlas') as { getDb: jest.Mock };
+    getDb = mocked.getDb;
 
     (getDb as jest.Mock).mockResolvedValue({
       collection: jest.fn().mockReturnValue(mockCollection)
     });
   });
 
-  describe('processDocument', () => {
-    it('processes text and stores chunks', async () => {
+  it('processes text and stores chunks', async () => {
       const text = 'This is a test document. It has two sentences.';
 
       const chunks = ['This is a test document.', 'It has two sentences.'];
@@ -64,13 +67,13 @@ describe('DocumentProcessor (updated)', () => {
       expect(mockInsertMany).toHaveBeenCalled();
     });
 
-    it('throws on empty text', async () => {
+  it('throws on empty text', async () => {
       await expect(documentProcessor.processDocument('doc123', 'org123', '')).rejects.toThrow(
         HttpError
       );
     });
 
-    it('handles embedding generation errors', async () => {
+  it('handles embedding generation errors', async () => {
       const text = 'Some content';
       (splitIntoChunks as jest.Mock).mockReturnValue(['Some content']);
       (embeddingService.generateEmbeddings as jest.Mock).mockRejectedValue(new Error('API error'));
@@ -79,7 +82,6 @@ describe('DocumentProcessor (updated)', () => {
         HttpError
       );
     });
-  });
 
   describe('deleteDocumentChunks', () => {
     it('deletes chunks and returns number deleted', async () => {

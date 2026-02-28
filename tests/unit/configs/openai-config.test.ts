@@ -7,8 +7,8 @@ import OpenAIClient from '../../../src/configurations/openai-config';
 // Mock the OpenAI library
 jest.mock('openai', () => {
   return {
-    default: jest.fn().mockImplementation(config => {
-      if (!config.apiKey) {
+    default: jest.fn().mockImplementation((config: { apiKey?: string }) => {
+      if (!config || !config.apiKey) {
         throw new Error('API key required');
       }
       return {
@@ -53,15 +53,17 @@ describe('OpenAI Configuration', () => {
       expect(client.chat).toBeDefined();
     });
 
-    it('should throw error when API key is not configured', () => {
+    it('should throw error when API key is not configured', async () => {
       delete process.env.OPENAI_API_KEY;
 
-      jest.isolateModules(() => {
-        const OpenAIClient = require('../../../src/configurations/openai-config').default;
-        expect(() => {
-          OpenAIClient.getInstance();
-        }).toThrow('OPENAI_API_KEY');
-      });
+      jest.resetModules();
+      const mod = (await import('../../../src/configurations/openai-config')) as unknown as {
+        default: { getInstance: () => unknown };
+      };
+      const OpenAIClient = mod.default;
+      expect(() => {
+        (OpenAIClient.getInstance() as unknown as { chat?: Record<string, unknown> });
+      }).toThrow('OPENAI_API_KEY');
     });
 
     it('should return same instance on multiple calls (singleton)', () => {
@@ -73,26 +75,30 @@ describe('OpenAI Configuration', () => {
       expect(client1).toBe(client2);
     });
 
-    it('should reject empty API key', () => {
+    it('should reject empty API key', async () => {
       process.env.OPENAI_API_KEY = '';
 
-      jest.isolateModules(() => {
-        const OpenAIClient = require('../../../src/configurations/openai-config').default;
-        expect(() => {
-          OpenAIClient.getInstance();
-        }).toThrow('OPENAI_API_KEY');
-      });
+      jest.resetModules();
+      const mod = (await import('../../../src/configurations/openai-config')) as unknown as {
+        default: { getInstance: () => unknown };
+      };
+      const OpenAIClient = mod.default;
+      expect(() => {
+        (OpenAIClient.getInstance() as unknown as { chat?: Record<string, unknown> });
+      }).toThrow('OPENAI_API_KEY');
     });
 
-    it('should reject whitespace-only API key', () => {
+    it('should reject whitespace-only API key', async () => {
       process.env.OPENAI_API_KEY = '   ';
 
-      jest.isolateModules(() => {
-        const OpenAIClient = require('../../../src/configurations/openai-config').default;
-        expect(() => {
-          OpenAIClient.getInstance();
-        }).toThrow('OPENAI_API_KEY');
-      });
+      jest.resetModules();
+      const mod = (await import('../../../src/configurations/openai-config')) as unknown as {
+        default: { getInstance: () => unknown };
+      };
+      const OpenAIClient = mod.default;
+      expect(() => {
+        (OpenAIClient.getInstance() as unknown as { chat?: Record<string, unknown> });
+      }).toThrow('OPENAI_API_KEY');
     });
 
     it('should handle API key from environment correctly', () => {
@@ -146,29 +152,37 @@ describe('OpenAI Configuration', () => {
   });
 
   describe('error handling', () => {
-    it('should provide helpful error message when key is missing', () => {
+    it('should provide helpful error message when key is missing', async () => {
       delete process.env.OPENAI_API_KEY;
 
-      jest.isolateModules(() => {
-        const OpenAIClient = require('../../../src/configurations/openai-config').default;
-        try {
-          OpenAIClient.getInstance();
-          throw new Error('Should have thrown error');
-        } catch (error: any) {
+      jest.resetModules();
+      const mod = (await import('../../../src/configurations/openai-config')) as unknown as {
+        default: { getInstance: () => unknown };
+      };
+      const OpenAIClient = mod.default;
+      try {
+        (OpenAIClient.getInstance() as unknown as { chat?: Record<string, unknown> });
+        throw new Error('Should have thrown error');
+      } catch (error: unknown) {
+        if (error instanceof Error) {
           expect(error.message).toContain('OPENAI_API_KEY');
+        } else {
+          throw error;
         }
-      });
+      }
     });
 
-    it('should handle undefined environment variable', () => {
-      process.env.OPENAI_API_KEY = undefined;
+    it('should handle undefined environment variable', async () => {
+      process.env.OPENAI_API_KEY = undefined as unknown as string;
 
-      jest.isolateModules(() => {
-        const OpenAIClient = require('../../../src/configurations/openai-config').default;
-        expect(() => {
-          OpenAIClient.getInstance();
-        }).toThrow('OPENAI_API_KEY');
-      });
+      jest.resetModules();
+      const mod = (await import('../../../src/configurations/openai-config')) as unknown as {
+        default: { getInstance: () => unknown };
+      };
+      const OpenAIClient = mod.default;
+      expect(() => {
+        (OpenAIClient.getInstance() as unknown as { chat?: Record<string, unknown> });
+      }).toThrow('OPENAI_API_KEY');
     });
   });
 });

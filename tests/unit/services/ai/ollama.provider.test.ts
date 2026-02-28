@@ -4,14 +4,15 @@ jest.resetModules();
 
 // Mock the Ollama client used inside the provider
 jest.mock('ollama', () => {
+  type OllamaCtorOpts = { host?: string };
   return {
     __esModule: true,
     Ollama: class {
       host: string;
-      constructor(opts: any) {
-        this.host = opts.host;
+      constructor(opts: OllamaCtorOpts) {
+        this.host = opts?.host ?? '';
       }
-      async embeddings(opts: any) {
+      async embeddings(_opts?: unknown) {
         // deterministic embedding of fixed length 768
         return { embedding: Array(768).fill(0.123) };
       }
@@ -19,7 +20,9 @@ jest.mock('ollama', () => {
   };
 });
 
-const { OllamaProvider } = require('../../../../src/services/ai/providers/ollama.provider');
+import { OllamaProvider } from '../../../../src/services/ai/providers/ollama.provider';
+
+type GenResp = { response: string };
 
 describe('OllamaProvider (unit, deterministic)', () => {
   it('generateEmbedding returns embedding with correct dimensions and model', async () => {
@@ -47,8 +50,12 @@ describe('OllamaProvider (unit, deterministic)', () => {
   it('classifyDocument parses JSON response from generateResponse', async () => {
     const provider = new OllamaProvider();
 
-    // Spy generateResponse to return deterministic JSON string
-    jest.spyOn(OllamaProvider.prototype as any, 'generateResponse').mockResolvedValueOnce({ response: JSON.stringify({ category: 'Factura', confidence: 0.92, tags: ['finanzas'] }) });
+    // Spy on the instance method and return typed response
+    const mockValue = {
+      response: JSON.stringify({ category: 'Factura', confidence: 0.92, tags: ['finanzas'] }),
+      model: provider.getChatModel(), // or a string like 'ollama-default'
+    };
+    jest.spyOn(provider, 'generateResponse').mockResolvedValueOnce(mockValue);
 
     const cls = await provider.classifyDocument('some text');
     expect(cls.category).toBe('Factura');
@@ -59,7 +66,11 @@ describe('OllamaProvider (unit, deterministic)', () => {
   it('summarizeDocument parses JSON response from generateResponse', async () => {
     const provider = new OllamaProvider();
     const payload = { summary: 'short', keyPoints: ['a', 'b', 'c'] };
-    jest.spyOn(OllamaProvider.prototype as any, 'generateResponse').mockResolvedValueOnce({ response: JSON.stringify(payload) });
+      const mockValue = {
+        response: JSON.stringify(payload),
+        model: provider.getChatModel(),
+      };
+      jest.spyOn(provider, 'generateResponse').mockResolvedValueOnce(mockValue);
 
     const s = await provider.summarizeDocument('long text');
     expect(s.summary).toBe('short');

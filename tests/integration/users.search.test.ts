@@ -59,11 +59,13 @@ describe('GET /api/users/search', () => {
       .get('/api/users/search')
       .query({ email: u2.email })
       .set('Authorization', `Bearer ${token}`)
-      .expect(200);
+        .expect(200);
 
-    expect(res.body).toHaveProperty('success', true);
-    expect(Array.isArray(res.body.data)).toBe(true);
-    expect(res.body.data.length).toBeGreaterThanOrEqual(1);
-    expect(res.body.data.some((x: any) => x.email === u2.email)).toBe(true);
+      const body = res.body as unknown as { success?: boolean; data?: Array<{ email?: string }>; };
+
+      expect(body.success).toBe(true);
+      expect(Array.isArray(body.data)).toBe(true);
+      expect((body.data ?? []).length).toBeGreaterThanOrEqual(1);
+      expect((body.data ?? []).some(x => x.email === u2.email)).toBe(true);
   });
 });

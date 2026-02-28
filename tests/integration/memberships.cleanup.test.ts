@@ -1,4 +1,5 @@
 import { request, app } from '../setup';
+import type { Response } from 'supertest';
 import { registerAndLogin } from '../helpers/auth.helper';
 import Membership, { MembershipStatus } from '../../src/models/membership.model';
 import Organization from '../../src/models/organization.model';
@@ -117,7 +118,7 @@ describe('Membership Removal - Data Cleanup', () => {
         })
         .expect(201);
 
-      const subfolderId = subfolderResponse.body.folder.id;
+      const subfolderId = bodyOf(subfolderResponse).folder?.id as string;
 
       // Verificar que existe
       const subfolderBefore = await Folder.findById(subfolderId);
@@ -274,8 +275,9 @@ describe('Membership Removal - Data Cleanup', () => {
         .set('Cookie', memberCookies.join('; '))
         .expect(200);
 
-      expect(userAfter.body.organization).toBeUndefined();
-      expect(userAfter.body.rootFolder).toBeUndefined();
+      const ub = bodyOf(userAfter as unknown as Response);
+      expect(ub.organization).toBeUndefined();
+      expect(ub.rootFolder).toBeUndefined();
     });
   });
 
@@ -292,7 +294,7 @@ describe('Membership Removal - Data Cleanup', () => {
           parentId: memberRootFolderId
         })
         .expect(201);
-      const subfolder1Id = subfolder1Res.body.folder.id;
+      const subfolder1Id = bodyOf(subfolder1Res).folder?.id as string;
 
       const subfolder2Res = await request(app)
         .post('/api/folders')
@@ -303,7 +305,7 @@ describe('Membership Removal - Data Cleanup', () => {
           parentId: subfolder1Id
         })
         .expect(201);
-      const subfolder2Id = subfolder2Res.body.folder.id;
+      const subfolder2Id = bodyOf(subfolder2Res).folder?.id as string;
 
       // Crear documento en subfolder2
       const storageRoot = path.resolve(process.cwd(), 'storage');
@@ -368,8 +370,18 @@ describe('Membership Removal - Data Cleanup', () => {
 
       // Verificar limpieza completa
       expect(await Folder.findById(memberRootFolderId)).toBeNull();
-      expect(await Folder.findById(subfolderRes.body.folder.id)).toBeNull();
+      expect(await Folder.findById(bodyOf(subfolderRes).folder?.id as string)).toBeNull();
       expect(await Membership.findOne({ user: memberId, organization: orgId })).toBeNull();
     });
   });
 });
+
+type MembershipApiBody = {
+  folder?: { id?: string };
+  organization?: unknown;
+  rootFolder?: unknown;
+};
+
+function bodyOf(res: Response): MembershipApiBody {
+  return (res.body as unknown) as MembershipApiBody;
+}

@@ -2,7 +2,16 @@
 jest.resetModules();
 
 describe('env-config utilities', () => {
-  const envConfig = require('../../../src/configurations/env-config');
+  let envConfig: {
+    getEnv: (k: string, d?: string) => string;
+    requireEnv: (k: string) => string;
+    getEnvBool: (k: string, d?: boolean) => boolean;
+    getEnvNumber: (k: string, d?: number) => number;
+  };
+
+  beforeAll(async () => {
+    envConfig = (await import('../../../src/configurations/env-config')) as unknown as typeof import('../../../src/configurations/env-config');
+  });
 
   it('getEnv returns default when not set and requireEnv throws', () => {
     process.env.TEST_FOO = '';
@@ -36,7 +45,12 @@ describe('elasticsearch-config', () => {
   });
 
   it('initializes client and can create index', async () => {
-    const ES = require('../../../src/configurations/elasticsearch-config').default;
+    const esModule = (await import('../../../src/configurations/elasticsearch-config')) as unknown;
+    const maybeDefault = (esModule as Record<string, unknown>)['default'] ?? esModule;
+    const ES = (maybeDefault as unknown) as {
+      checkConnection: () => Promise<boolean>;
+      createDocumentIndex: () => Promise<void>;
+    };
     const ok = await ES.checkConnection();
     expect(ok).toBe(true);
     await expect(ES.createDocumentIndex()).resolves.toBeUndefined();

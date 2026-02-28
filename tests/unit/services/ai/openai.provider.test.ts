@@ -36,14 +36,20 @@ describe('OpenAIProvider', () => {
 
   test('classifyDocument returns fallback on invalid JSON', async () => {
     // spy generateResponse to return non-json
-    jest.spyOn(provider, 'generateResponse' as any).mockResolvedValue({ response: 'not json', model: 'm', tokens: { prompt: 0, completion: 0, total: 0 } } as any);
+    const mockResp = { response: 'not json', model: 'm', tokens: { prompt: 0, completion: 0, total: 0 } };
+    type ResponseShape = { response: string; model: string; tokens: { prompt: number; completion: number; total: number } };
+    type GenResp = { generateResponse: (input: string) => Promise<ResponseShape> };
+    jest.spyOn(provider as unknown as GenResp, 'generateResponse').mockResolvedValue(mockResp as unknown as ResponseShape);
     const res = await provider.classifyDocument('hello');
     expect(res).toHaveProperty('category');
     expect(res).toHaveProperty('confidence');
   });
 
   test('summarizeDocument returns fallback on invalid JSON', async () => {
-    jest.spyOn(provider, 'generateResponse' as any).mockResolvedValue({ response: 'no json', model: 'm', tokens: { prompt: 0, completion: 0, total: 0 } } as any);
+    const mockResp = { response: 'no json', model: 'm', tokens: { prompt: 0, completion: 0, total: 0 } };
+    type ResponseShape = { response: string; model: string; tokens: { prompt: number; completion: number; total: number } };
+    type GenResp = { generateResponse: (input: string) => Promise<ResponseShape> };
+    jest.spyOn(provider as unknown as GenResp, 'generateResponse').mockResolvedValue(mockResp as unknown as ResponseShape);
     const res = await provider.summarizeDocument('hello');
     expect(res).toHaveProperty('summary');
   });

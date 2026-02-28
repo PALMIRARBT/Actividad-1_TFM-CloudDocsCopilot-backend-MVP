@@ -96,9 +96,11 @@ describe('UserController Integration Tests', () => {
           .send({ avatar: avatarUrl })
           .expect(200);
 
-        expect(response.body).toHaveProperty('message', 'Avatar updated successfully');
-        expect(response.body.user).toHaveProperty('avatar', avatarUrl);
-        expect(response.body.user).toHaveProperty('id', testUserId.toString());
+        const body = response.body as unknown as Record<string, unknown>;
+
+        expect(body).toHaveProperty('message', 'Avatar updated successfully');
+        expect((body.user as Record<string, unknown>)).toHaveProperty('avatar', avatarUrl);
+        expect((body.user as Record<string, unknown>)).toHaveProperty('id', testUserId.toString());
 
         // Verificar en base de datos
         const updatedUser = await User.findById(testUserId);
@@ -125,7 +127,8 @@ describe('UserController Integration Tests', () => {
           .send({ avatar: dataUrl })
           .expect(200);
 
-        expect(response.body.user).toHaveProperty('avatar', dataUrl);
+        const body = response.body as unknown as Record<string, unknown>;
+        expect((body.user as Record<string, unknown>)).toHaveProperty('avatar', dataUrl);
       });
 
       it('should update avatar to empty string (remove avatar)', async () => {
@@ -138,7 +141,8 @@ describe('UserController Integration Tests', () => {
           .send({ avatar: '' })
           .expect(200);
 
-        expect(response.body.user).toHaveProperty('avatar', '');
+        const body = response.body as unknown as Record<string, unknown>;
+        expect((body.user as Record<string, unknown>)).toHaveProperty('avatar', '');
       });
 
       it('should accept relative paths as avatars', async () => {
@@ -150,7 +154,8 @@ describe('UserController Integration Tests', () => {
           .send({ avatar: relativePath })
           .expect(200);
 
-        expect(response.body.user).toHaveProperty('avatar', relativePath);
+        const body = response.body as unknown as Record<string, unknown>;
+        expect((body.user as Record<string, unknown>)).toHaveProperty('avatar', relativePath);
       });
     });
 
@@ -159,10 +164,11 @@ describe('UserController Integration Tests', () => {
         const response = await request(app)
           .patch(`/api/users/${testUserId}/avatar`)
           .set('Authorization', `Bearer ${testToken}`)
-          .send({})
+          .send({ })
           .expect(400);
 
-        expect(response.body).toHaveProperty('error', 'Avatar file or URL is required');
+        const body = response.body as unknown as Record<string, unknown>;
+        expect(body).toHaveProperty('error', 'Avatar file or URL is required');
       });
 
       it('should fail when avatar exceeds max length (2048 chars)', async () => {
@@ -174,8 +180,9 @@ describe('UserController Integration Tests', () => {
           .send({ avatar: longUrl })
           .expect(400);
 
-        expect(response.body).toHaveProperty('error');
-        expect(response.body.error).toMatch(/cannot exceed 2048 characters/i);
+        const body = response.body as unknown as Record<string, unknown>;
+        expect(body).toHaveProperty('error');
+        expect(String(body.error)).toMatch(/cannot exceed 2048 characters/i);
       });
 
       it('should fail when user does not exist', async () => {
@@ -188,7 +195,8 @@ describe('UserController Integration Tests', () => {
           .send({ avatar: 'https://example.com/avatar.jpg' })
           .expect(403);
 
-        expect(response.body).toHaveProperty('error', 'Forbidden');
+        const body = response.body as unknown as Record<string, unknown>;
+        expect(body).toHaveProperty('error', 'Forbidden');
       });
     });
 
@@ -245,7 +253,8 @@ describe('UserController Integration Tests', () => {
           .send({ avatar: null })
           .expect(400);
 
-        expect(response.body).toHaveProperty('error', 'Avatar URL is required');
+        const body = response.body as unknown as Record<string, unknown>;
+        expect(body).toHaveProperty('error', 'Avatar URL is required');
       });
 
       it('should trim whitespace from avatar URL', async () => {
@@ -258,7 +267,8 @@ describe('UserController Integration Tests', () => {
           .expect(200);
 
         // Mongoose trim debe eliminar espacios
-        expect(response.body.user.avatar).toBe('https://example.com/avatar.jpg');
+        const body = response.body as unknown as Record<string, unknown>;
+        expect((body.user as Record<string, unknown>).avatar).toBe('https://example.com/avatar.jpg');
       });
 
       it('should handle multiple consecutive avatar updates', async () => {
@@ -275,7 +285,8 @@ describe('UserController Integration Tests', () => {
             .send({ avatar: url })
             .expect(200);
 
-          expect(response.body.user.avatar).toBe(url);
+          const body = response.body as unknown as Record<string, unknown>;
+          expect((body.user as Record<string, unknown>).avatar).toBe(url);
         }
 
         // Verificar que el último valor persiste
@@ -290,7 +301,8 @@ describe('UserController Integration Tests', () => {
           .send({ avatar: 'https://example.com/avatar.jpg' })
           .expect(200);
 
-        expect(response.body.user).not.toHaveProperty('password');
+        const body = response.body as unknown as Record<string, unknown>;
+        expect((body.user as Record<string, unknown>)).not.toHaveProperty('password');
       });
 
       it('should preserve other user fields when updating avatar', async () => {
@@ -321,7 +333,8 @@ describe('UserController Integration Tests', () => {
           .expect(200);
 
         // Aunque se guarda, el frontend debe sanitizar al mostrar
-        expect(response.body.user.avatar).toBe(xssPayload);
+        const bodyXss = response.body as unknown as Record<string, unknown>;
+        expect((bodyXss.user as Record<string, unknown>).avatar).toBe(xssPayload);
       });
 
       it('should not allow SQL injection attempts', async () => {
@@ -334,7 +347,8 @@ describe('UserController Integration Tests', () => {
           .expect(200);
 
         // MongoDB no es vulnerable a SQL injection
-        expect(response.body.user.avatar).toBe(sqlInjection);
+        const bodySql = response.body as unknown as Record<string, unknown>;
+        expect((bodySql.user as Record<string, unknown>).avatar).toBe(sqlInjection);
       });
     });
 
@@ -397,8 +411,9 @@ describe('UserController Integration Tests', () => {
           .set('Authorization', `Bearer ${adminToken}`)
           .expect(200);
 
-        expect(Array.isArray(response.body)).toBe(true);
-        expect(response.body.length).toBeGreaterThanOrEqual(3);
+        const list = response.body as unknown as unknown[];
+        expect(Array.isArray(list)).toBe(true);
+        expect(list.length).toBeGreaterThanOrEqual(3);
       });
 
       it('should not allow regular users to list users', async () => {
@@ -417,8 +432,9 @@ describe('UserController Integration Tests', () => {
           .send({ name: 'Updated Name', email: 'updated@test.com' })
           .expect(200);
 
-        expect(response.body.user.name).toBe('Updated Name');
-        expect(response.body.user.email).toBe('updated@test.com');
+        const bodyUp = response.body as unknown as Record<string, unknown>;
+        expect((bodyUp.user as Record<string, unknown>).name).toBe('Updated Name');
+        expect((bodyUp.user as Record<string, unknown>).email).toBe('updated@test.com');
       });
 
       it('should allow partial update (only name)', async () => {
@@ -428,9 +444,10 @@ describe('UserController Integration Tests', () => {
           .send({ name: 'Only Name' })
           .expect(200);
 
-        expect(response.body.user.name).toBe('Only Name');
+        const bodyPartial = response.body as unknown as Record<string, unknown>;
+        expect((bodyPartial.user as Record<string, unknown>).name).toBe('Only Name');
         // El email debe permanecer igual
-        expect(response.body.user.email).toBe('user@test.com');
+        expect((bodyPartial.user as Record<string, unknown>).email).toBe('user@test.com');
       });
     });
   });

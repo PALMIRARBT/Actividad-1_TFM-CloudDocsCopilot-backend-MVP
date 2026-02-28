@@ -152,7 +152,7 @@ describe('document.controller (unit)', () => {
         file: undefined,
         body: {},
         user: { id: USER_ID },
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -169,7 +169,7 @@ describe('document.controller (unit)', () => {
         file: { filename: 'a.txt' },
         body: {},
         user: { id: USER_ID },
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -193,7 +193,7 @@ describe('document.controller (unit)', () => {
         file: { filename: 'a.txt' },
         body: { folderId: '507f1f77bcf86cd799439088' },
         user: { id: USER_ID },
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -215,9 +215,9 @@ describe('document.controller (unit)', () => {
     it('should next 400 when file missing', async () => {
       const req = {
         file: undefined,
-        params: { id: DOC_ID } as unknown,
+        params: { id: DOC_ID } as { id: string },
         user: { id: USER_ID },
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       
       const res = makeRes();
       const next = makeNext();
@@ -233,9 +233,9 @@ describe('document.controller (unit)', () => {
 
       const req = {
         file: { filename: 'a.txt' },
-        params: { id: DOC_ID } as unknown,
+        params: { id: DOC_ID } as { id: string },
         user: { id: USER_ID },
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -249,9 +249,9 @@ describe('document.controller (unit)', () => {
 
       const req = {
         file: { filename: 'a.txt' },
-        params: { id: DOC_ID } as unknown,
+        params: { id: DOC_ID } as { id: string },
         user: { id: USER_ID },
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -276,16 +276,21 @@ describe('document.controller (unit)', () => {
         makeDocument({ _id: new mongoose.Types.ObjectId() }),
       ]);
 
-      const req = { user: { id: USER_ID } } as AuthRequest;
+      const req = { user: { id: USER_ID } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
       await documentController.list(req, res, next);
 
       expect(mockListDocuments).toHaveBeenCalledWith(USER_ID);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ success: true, count: 2, documents: expect.arrayContaining([expect.objectContaining({ _id: expect.anything() })]) })
-      );
+      expect(res.json).toHaveBeenCalled();
+      {
+        const calls = ((res.json as jest.Mock).mock as unknown as { calls: Array<[Record<string, unknown>]> }).calls;
+        const jsonArg = calls[0][0];
+        expect(jsonArg['success']).toBe(true);
+        expect(jsonArg['count']).toBe(2);
+        expect(Array.isArray(jsonArg['documents'])).toBe(true);
+      }
     });
   });
 
@@ -293,16 +298,21 @@ describe('document.controller (unit)', () => {
     it('should return docs and count', async () => {
       mockListSharedDocumentsToUser.mockImplementation(async () => [makeDocument({ _id: new mongoose.Types.ObjectId() })]);
 
-      const req = { user: { id: USER_ID } } as AuthRequest;
+      const req = { user: { id: USER_ID } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
       await documentController.listSharedToMe(req, res, next);
 
       expect(mockListSharedDocumentsToUser).toHaveBeenCalledWith(USER_ID);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ success: true, count: 1, documents: expect.any(Array) })
-      );
+      expect(res.json).toHaveBeenCalled();
+      {
+        const calls = ((res.json as jest.Mock).mock as unknown as { calls: Array<[Record<string, unknown>]> }).calls;
+        const jsonArg = calls[0][0];
+        expect(jsonArg['success']).toBe(true);
+        expect(jsonArg['count']).toBe(1);
+        expect(Array.isArray(jsonArg['documents'])).toBe(true);
+      }
     });
   });
 
@@ -312,7 +322,7 @@ describe('document.controller (unit)', () => {
         user: { id: USER_ID },
         params: {},
         query: {},
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -325,9 +335,9 @@ describe('document.controller (unit)', () => {
     it('should next 400 when organizationId invalid', async () => {
       const req = {
         user: { id: USER_ID },
-        params: { organizationId: 'invalid' } as unknown,
+        params: { organizationId: 'invalid' },
         query: {},
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -346,18 +356,23 @@ describe('document.controller (unit)', () => {
 
       const req = {
         user: { id: USER_ID },
-        params: { organizationId: ORG_ID } as unknown,
+        params: { organizationId: ORG_ID },
         query: {},
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
       await documentController.getRecent(req, res, next);
 
       expect(mockGetUserRecentDocuments).toHaveBeenCalledWith({ userId: USER_ID, limit: 10 });
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ success: true, count: 2, documents: expect.arrayContaining([expect.objectContaining({ _id: expect.anything() })]) })
-      );
+      expect(res.json).toHaveBeenCalled();
+      {
+        const calls = ((res.json as jest.Mock).mock as unknown as { calls: Array<[Record<string, unknown>]> }).calls;
+        const jsonArg = calls[0][0];
+        expect(jsonArg['success']).toBe(true);
+        expect(jsonArg['count']).toBe(2);
+        expect(Array.isArray(jsonArg['documents'])).toBe(true);
+      }
     });
 
     it('should parse limit from query', async () => {
@@ -367,9 +382,9 @@ describe('document.controller (unit)', () => {
 
       const req = {
         user: { id: USER_ID },
-        params: { organizationId: ORG_ID } as unknown,
-        query: { limit: '2' } as unknown,
-      } as AuthRequest;
+        params: { organizationId: ORG_ID },
+        query: { limit: '2' },
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -383,7 +398,7 @@ describe('document.controller (unit)', () => {
     it('should next 404 when doc not found', async () => {
       mockFindDocumentById.mockImplementation(async () => null);
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -403,7 +418,7 @@ describe('document.controller (unit)', () => {
         })
       );
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -424,7 +439,7 @@ describe('document.controller (unit)', () => {
         })
       );
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -445,7 +460,7 @@ describe('document.controller (unit)', () => {
       );
       mockHasAnyRole.mockImplementation(async () => true);
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -467,7 +482,7 @@ describe('document.controller (unit)', () => {
       );
       mockHasAnyRole.mockImplementation(async () => false);
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -486,7 +501,7 @@ describe('document.controller (unit)', () => {
         })
       );
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -505,7 +520,7 @@ describe('document.controller (unit)', () => {
         })
       );
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -520,9 +535,9 @@ describe('document.controller (unit)', () => {
 
       const req = {
         user: { id: USER_ID },
-        params: { id: DOC_ID } as unknown,
+        params: { id: DOC_ID } as { id: string },
         body: {},
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -537,9 +552,9 @@ describe('document.controller (unit)', () => {
 
       const req = {
         user: { id: USER_ID },
-        params: { id: DOC_ID } as unknown,
+        params: { id: DOC_ID } as { id: string },
         body: { userIds: [USER_ID] },
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -553,9 +568,9 @@ describe('document.controller (unit)', () => {
 
       const req = {
         user: { id: USER_ID },
-        params: { id: DOC_ID } as unknown,
+        params: { id: DOC_ID } as { id: string },
         body: { userIds: [USER_ID] },
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -576,9 +591,9 @@ describe('document.controller (unit)', () => {
     it('should next 400 when targetFolderId missing', async () => {
       const req = {
         user: { id: USER_ID },
-        params: { id: DOC_ID } as unknown,
+        params: { id: DOC_ID } as { id: string },
         body: {},
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -593,9 +608,9 @@ describe('document.controller (unit)', () => {
 
       const req = {
         user: { id: USER_ID },
-        params: { id: DOC_ID } as unknown,
+        params: { id: DOC_ID } as { id: string },
         body: { targetFolderId: '507f1f77bcf86cd799439099' },
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -616,9 +631,9 @@ describe('document.controller (unit)', () => {
     it('should next 400 when targetFolderId missing', async () => {
       const req = {
         user: { id: USER_ID },
-        params: { id: DOC_ID } as unknown,
+        params: { id: DOC_ID } as { id: string },
         body: {},
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -633,9 +648,9 @@ describe('document.controller (unit)', () => {
 
       const req = {
         user: { id: USER_ID },
-        params: { id: DOC_ID } as unknown,
+        params: { id: DOC_ID } as { id: string },
         body: { targetFolderId: '507f1f77bcf86cd799439099' },
-      } as AuthRequest;
+      } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -657,7 +672,7 @@ describe('document.controller (unit)', () => {
     it('should next 404 when doc not found', async () => {
       mockFindDocumentById.mockImplementation(async () => null);
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -680,7 +695,7 @@ describe('document.controller (unit)', () => {
       );
       mockHasAnyRole.mockImplementation(async () => false);
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -705,7 +720,7 @@ describe('document.controller (unit)', () => {
 
       mockValidateDownloadPath.mockImplementation(async () => '/abs/uploads/a.pdf');
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -733,7 +748,7 @@ describe('document.controller (unit)', () => {
         .mockRejectedValueOnce(new Error('nope')) // uploads attempt with filename
         .mockResolvedValueOnce('/abs/storage/org/a.pdf'); // storage attempt with relative path from doc.path
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -762,7 +777,7 @@ describe('document.controller (unit)', () => {
         .mockRejectedValueOnce(new Error('no uploads'))
         .mockRejectedValueOnce(new Error('no storage'));
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -777,7 +792,7 @@ describe('document.controller (unit)', () => {
     it('should next 404 when doc not found', async () => {
       mockFindDocumentById.mockImplementation(async () => null);
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -804,7 +819,7 @@ describe('document.controller (unit)', () => {
         .mockRejectedValueOnce(new Error('storage fail')) // storage attempt (relativePath, storageBase)
         .mockResolvedValueOnce('/abs/uploads/obs/org/file.pdf'); // alternativePath in uploads
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -832,7 +847,7 @@ describe('document.controller (unit)', () => {
       mockValidateDownloadPath.mockImplementation(async () => '/abs/storage/org/file.docx');
       mockMammothConvertToHtml.mockImplementation(async () => ({ value: '<p>Hello</p>' }));
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -860,7 +875,7 @@ describe('document.controller (unit)', () => {
       mockValidateDownloadPath.mockImplementation(async () => '/abs/storage/org/file.docx');
       mockMammothConvertToHtml.mockRejectedValue(new Error('bad docx'));
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -883,7 +898,7 @@ describe('document.controller (unit)', () => {
       );
       mockHasAnyRole.mockImplementation(async () => false);
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -911,7 +926,7 @@ describe('document.controller (unit)', () => {
         .mockRejectedValueOnce(new Error('no storage'))
         .mockRejectedValueOnce(new Error('no alternative'));
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -926,7 +941,7 @@ describe('document.controller (unit)', () => {
     it('should map "Document not found" to 404', async () => {
       mockDeleteDocument.mockRejectedValue(new Error('Document not found'));
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 
@@ -938,7 +953,7 @@ describe('document.controller (unit)', () => {
     it('should return success json when deleted', async () => {
       mockDeleteDocument.mockImplementation(async () => makeDocument({ _id: new mongoose.Types.ObjectId(DOC_ID) }));
 
-      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as unknown } as AuthRequest;
+      const req = { user: { id: USER_ID }, params: { id: DOC_ID } as { id: string } } as unknown as AuthRequest;
       const res = makeRes();
       const next = makeNext();
 

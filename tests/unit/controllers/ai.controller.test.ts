@@ -5,7 +5,7 @@
 // Prevent native pdf bindings from loading during tests
 jest.mock('pdf-parse', () => ({ __esModule: true, default: jest.fn() }));
 
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import * as aiController from '../../../src/controllers/ai.controller';
 import { ragService } from '../../../src/services/ai/rag.service';
 import { documentProcessor } from '../../../src/services/document-processor.service';
@@ -25,30 +25,30 @@ jest.mock('../../../src/services/membership.service');
  * Helper function to create a chainable mock for DocumentModel.findById
  * that supports .select('+extractedText')
  */
-function mockFindByIdWithSelect(document: any) {
+function mockFindByIdWithSelect(document: unknown) {
   return {
-    select: jest.fn().mockResolvedValue(document)
+    select: jest.fn().mockResolvedValue(document as unknown)
   };
 }
 
 describe('AI Controller', () => {
-  let mockReq: any;
+  let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
-  let mockNext: NextFunction;
+  let mockNext: jest.MockedFunction<(err?: unknown) => void>;
 
   beforeEach(() => {
     mockReq = {
       user: { id: 'user123', email: 'test@example.com' },
       body: {},
       params: {}
-    };
+    } as Partial<Request>;
 
     mockRes = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis()
     };
 
-    mockNext = jest.fn();
+    mockNext = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
 
     jest.clearAllMocks();
   });

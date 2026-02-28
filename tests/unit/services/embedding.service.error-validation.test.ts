@@ -1,10 +1,23 @@
 import HttpError from '../../../src/models/error.model';
 
-describe('EmbeddingService - Provider abstraction dimension checks', () => {
-  let embeddingService: any;
-  let mockProvider: any;
+type EmbeddingServiceType = {
+  generateEmbedding: (text: string) => Promise<number[]>;
+  generateEmbeddings: (texts: string[]) => Promise<number[][]>;
+  getDimensions: () => number;
+};
 
-  beforeEach(() => {
+type ProviderMock = {
+  generateEmbedding: jest.Mock<Promise<{ embedding: number[] }>, [string]>;
+  generateEmbeddings: jest.Mock<Promise<Array<{ embedding: number[] }>>, [string[]]>;
+  getEmbeddingDimensions: jest.Mock<number, []>;
+  getEmbeddingModel: jest.Mock<string, []>;
+};
+
+describe('EmbeddingService - Provider abstraction dimension checks', () => {
+  let embeddingService: EmbeddingServiceType;
+  let mockProvider: ProviderMock;
+
+  beforeEach(async () => {
     jest.resetModules();
 
     mockProvider = {
@@ -12,13 +25,13 @@ describe('EmbeddingService - Provider abstraction dimension checks', () => {
       generateEmbeddings: jest.fn(),
       getEmbeddingDimensions: jest.fn(() => 1536),
       getEmbeddingModel: jest.fn(() => 'text-embedding-3-small')
-    };
+    } as unknown as ProviderMock;
 
     jest.doMock('../../../src/services/ai/providers/provider.factory', () => ({
       getAIProvider: () => mockProvider
     }));
 
-    embeddingService = require('../../../src/services/ai/embedding.service').embeddingService;
+    embeddingService = ((await import('../../../src/services/ai/embedding.service')) as unknown as typeof import('../../../src/services/ai/embedding.service')).embeddingService as unknown as EmbeddingServiceType;
   });
 
   describe('generateEmbedding - dimension awareness', () => {
@@ -58,7 +71,7 @@ describe('EmbeddingService - Provider abstraction dimension checks', () => {
       const embB = Array(dims).fill(0.2);
 
       mockProvider.getEmbeddingDimensions.mockReturnValue(dims);
-      mockProvider.generateEmbeddings.mockResolvedValue([{ embedding: embA }, { embedding: embB }]);
+      mockProvider.generateEmbeddings.mockResolvedValue([{ embedding: embA }, { embedding: embB }] as unknown as Array<{ embedding: number[] }>);
 
       const texts = ['A', 'B'];
       const result = await embeddingService.generateEmbeddings(texts);
@@ -71,7 +84,7 @@ describe('EmbeddingService - Provider abstraction dimension checks', () => {
     it('throws when provider returns fewer results than input texts', async () => {
       const dims = 1536;
       mockProvider.getEmbeddingDimensions.mockReturnValue(dims);
-      mockProvider.generateEmbeddings.mockResolvedValue([{ embedding: Array(dims).fill(0) }]);
+      mockProvider.generateEmbeddings.mockResolvedValue([{ embedding: Array(dims).fill(0) }] as unknown as Array<{ embedding: number[] }>);
 
       const texts = ['T1', 'T2', 'T3'];
 

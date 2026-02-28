@@ -69,7 +69,7 @@ describe('TextExtractionService OCR unit tests', () => {
     const mod = await import('../../../src/services/ai/text-extraction.service');
     const { textExtractionService } = mod;
     // stub the internal PDF extractor to return empty text so the OCR fallback is exercised
-    jest.spyOn(textExtractionService as any, 'extractFromPdf').mockResolvedValue({
+    jest.spyOn(textExtractionService as unknown as { extractFromPdf: jest.Mock }, 'extractFromPdf').mockResolvedValue({
       text: '',
       charCount: 0,
       wordCount: 0,

@@ -5,6 +5,7 @@ import { embeddingService } from './embedding.service';
 import { llmService } from './llm.service';
 import { buildPrompt } from './prompt.builder';
 import HttpError from '../../models/error.model';
+import mongoose from 'mongoose';
 import type { IDocumentChunk, ISearchResult, IRagResponse } from '../../models/types/ai.types';
 
 type SearchChunkWithScore = IDocumentChunk & { score?: number };
@@ -75,9 +76,13 @@ export class RAGService {
       const db = await getDb();
       const collection = db.collection<IDocumentChunk>(COLLECTION_NAME);
 
+      // No document-scoped filtering here — document-scoped searches are handled
+      // by `searchInDocument`, which computes its own `docIdFilter` from the
+      // provided `documentId` parameter.
+
+
       // Ejecutar búsqueda vectorial usando aggregation pipeline
-      const results = await collection
-        .aggregate([
+      const cursor = collection.aggregate([
           {
             $vectorSearch: {
               index: VECTOR_SEARCH_INDEX,
@@ -113,8 +118,13 @@ export class RAGService {
           },
           // Ensure an explicit limit stage is present for compatibility with tests/clients
           { $limit: topK }
-        ])
-        .toArray();
+        ]);
+
+      if (!cursor || typeof (cursor as any).toArray !== 'function') {
+        throw new Error('Database error');
+      }
+
+      const results = await (cursor as any).toArray();
 
       // Transformar resultados al formato esperado
       const searchResults: ISearchResult[] = (results as SearchChunkWithScore[]).map(doc => ({
@@ -270,9 +280,13 @@ export class RAGService {
       const db = await getDb();
       const collection = db.collection<IDocumentChunk>(COLLECTION_NAME);
 
+      // Compute deterministic document id filter (ObjectId when valid)
+      const docIdFilter = mongoose.Types.ObjectId.isValid(documentId)
+        ? new mongoose.Types.ObjectId(documentId)
+        : documentId;
+
       // Búsqueda vectorial con filtro por organización Y documento
-      const results = await collection
-        .aggregate([
+      const cursor = collection.aggregate([
           {
             $vectorSearch: {
               index: VECTOR_SEARCH_INDEX,
@@ -283,9 +297,9 @@ export class RAGService {
               filter: {
                 // 🔐 CRITICAL: Filtros obligatorios para multitenancy
                 $and: [
-                  { organizationId: { $eq: organizationId } },
-                  { documentId: { $eq: documentId } }
-                ]
+                      { organizationId: { $eq: organizationId } },
+                      { documentId: { $eq: docIdFilter } }
+                    ]
               }
             }
           },
@@ -308,10 +322,15 @@ export class RAGService {
             }
           },
           // Add an explicit match and limit stage for predictable pipelines
-          { $match: { documentId: documentId, organizationId: organizationId } },
+          { $match: { documentId: docIdFilter, organizationId: organizationId } },
           { $limit: topK }
-        ])
-        .toArray();
+        ]);
+
+      if (!cursor || typeof (cursor as any).toArray !== 'function') {
+        throw new Error('Database error');
+      }
+
+      const results = await (cursor as any).toArray();
 
       const searchResults: ISearchResult[] = (results as SearchChunkWithScore[]).map(doc => ({
         chunk: {

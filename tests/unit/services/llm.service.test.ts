@@ -5,16 +5,26 @@
 // Note: removed unused HttpError import to avoid TS6133 during CI
 
 describe('LLMService', () => {
-  let llmService: any;
-  let mockProvider: any;
+  type LLMServiceShape = {
+    generateResponse: (prompt: string, opts?: unknown) => Promise<string>;
+    generateResponseStream: (prompt: string, onChunk: (chunk: string) => void) => Promise<string>;
+    getDefaultTemperature: () => number;
+  };
 
-  beforeEach(() => {
+  let llmService: LLMServiceShape;
+  let mockProvider: {
+    name: string;
+    generateResponse: jest.Mock<Promise<{ response: string; usage?: unknown }>, [string, unknown?]>;
+    getChatModel: jest.Mock<string, []>;
+  };
+
+  beforeEach(async () => {
     jest.resetModules();
 
     // Mock provider with predictable behavior
     mockProvider = {
       name: 'mock',
-      generateResponse: jest.fn(),
+      generateResponse: jest.fn<Promise<{ response: string; usage?: unknown }>, [string, unknown?]>(),
       getChatModel: jest.fn(() => 'mock-chat-model')
     };
 
@@ -24,7 +34,7 @@ describe('LLMService', () => {
     }));
 
     // Now require the service under test so it picks up the mocked factory
-    llmService = require('../../../src/services/ai/llm.service').llmService;
+    llmService = ((await import('../../../src/services/ai/llm.service')) as unknown as typeof import('../../../src/services/ai/llm.service')).llmService as LLMServiceShape;
   });
 
   describe('generateResponse', () => {
@@ -126,7 +136,7 @@ describe('LLMService', () => {
 
     it('should handle rate limit errors', async () => {
       const rateLimitError = new Error('Rate limit exceeded');
-      (rateLimitError as any).status = 429;
+      (rateLimitError as unknown as { status?: number }).status = 429;
 
       mockProvider.generateResponse.mockRejectedValue(rateLimitError);
 
@@ -137,7 +147,7 @@ describe('LLMService', () => {
 
     it('should handle authentication errors', async () => {
       const authError = new Error('Invalid API key');
-      (authError as any).status = 401;
+      (authError as unknown as { status?: number }).status = 401;
 
       mockProvider.generateResponse.mockRejectedValue(authError);
 

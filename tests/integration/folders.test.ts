@@ -1,4 +1,5 @@
 import { request, app } from '../setup';
+import type { Response } from 'supertest';
 import { registerAndLogin } from '../helpers';
 import { folderUser, basicFolder, duplicateFolder, multipleFolders } from '../fixtures';
 import { FolderBuilder } from '../builders';
@@ -30,6 +31,10 @@ describe('Folder Endpoints', () => {
     rootFolderId = user?.rootFolder?.toString() || '';
   });
 
+  function bodyOf(res: Response): Record<string, unknown> {
+    return (res.body as unknown) as Record<string, unknown>;
+  }
+
   describe('POST /api/folders', () => {
     it('should create a new folder', async () => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
@@ -43,10 +48,13 @@ describe('Folder Endpoints', () => {
         })
         .expect(201);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.folder).toHaveProperty('id');
-      expect(response.body.folder.name).toBe(basicFolder.name);
-      expect(response.body.folder.owner.toString()).toBe(userId);
+      const body = response.body as unknown as Record<string, unknown>;
+      expect(body['success']).toBe(true);
+      const folder = body['folder'] as Record<string, unknown>;
+      expect(folder).toBeDefined();
+      expect(folder['id']).toBeDefined();
+      expect(folder['name']).toBe(basicFolder.name);
+      expect((folder['owner'] as unknown as { toString: () => string }).toString()).toBe(userId);
     });
 
     it('should fail without authentication token', async () => {
@@ -109,10 +117,12 @@ describe('Folder Endpoints', () => {
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(Array.isArray(response.body.folders)).toBe(true);
+      const body = response.body as unknown as Record<string, unknown>;
+      expect(body['success']).toBe(true);
+      const folders = body['folders'] as unknown[];
+      expect(Array.isArray(folders)).toBe(true);
       // Debe incluir las 2 carpetas creadas + 1 rootFolder
-      expect(response.body.folders.length).toBeGreaterThanOrEqual(2);
+      expect((folders as unknown[]).length).toBeGreaterThanOrEqual(2);
     });
 
     it('should fail without authentication', async () => {
@@ -132,7 +142,8 @@ describe('Folder Endpoints', () => {
           parentId: rootFolderId
         });
 
-      const folderId = createResponse.body.folder.id;
+      const crBody = createResponse.body as unknown as Record<string, unknown>;
+      const folderId = ((crBody['folder'] as Record<string, unknown>)['id'] as string) || '';
 
       await request(app)
         .delete(`/api/folders/${folderId}`)
@@ -161,7 +172,8 @@ describe('Folder Endpoints', () => {
           parentId: rootFolderId
         });
 
-      const folderId = createResponse.body.folder.id;
+      const crBody = bodyOf(createResponse);
+      const folderId = ((crBody['folder'] as Record<string, unknown>)['id'] as string) || '';
 
       const response = await request(app)
         .patch(`/api/folders/${folderId}`)
@@ -169,8 +181,10 @@ describe('Folder Endpoints', () => {
         .send({ name: newName })
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.folder.name).toBe(newName);
+      const body = response.body as unknown as Record<string, unknown>;
+      expect(body['success']).toBe(true);
+      const folder = body['folder'] as Record<string, unknown>;
+      expect(folder['name']).toBe(newName);
     });
 
     it('should fail without authentication', async () => {

@@ -1,10 +1,10 @@
 import errorHandler from '../../../src/middlewares/error.middleware';
 import HttpError from '../../../src/models/error.model';
 
-function makeRes() {
-  const res: any = {};
-  res.status = jest.fn(() => res);
-  res.json = jest.fn(() => res);
+function makeRes(): Partial<import('express').Response> {
+  const res: Partial<import('express').Response> = {};
+  res.status = jest.fn(() => res as import('express').Response);
+  res.json = jest.fn(() => res as import('express').Response);
   return res;
 }
 
@@ -12,56 +12,50 @@ describe('error.middleware', () => {
   test('handles HttpError', () => {
     const res = makeRes();
     const err = new HttpError(418, 'teapot');
-    errorHandler(err, {} as any, res, jest.fn());
+    errorHandler(err, {} as unknown as import('express').Request, res as import('express').Response, jest.fn() as unknown as import('express').NextFunction);
     expect(res.status).toHaveBeenCalledWith(418);
     expect(res.json).toHaveBeenCalledWith({ success: false, error: 'teapot' });
   });
 
   test('maps Mongoose ValidationError', () => {
     const res = makeRes();
-    const err: any = new Error('v');
-    err.name = 'ValidationError';
-    errorHandler(err, {} as any, res, jest.fn());
+    const err = { name: 'ValidationError', message: 'v' };
+    errorHandler(err as unknown, {} as unknown as import('express').Request, res as import('express').Response, jest.fn() as unknown as import('express').NextFunction);
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
   test('maps CastError', () => {
     const res = makeRes();
-    const err: any = new Error('c');
-    err.name = 'CastError';
-    errorHandler(err, {} as any, res, jest.fn());
+    const err = { name: 'CastError', message: 'c' };
+    errorHandler(err as unknown, {} as unknown as import('express').Request, res as import('express').Response, jest.fn() as unknown as import('express').NextFunction);
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
   test('maps duplicate key error', () => {
     const res = makeRes();
-    const err: any = new Error('dup');
-    err.code = 11000;
-    err.keyValue = { name: 'x' };
+    const err = { code: 11000, keyValue: { name: 'x' } };
     const next = jest.fn();
-    errorHandler(err, {} as any, res, next);
+    errorHandler(err as unknown, {} as unknown as import('express').Request, res as import('express').Response, next as unknown as import('express').NextFunction);
     expect(res.status).toHaveBeenCalledWith(409);
   });
 
   test('handles TokenExpiredError', () => {
     const res = makeRes();
-    const err: any = new Error('t');
-    err.name = 'TokenExpiredError';
-    errorHandler(err, {} as any, res, jest.fn());
+    const err = { name: 'TokenExpiredError', message: 't' };
+    errorHandler(err as unknown, {} as unknown as import('express').Request, res as import('express').Response, jest.fn() as unknown as import('express').NextFunction);
     expect(res.status).toHaveBeenCalledWith(401);
   });
 
   test('fallback to 500', () => {
     const res = makeRes();
     const err = new Error('unknown');
-    errorHandler(err, {} as any, res, jest.fn());
+    errorHandler(err, {} as unknown as import('express').Request, res as import('express').Response, jest.fn() as unknown as import('express').NextFunction);
     expect(res.status).toHaveBeenCalledWith(500);
   });
 });
 // Unit tests for error.middleware.ts (improve branch coverage)
 import { Request, Response, NextFunction } from 'express';
-import { errorHandler } from '../../../src/middlewares/error.middleware';
-import HttpError from '../../../src/models/error.model';
+
 
 describe('error.middleware', () => {
   let mockReq: Partial<Request>;
@@ -204,7 +198,7 @@ describe('error.middleware', () => {
         code: 'LIMIT_FILE_SIZE',
         message: 'File too large'
       };
-      errorHandler(err as any, mockReq as Request, mockRes as Response, mockNext);
+      errorHandler(err as unknown as Error, mockReq as Request, mockRes as Response, mockNext);
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -218,7 +212,7 @@ describe('error.middleware', () => {
         code: 'LIMIT_FILE_COUNT',
         message: 'Too many files'
       };
-      errorHandler(err as any, mockReq as Request, mockRes as Response, mockNext);
+      errorHandler(err as unknown as Error, mockReq as Request, mockRes as Response, mockNext);
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith({

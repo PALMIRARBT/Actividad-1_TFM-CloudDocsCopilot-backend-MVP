@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import type { Request, Response } from 'express';
 import {
   generalRateLimiter,
   authRateLimiter,
@@ -9,7 +9,7 @@ import {
 } from '../../../src/middlewares/rate-limit.middleware';
 
 describe('Rate Limit Middleware', () => {
-  let mockRequest: any;
+  let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
   let jsonMock: jest.Mock;
   let statusMock: jest.Mock;
@@ -19,18 +19,18 @@ describe('Rate Limit Middleware', () => {
     statusMock = jest.fn().mockReturnValue({ json: jsonMock });
     mockRequest = {
       ip: '192.168.1.1',
-      socket: { remoteAddress: '192.168.1.1' },
+      socket: { remoteAddress: '192.168.1.1' } as unknown as { remoteAddress?: string },
       headers: {},
       method: 'GET',
       path: '/'
-    };
+    } as Partial<Request>;
     mockResponse = {
-      status: statusMock,
-      json: jsonMock,
-      setHeader: jest.fn(),
-      getHeader: jest.fn().mockReturnValue('900'),
+      status: statusMock as unknown as Response['status'],
+      json: jsonMock as unknown as Response['json'],
+      setHeader: jest.fn() as unknown as Response['setHeader'],
+      getHeader: jest.fn().mockReturnValue('900') as unknown as Response['getHeader'],
       statusCode: 200
-    } as any;
+    } as Partial<Response>;
   });
 
   describe('generalRateLimiter', () => {
@@ -66,14 +66,14 @@ describe('Rate Limit Middleware', () => {
     });
 
     it('should handle unknown IP addresses', () => {
-      const reqWithoutIp = {
-        socket: {},
+      const reqWithoutIp: Partial<Request> = {
+        socket: {} as unknown as Request['socket'],
         headers: {}
       };
 
       // Should fallback to 'unknown' when no IP is available
-      const ip =
-        (reqWithoutIp as any).ip || (reqWithoutIp.socket as any).remoteAddress || 'unknown';
+      const socket = reqWithoutIp.socket as unknown as { remoteAddress?: string } | undefined;
+      const ip = reqWithoutIp.ip || socket?.remoteAddress || 'unknown';
       expect(ip).toBe('unknown');
     });
   });
@@ -270,16 +270,22 @@ describe('Rate Limit Middleware', () => {
     });
 
     it('should fallback to IP when user is not authenticated', () => {
-      const unauthRequest = { ...mockRequest, ip: '192.168.1.100' };
+      const unauthRequest: Partial<Request & { user?: { id: string } }> = {
+        ...mockRequest,
+        ip: '192.168.1.100'
+      };
 
-      const key = (unauthRequest as any).user?.id || unauthRequest.ip;
+      const key = unauthRequest.user?.id || unauthRequest.ip;
       expect(key).toBe('192.168.1.100');
     });
 
     it('should handle requests without user or IP', () => {
-      const minimalRequest = { socket: {}, headers: {} };
+      const minimalRequest: Partial<Request & { user?: { id: string } }> = {
+        socket: {} as unknown as Request['socket'],
+        headers: {}
+      };
 
-      const key = (minimalRequest as any).user?.id || (minimalRequest as any).ip || 'unknown';
+      const key = minimalRequest.user?.id || minimalRequest.ip || 'unknown';
       expect(key).toBe('unknown');
     });
   });
@@ -297,9 +303,9 @@ describe('Rate Limit Middleware', () => {
     });
 
     it('should include retry-after header', () => {
-      (mockResponse as any).getHeader = jest.fn().mockReturnValue('900');
+      mockResponse.getHeader = jest.fn().mockReturnValue('900') as unknown as Response['getHeader'];
 
-      const retryAfter = mockResponse.getHeader!('Retry-After');
+      const retryAfter = (mockResponse.getHeader as Response['getHeader'])('Retry-After');
       expect(retryAfter).toBe('900');
     });
 

@@ -111,9 +111,14 @@ describe('FolderService Integration Tests', () => {
     if (fs.existsSync(storageRoot)) {
       try {
         fs.rmSync(storageRoot, { recursive: true, force: true });
-      } catch (err: any) {
-        if (err && (err.code === 'ENOTEMPTY' || err.code === 'EBUSY' || err.code === 'EPERM')) {
-          console.warn('Warning: could not fully remove storageRoot during cleanup:', err.code);
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'code' in err) {
+          const e = err as { code?: string };
+          if (e.code === 'ENOTEMPTY' || e.code === 'EBUSY' || e.code === 'EPERM') {
+            console.warn('Warning: could not fully remove storageRoot during cleanup:', e.code);
+          } else {
+            throw err;
+          }
         } else {
           throw err;
         }

@@ -297,8 +297,9 @@ describe('DeletionService', () => {
       (DeletionAuditModel.create as jest.Mock).mockResolvedValue(mockAuditEntry);
 
       // Mock the secure overwrite to throw error so we can check audit entry creation
+      type DeletionSvcType = { secureOverwriteFile: (path: string, opts?: { method?: string; passes?: number }) => Promise<void> };
       jest
-        .spyOn(deletionService as any, 'secureOverwriteFile')
+        .spyOn(deletionService as unknown as DeletionSvcType, 'secureOverwriteFile')
         .mockRejectedValue(new Error('File error'));
 
       await expect(deletionService.permanentDelete(mockDocId, mockContext, {})).rejects.toThrow();
@@ -325,8 +326,9 @@ describe('DeletionService', () => {
       (DocumentModel.findById as jest.Mock).mockResolvedValue(document);
       (DeletionAuditModel.create as jest.Mock).mockResolvedValue(mockAuditEntry);
 
+      type DeletionSvcType = { secureOverwriteFile: (path: string, opts?: { method?: string; passes?: number }) => Promise<void> };
       jest
-        .spyOn(deletionService as any, 'secureOverwriteFile')
+        .spyOn(deletionService as unknown as DeletionSvcType, 'secureOverwriteFile')
         .mockRejectedValue(new Error('Mock error'));
 
       await expect(
@@ -352,7 +354,8 @@ describe('DeletionService', () => {
         userId: mockUserId
       };
 
-      const result = await deletionService.moveToTrash(mockDocId, minimalContext as any);
+      type MinimalContext = { userId: string; organizationId?: string; ipAddress?: string; userAgent?: string; reason?: string };
+      const result = await deletionService.moveToTrash(mockDocId, minimalContext as unknown as MinimalContext);
 
       expect(result).toBeDefined();
     });
@@ -386,7 +389,7 @@ describe('DeletionService', () => {
     it('should calculate scheduled deletion date correctly', async () => {
       const document = { ...mockDocument };
       document.isOwnedBy = jest.fn().mockReturnValue(true);
-      document.save = jest.fn().mockImplementation(function (this: any) {
+      document.save = jest.fn().mockImplementation(function (this: Record<string, unknown>) {
         // Simulate what the real save does - scheduledDeletionDate gets set
         return Promise.resolve(this);
       });

@@ -1,4 +1,5 @@
 import { request, app } from '../setup';
+import type { Response } from 'supertest';
 import { UserBuilder } from '../builders';
 import { authUser } from '../fixtures';
 import Organization from '../../src/models/organization.model';
@@ -10,6 +11,12 @@ import mongoose from 'mongoose';
  */
 describe('Auth Endpoints', () => {
   let testOrgId: string;
+
+  type ApiBody = { success?: boolean; user?: unknown; message?: string; error?: string };
+
+  function bodyOf(res: Response): ApiBody {
+    return (res.body as unknown) as ApiBody;
+  }
 
   beforeEach(async () => {
     // Crear una organización de prueba para cada test
@@ -31,8 +38,10 @@ describe('Auth Endpoints', () => {
         .send({ ...userData, organizationId: testOrgId })
         .expect(201);
 
-      expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(userData.email);
+      const b = bodyOf(response);
+      expect(b.user).toBeDefined();
+      const userObj = b.user as Record<string, unknown>;
+      expect(userObj['email']).toBe(userData.email);
     });
 
     it('should fail with incomplete data', async () => {
@@ -42,8 +51,8 @@ describe('Auth Endpoints', () => {
       };
 
       const response = await request(app).post('/api/auth/register').send(userData).expect(400);
-
-      expect(response.body).toHaveProperty('error');
+      const b = bodyOf(response);
+      expect(b.error).toBeDefined();
     });
 
     it('should fail with duplicate email', async () => {
@@ -64,7 +73,8 @@ describe('Auth Endpoints', () => {
         .send({ ...userData, organizationId: testOrgId })
         .expect(409);
 
-      expect(response.body).toHaveProperty('error');
+      const b = bodyOf(response);
+      expect(b.error).toBeDefined();
     });
   });
 
@@ -85,11 +95,12 @@ describe('Auth Endpoints', () => {
         })
         .expect(200);
 
+      const b = bodyOf(response);
       // Verificar que NO devuelve token en JSON
-      expect(response.body).not.toHaveProperty('token');
+      expect(b).not.toHaveProperty('token');
       // Verificar que devuelve el usuario
-      expect(response.body).toHaveProperty('user');
-      expect(response.body).toHaveProperty('message');
+      expect(b.user).toBeDefined();
+      expect(b.message).toBeDefined();
       // Verificar que envía la cookie
       expect(response.headers['set-cookie']).toBeDefined();
       const cookies: string[] = response.headers['set-cookie'] as unknown as string[];
@@ -108,7 +119,8 @@ describe('Auth Endpoints', () => {
         })
         .expect(401);
 
-      expect(response.body).toHaveProperty('error');
+      const b = bodyOf(response);
+      expect(b.error).toBeDefined();
     });
 
     it('should fail with non-existent email', async () => {
@@ -120,7 +132,8 @@ describe('Auth Endpoints', () => {
         })
         .expect(404);
 
-      expect(response.body).toHaveProperty('error');
+      const b = bodyOf(response);
+      expect(b.error).toBeDefined();
     });
   });
 
@@ -151,8 +164,9 @@ describe('Auth Endpoints', () => {
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .expect(200);
 
-      expect(logoutResponse.body).toHaveProperty('message');
-      expect(logoutResponse.body.message).toBe('Logout successful');
+      const b = bodyOf(logoutResponse);
+      expect(b.message).toBeDefined();
+      expect(b.message).toBe('Logout successful');
 
       // Verificar que la cookie se limpia
       const clearCookies: string[] | undefined = logoutResponse.headers['set-cookie'] as unknown as

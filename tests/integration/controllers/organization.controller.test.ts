@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import request from 'supertest';
 import express from 'express';
+import type { Request as ExRequest, Response as ExResponse, NextFunction } from 'express';
 
 import User from '../../../src/models/user.model';
 import * as jwtService from '../../../src/services/jwt.service';
@@ -30,15 +31,31 @@ jest.mock('../../../src/services/membership.service', () => ({
 
 import * as organizationService from '../../../src/services/organization.service';
 import * as membershipService from '../../../src/services/membership.service';
+import type { Response } from 'supertest';
 
-type AnyErr = any;
+type ApiBody = {
+  success?: boolean;
+  message?: string;
+  error?: string;
+  organization?: { name?: string; plan?: SubscriptionPlan; settings?: { maxUsers?: number } };
+  count?: number;
+  memberships?: unknown[];
+  stats?: { totalUsers?: number };
+  members?: unknown[];
+};
+
+function bodyOf(res: Response): ApiBody {
+  return (res.body as unknown) as ApiBody;
+}
+
+type AnyErr = unknown;
 
 function buildTestApp(opts: { tokenToUserId: Record<string, string> }) {
   const app = express();
   app.use(express.json());
 
   // Minimal auth middleware for tests
-  app.use((req: any, res, next) => {
+  app.use((req: ExRequest & { user?: { id: string } }, res: ExResponse, next: NextFunction) => {
     const auth = req.header('authorization') || req.header('Authorization');
     if (!auth?.startsWith('Bearer ')) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
@@ -75,16 +92,16 @@ function buildTestApp(opts: { tokenToUserId: Record<string, string> }) {
   // Ensures HttpError-like objects return their status codes.
   // Also ensures response shape has success:false and error message.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  app.use((err: AnyErr, _req: any, res: any, _next: any) => {
-    const status =
-      err?.statusCode ||
-      err?.status ||
-      (typeof err?.code === 'number' ? err.code : undefined) ||
-      500;
+  app.use((err: AnyErr, _req: ExRequest, res: ExResponse, _next: NextFunction) => {
+    const e = typeof err === 'object' && err !== null
+      ? (err as { statusCode?: number; status?: number; code?: number; message?: string })
+      : {};
+
+    const status = e.statusCode || e.status || (typeof e.code === 'number' ? e.code : undefined) || 500;
 
     res.status(typeof status === 'number' ? status : 500).json({
       success: false,
-      error: err?.message || 'Internal Server Error'
+      error: e.message || 'Internal Server Error'
     });
   });
 
@@ -177,11 +194,12 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .send({ name: 'Test Organization' });
 
       expect(res.status).toBe(201);
-      expect(res.body.success).toBe(true);
-      expect(res.body.message).toBe('Organization created successfully');
-      expect(res.body.organization).toBeDefined();
-      expect(res.body.organization.name).toBe('Test Organization');
-      expect(res.body.organization.plan).toBe(SubscriptionPlan.FREE);
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
+      expect(b.message).toBe('Organization created successfully');
+      expect(b.organization).toBeDefined();
+      expect(b.organization?.name).toBe('Test Organization');
+      expect(b.organization?.plan).toBe(SubscriptionPlan.FREE);
 
       expect(organizationService.createOrganization).toHaveBeenCalledWith({
         name: 'Test Organization',
@@ -210,7 +228,8 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .send({ name: 'Premium Org', plan: SubscriptionPlan.PREMIUM });
 
       expect(res.status).toBe(201);
-      expect(res.body.organization.plan).toBe(SubscriptionPlan.PREMIUM);
+      const b = bodyOf(res);
+      expect(b.organization?.plan).toBe(SubscriptionPlan.PREMIUM);
 
       expect(organizationService.createOrganization).toHaveBeenCalledWith({
         name: 'Premium Org',
@@ -226,8 +245,9 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .send({});
 
       expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
-      expect(res.body.error || res.body.message).toMatch(/Organization name is required/i);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
+      expect(b.error || b.message).toMatch(/Organization name is required/i);
       expect(organizationService.createOrganization).not.toHaveBeenCalled();
     });
 
@@ -249,9 +269,10 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .set('Authorization', `Bearer ${testToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.count).toBe(2);
-      expect(res.body.memberships).toHaveLength(2);
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
+      expect(b.count).toBe(2);
+      expect(b.memberships).toHaveLength(2);
 
       expect(organizationService.getUserOrganizations).toHaveBeenCalledWith(testUserId.toString());
     });
@@ -278,8 +299,9 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .set('Authorization', `Bearer ${testToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.organization.name).toBe('Test Org');
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
+      expect(b.organization?.name).toBe('Test Org');
     });
 
     it('should return org if requester is member (members raw ids)', async () => {
@@ -295,9 +317,9 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
       const res = await request(app)
         .get(`/api/organizations/${orgId}`)
         .set('Authorization', `Bearer ${testToken}`);
-
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
     });
 
     it('should fail with 403 if requester is not a member', async () => {
@@ -315,8 +337,9 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .set('Authorization', `Bearer ${testToken2}`);
 
       expect(res.status).toBe(403);
-      expect(res.body.success).toBe(false);
-      expect(res.body.error || res.body.message).toMatch(/Access denied to this organization/i);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
+      expect(b.error || b.message).toMatch(/Access denied to this organization/i);
     });
 
     it('should return 404 if organization not found', async () => {
@@ -328,7 +351,8 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .set('Authorization', `Bearer ${testToken}`);
 
       expect(res.status).toBe(404);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
     });
   });
 
@@ -349,10 +373,11 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .send({ name: 'Updated Organization Name', settings: { maxUsers: 200 } });
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.message).toBe('Organization updated successfully');
-      expect(res.body.organization.name).toBe('Updated Organization Name');
-      expect(res.body.organization.settings.maxUsers).toBe(200);
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
+      expect(b.message).toBe('Organization updated successfully');
+      expect(b.organization?.name).toBe('Updated Organization Name');
+      expect(b.organization?.settings?.maxUsers).toBe(200);
 
       expect(organizationService.updateOrganization).toHaveBeenCalledWith(
         orgId,
@@ -375,8 +400,9 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .send({ name: 'Hacked Name' });
 
       expect(res.status).toBe(403);
-      expect(res.body.success).toBe(false);
-      expect(res.body.error).toMatch(/Only organization owner/i);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
+      expect(b.error).toMatch(/Only organization owner/i);
     });
 
     it('should bubble service error (plain Error -> 500)', async () => {
@@ -392,7 +418,8 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .send({ name: 'X' });
 
       expect(res.status).toBe(500);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
     });
   });
 
@@ -406,8 +433,9 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .set('Authorization', `Bearer ${testToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.message).toBe('Organization deleted successfully');
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
+      expect(b.message).toBe('Organization deleted successfully');
 
       expect(organizationService.deleteOrganization).toHaveBeenCalledWith(
         orgId,
@@ -427,8 +455,9 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .send({ userId: testUser2Id.toString() });
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.message).toBe('Member added successfully');
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
+      expect(b.message).toBe('Member added successfully');
 
       expect(organizationService.addUserToOrganization).toHaveBeenCalledWith(
         orgId,
@@ -443,10 +472,10 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .post(`/api/organizations/${orgId}/members`)
         .set('Authorization', `Bearer ${testToken}`)
         .send({});
-
       expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
-      expect(res.body.error || res.body.message).toMatch(/User ID is required/i);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
+      expect(b.error || b.message).toMatch(/User ID is required/i);
       expect(organizationService.addUserToOrganization).not.toHaveBeenCalled();
     });
   });
@@ -463,8 +492,9 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .set('Authorization', `Bearer ${testToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.message).toBe('Member removed successfully');
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
+      expect(b.message).toBe('Member removed successfully');
 
       expect(organizationService.removeUserFromOrganization).toHaveBeenCalledWith(
         orgId,
@@ -499,9 +529,10 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .set('Authorization', `Bearer ${testToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.stats).toBeDefined();
-      expect(res.body.stats.totalUsers).toBe(2);
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
+      expect(b.stats).toBeDefined();
+      expect(b.stats?.totalUsers).toBe(2);
 
       expect(organizationService.getOrganizationStorageStats).toHaveBeenCalledWith(orgId);
     });
@@ -521,7 +552,8 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .set('Authorization', `Bearer ${testToken2}`);
 
       expect(res.status).toBe(403);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
     });
 
     it('should fail with 404 if organization does not exist', async () => {
@@ -533,7 +565,8 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .set('Authorization', `Bearer ${testToken}`);
 
       expect(res.status).toBe(404);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
     });
   });
 
@@ -566,11 +599,15 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .set('Authorization', `Bearer ${testToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.count).toBe(2);
-      expect(res.body.members).toHaveLength(2);
-      expect(res.body.members[0]).toHaveProperty('user');
-      expect(res.body.members[0].user).toHaveProperty('email');
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
+      expect(b.count).toBe(2);
+      expect(b.members).toHaveLength(2);
+      const bMembers = b.members as unknown[];
+      const firstMember = bMembers[0] as Record<string, unknown>;
+      expect(firstMember['user']).toBeDefined();
+      const userObj = firstMember['user'] as Record<string, unknown>;
+      expect(userObj['email']).toBeDefined();
 
       expect(membershipService.getOrganizationMembers).toHaveBeenCalledWith(orgId);
     });
@@ -590,7 +627,8 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .set('Authorization', `Bearer ${testToken2}`);
 
       expect(res.status).toBe(403);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
       expect(membershipService.getOrganizationMembers).not.toHaveBeenCalled();
     });
 
@@ -603,7 +641,8 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
         .set('Authorization', `Bearer ${testToken}`);
 
       expect(res.status).toBe(404);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
     });
   });
 });

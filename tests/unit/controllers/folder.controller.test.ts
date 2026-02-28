@@ -26,7 +26,7 @@ describe('Folder Controller', () => {
 
   beforeEach(() => {
     mockRequest = {
-      user: { id: mockUserId, email: 'test@example.com' } as any,
+      user: { id: mockUserId, email: 'test@example.com' } as unknown as { id: string; email: string },
       body: {},
       params: {},
       query: {}
@@ -58,7 +58,7 @@ describe('Folder Controller', () => {
 
       (folderService.createFolder as jest.Mock).mockResolvedValue(mockFolder);
 
-      await create(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await create(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(folderService.createFolder).toHaveBeenCalledWith({
         name: 'test-folder',
@@ -81,7 +81,7 @@ describe('Folder Controller', () => {
         parentId: mockParentId
       };
 
-      await create(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await create(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Folder name is required'));
       expect(folderService.createFolder).not.toHaveBeenCalled();
@@ -93,7 +93,7 @@ describe('Folder Controller', () => {
         parentId: mockParentId
       };
 
-      await create(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await create(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Organization ID is required'));
     });
@@ -104,7 +104,7 @@ describe('Folder Controller', () => {
         organizationId: mockOrgId
       };
 
-      await create(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await create(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Parent folder ID is required'));
     });
@@ -119,7 +119,7 @@ describe('Folder Controller', () => {
       const error = new Error('Database error');
       (folderService.createFolder as jest.Mock).mockRejectedValue(error);
 
-      await create(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await create(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(error);
     });
@@ -134,7 +134,7 @@ describe('Folder Controller', () => {
       const mockFolder = { _id: mockFolderId, name: 'test-folder' };
       (folderService.createFolder as jest.Mock).mockResolvedValue(mockFolder);
 
-      await create(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await create(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(folderService.createFolder).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -157,7 +157,7 @@ describe('Folder Controller', () => {
 
       (folderService.getUserFolderTree as jest.Mock).mockResolvedValue(mockTree);
 
-      await getUserTree(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await getUserTree(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(folderService.getUserFolderTree).toHaveBeenCalledWith({
         userId: mockUserId,
@@ -172,7 +172,7 @@ describe('Folder Controller', () => {
     it('should return 400 when organizationId is missing', async () => {
       mockRequest.query = {};
 
-      await getUserTree(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await getUserTree(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Organization ID is required'));
     });
@@ -180,7 +180,7 @@ describe('Folder Controller', () => {
     it('should return 400 when organizationId is invalid', async () => {
       mockRequest.query = { organizationId: 'invalid-id' };
 
-      await getUserTree(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await getUserTree(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Invalid Organization ID'));
     });
@@ -190,7 +190,7 @@ describe('Folder Controller', () => {
 
       (folderService.getUserFolderTree as jest.Mock).mockResolvedValue(null);
 
-      await getUserTree(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await getUserTree(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(
         new HttpError(404, 'User has no root folder in this organization')
@@ -203,7 +203,7 @@ describe('Folder Controller', () => {
       const mockTree = { _id: mockFolderId, name: 'root' };
       (folderService.getUserFolderTree as jest.Mock).mockResolvedValue(mockTree);
 
-      await getUserTree(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await getUserTree(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(folderService.getUserFolderTree).toHaveBeenCalledWith({
         userId: mockUserId,
@@ -217,7 +217,7 @@ describe('Folder Controller', () => {
       const error = new Error('Database error');
       (folderService.getUserFolderTree as jest.Mock).mockRejectedValue(error);
 
-      await getUserTree(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await getUserTree(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(error);
     });
@@ -234,7 +234,7 @@ describe('Folder Controller', () => {
 
       (folderService.getFolderContents as jest.Mock).mockResolvedValue(mockContents);
 
-      await getContents(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await getContents(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(folderService.getFolderContents).toHaveBeenCalledWith({
         folderId: mockFolderId,
@@ -256,7 +256,7 @@ describe('Folder Controller', () => {
 
       (folderService.getFolderContents as jest.Mock).mockResolvedValue(mockContents);
 
-      await getContents(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await getContents(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
@@ -288,7 +288,7 @@ describe('Folder Controller', () => {
       const mockSharedFolder = { _id: mockFolderId, sharedWith: [targetUserId] };
       (folderService.shareFolder as jest.Mock).mockResolvedValue(mockSharedFolder);
 
-      await share(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await share(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(folderService.shareFolder).toHaveBeenCalledWith({
         folderId: mockFolderId,
@@ -314,7 +314,7 @@ describe('Folder Controller', () => {
       const mockSharedFolder = { _id: mockFolderId, sharedWith: [targetUserId] };
       (folderService.shareFolder as jest.Mock).mockResolvedValue(mockSharedFolder);
 
-      await share(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await share(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(folderService.shareFolder).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -334,7 +334,7 @@ describe('Folder Controller', () => {
       const mockSharedFolder = { _id: mockFolderId };
       (folderService.shareFolder as jest.Mock).mockResolvedValue(mockSharedFolder);
 
-      await share(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await share(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(folderService.shareFolder).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -354,7 +354,7 @@ describe('Folder Controller', () => {
       const mockSharedFolder = { _id: mockFolderId };
       (folderService.shareFolder as jest.Mock).mockResolvedValue(mockSharedFolder);
 
-      await share(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await share(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(folderService.shareFolder).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -371,7 +371,7 @@ describe('Folder Controller', () => {
         role: 3 // 3 = owner (not allowed)
       };
 
-      await share(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await share(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(
         new HttpError(400, 'Cannot share folder with owner role')
@@ -384,7 +384,7 @@ describe('Folder Controller', () => {
         role: 'viewer'
       };
 
-      await share(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await share(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Target user ID is required'));
     });
@@ -467,7 +467,7 @@ describe('Folder Controller', () => {
 
       (folderService.listFolders as jest.Mock).mockResolvedValue(mockFolders);
 
-      await list(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await list(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(folderService.listFolders).toHaveBeenCalledWith(mockUserId);
       expect(mockResponse.json).toHaveBeenCalledWith({
@@ -480,7 +480,7 @@ describe('Folder Controller', () => {
     it('should return empty array when user has no folders', async () => {
       (folderService.listFolders as jest.Mock).mockResolvedValue([]);
 
-      await list(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await list(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
@@ -493,7 +493,7 @@ describe('Folder Controller', () => {
       const error = new Error('Database error');
       (folderService.listFolders as jest.Mock).mockRejectedValue(error);
 
-      await list(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await list(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(error);
     });
@@ -507,7 +507,7 @@ describe('Folder Controller', () => {
       const mockRenamedFolder = { _id: mockFolderId, name: 'new-folder-name' };
       (folderService.renameFolder as jest.Mock).mockResolvedValue(mockRenamedFolder);
 
-      await rename(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await rename(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(folderService.renameFolder).toHaveBeenCalledWith({
         id: mockFolderId,
@@ -529,7 +529,7 @@ describe('Folder Controller', () => {
       const mockRenamedFolder = { _id: mockFolderId, displayName: 'New Display Name' };
       (folderService.renameFolder as jest.Mock).mockResolvedValue(mockRenamedFolder);
 
-      await rename(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await rename(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(folderService.renameFolder).toHaveBeenCalledWith({
         id: mockFolderId,
@@ -553,7 +553,7 @@ describe('Folder Controller', () => {
       };
       (folderService.renameFolder as jest.Mock).mockResolvedValue(mockRenamedFolder);
 
-      await rename(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await rename(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(folderService.renameFolder).toHaveBeenCalledWith({
         id: mockFolderId,
@@ -567,7 +567,7 @@ describe('Folder Controller', () => {
       mockRequest.params = { id: mockFolderId };
       mockRequest.body = {};
 
-      await rename(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await rename(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(new HttpError(400, 'Name or displayName is required'));
     });
@@ -594,7 +594,7 @@ describe('Folder Controller', () => {
         parentId: mockParentId
       };
 
-      await create(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await create(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       // Should handle gracefully or throw error
       expect(mockNext).toHaveBeenCalled();
@@ -610,7 +610,7 @@ describe('Folder Controller', () => {
       const error = new Error('Name too long');
       (folderService.createFolder as jest.Mock).mockRejectedValue(error);
 
-      await create(mockRequest as AuthRequest, mockResponse as Response, mockNext);
+      await create(mockRequest as unknown as AuthRequest, mockResponse as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(error);
     });

@@ -1,4 +1,5 @@
 import { request, app } from '../setup';
+import type { Response } from 'supertest';
 import { UserBuilder } from '../builders/user.builder';
 import Organization from '../../src/models/organization.model';
 import User from '../../src/models/user.model'; // Importar modelo para verificaciones directas
@@ -12,17 +13,19 @@ describe('User Profile Management', () => {
   let userId: string;
   let organizationId: string;
 
-  // Helpers to extract token from cookies
-  const getTokenFromCookie = (res: any) => {
-    const cookies = res.headers['set-cookie'];
-    if (!cookies) return null;
+  // Helpers to extract token from cookies (safely narrow header types)
+  const getTokenFromCookie = (res: Response): string | null => {
+    const raw = res.headers['set-cookie'];
+    if (!raw) return null;
 
-    // Look for token cookie
-    const tokenCookie = cookies.find((c: string) => c.startsWith('token='));
+    const cookies: string[] = Array.isArray(raw) ? raw.map(String) : [String(raw)];
+
+    const tokenCookie = cookies.find((c) => typeof c === 'string' && c.startsWith('token='));
     if (!tokenCookie) return null;
 
-    // Extract value
-    return tokenCookie.split(';')[0].split('=')[1];
+    const firstPart = tokenCookie.split(';')[0];
+    const kv = firstPart.split('=');
+    return kv.length > 1 ? kv[1] : null;
   };
 
   beforeEach(async () => {
@@ -46,7 +49,9 @@ describe('User Profile Management', () => {
     const registerResponse = await request(app).post('/api/auth/register').send(userData);
 
     // En algunos casos register devuelve user, en otros _id
-    userId = registerResponse.body.user.id || registerResponse.body.user._id;
+    const regBody = registerResponse.body as unknown as Record<string, unknown>;
+    const regUser = regBody['user'] as Record<string, unknown>;
+    userId = (regUser['id'] as string) || (regUser['_id'] as string);
 
     // 4. Login para obtener token
     const loginResponse = await request(app)
@@ -54,8 +59,10 @@ describe('User Profile Management', () => {
       .send({ email: userData.email, password: userData.password });
 
     // Extraer token (puede venir en body O en cookie, testea ambos)
-    token = loginResponse.body.token || getTokenFromCookie(loginResponse);
-    if (!token) throw new Error('Login failed to provide token');
+    const loginBody = loginResponse.body as unknown as Record<string, unknown>;
+    const maybeToken = (loginBody['token'] as string) || getTokenFromCookie(loginResponse as Response);
+    if (!maybeToken) throw new Error('Login failed to provide token');
+    token = maybeToken;
   });
 
   describe('PUT /api/users/:id - Update Profile & Preferences', () => {
@@ -73,10 +80,14 @@ describe('User Profile Management', () => {
         .send(updateData)
         .expect(200);
 
-      expect(response.body.user.preferences.emailNotifications).toBe(false);
-      expect(response.body.user.preferences.aiAnalysis).toBe(true);
+      const body = response.body as unknown as Record<string, unknown>;
+      const user = body['user'] as Record<string, unknown>;
+      const preferences = (user['preferences'] as Record<string, unknown>) || {};
+
+      expect(preferences['emailNotifications']).toBe(false);
+      expect(preferences['aiAnalysis']).toBe(true);
       // Las preferencias no enviadas deben mantener su valor por defecto (true)
-      expect(response.body.user.preferences.documentUpdates).toBe(true);
+      expect(preferences['documentUpdates']).toBe(true);
 
       // Verificación directa con Mongoose (Base de datos real)
       const userInDb = await User.findById(userId);
@@ -93,10 +104,14 @@ describe('User Profile Management', () => {
         .send({ name: newName }) // No enviamos preferences
         .expect(200);
 
-      expect(response.body.user.name).toBe(newName);
+      const body = response.body as unknown as Record<string, unknown>;
+      const user = body['user'] as Record<string, unknown>;
+
+      expect(user['name']).toBe(newName);
       // Preferencias deben seguir existiendo (default true)
-      if (response.body.user.preferences) {
-        expect(response.body.user.preferences.documentUpdates).toBe(true);
+      if (user['preferences']) {
+        const preferences = user['preferences'] as Record<string, unknown>;
+        expect(preferences['documentUpdates']).toBe(true);
       }
     });
   });
@@ -111,7 +126,9 @@ describe('User Profile Management', () => {
         .send({ avatar: avatarUrl })
         .expect(200);
 
-      expect(response.body.user.avatar).toBe(avatarUrl);
+      const body = response.body as unknown as Record<string, unknown>;
+      const user = body['user'] as Record<string, unknown>;
+      expect(user['avatar']).toBe(avatarUrl);
     });
 
     it('should accept an image file via multipart/form-data', async () => {
@@ -123,7 +140,9 @@ describe('User Profile Management', () => {
         .attach('avatar', buffer, 'test-avatar.png')
         .expect(200);
 
-      expect(response.body.user.avatar).toMatch(/\/uploads\/.*\.png$/);
+      const body = response.body as unknown as Record<string, unknown>;
+      const user = body['user'] as Record<string, unknown>;
+      expect(user['avatar']).toMatch(/\/uploads\/.*\.png$/);
     });
   });
 

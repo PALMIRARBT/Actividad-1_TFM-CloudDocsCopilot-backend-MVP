@@ -139,7 +139,7 @@ describe('DeletionAudit Model', () => {
           path: '/test'
         },
         performedBy: new mongoose.Types.ObjectId(),
-        action: 'invalid_action' as any
+        action: 'invalid_action' as unknown as string
       };
 
       // Act
@@ -164,7 +164,7 @@ describe('DeletionAudit Model', () => {
         },
         performedBy: new mongoose.Types.ObjectId(),
         action: DeletionAction.SOFT_DELETE,
-        status: 'invalid_status' as any
+        status: 'invalid_status' as unknown as string
       };
 
       // Act

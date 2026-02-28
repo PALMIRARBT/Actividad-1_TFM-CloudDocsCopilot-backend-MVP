@@ -33,7 +33,7 @@ describe('folder.service (unit)', () => {
 
   it('validateFolderAccess throws 404 when folder not found', async () => {
     const Folder = await import('../../../src/models/folder.model');
-    (Folder as any).findById.mockResolvedValue(null);
+    (Folder as unknown as { findById: jest.Mock }).findById.mockResolvedValue(null);
 
     const id = new mongoose.Types.ObjectId().toString();
     const mod = await import('../../../src/services/folder.service');
@@ -45,7 +45,7 @@ describe('folder.service (unit)', () => {
 
   it('validateFolderAccess throws 403 when no access', async () => {
     const Folder = await import('../../../src/models/folder.model');
-    (Folder as any).findById.mockResolvedValue({ hasAccess: () => false });
+    (Folder as unknown as { findById: jest.Mock }).findById.mockResolvedValue({ hasAccess: () => false });
 
     const id = new mongoose.Types.ObjectId().toString();
     const mod = await import('../../../src/services/folder.service');
@@ -57,7 +57,7 @@ describe('folder.service (unit)', () => {
 
   it('validateFolderAccess returns true when has access', async () => {
     const Folder = await import('../../../src/models/folder.model');
-    (Folder as any).findById.mockResolvedValue({ hasAccess: () => true });
+    (Folder as unknown as { findById: jest.Mock }).findById.mockResolvedValue({ hasAccess: () => true });
 
     const id = new mongoose.Types.ObjectId().toString();
     const mod = await import('../../../src/services/folder.service');
@@ -68,7 +68,7 @@ describe('folder.service (unit)', () => {
 
   it('getUserFolderTree returns null when no folders', async () => {
     const Folder = await import('../../../src/models/folder.model');
-    (Folder as any).find.mockReturnValue({ sort: jest.fn().mockResolvedValue([]) });
+    (Folder as unknown as { find: jest.Mock }).find.mockReturnValue({ sort: jest.fn().mockResolvedValue([]) } as unknown);
 
     const mod = await import('../../../src/services/folder.service');
     const folderService = mod as unknown as typeof import('../../../src/services/folder.service');
@@ -104,7 +104,7 @@ describe('folder.service (unit)', () => {
         }
       }
     ];
-    (Folder as any).find.mockReturnValue({ sort: jest.fn().mockResolvedValue(folders) });
+    (Folder as unknown as { find: jest.Mock }).find.mockReturnValue({ sort: jest.fn().mockResolvedValue(folders) } as unknown);
 
     const mod = await import('../../../src/services/folder.service');
     const folderService = mod as unknown as typeof import('../../../src/services/folder.service');
@@ -114,15 +114,15 @@ describe('folder.service (unit)', () => {
       organizationId: new mongoose.Types.ObjectId().toString()
     });
     expect(res).toBeDefined();
-    expect((res as any).children).toHaveLength(1);
-    expect((res as any).children[0].name).toBe('child');
+    expect((res as unknown as { children: Array<{ name: string }> }).children).toHaveLength(1);
+    expect((res as unknown as { children: Array<{ name: string }> }).children[0].name).toBe('child');
   });
 
   it('createFolder validates required fields', async () => {
     const mod = await import('../../../src/services/folder.service');
     const folderService = mod as unknown as typeof import('../../../src/services/folder.service');
     await expect(
-      folderService.createFolder({ name: '', owner: '', organizationId: '', parentId: '' } as any)
+      folderService.createFolder({ name: '', owner: '', organizationId: '', parentId: '' } as unknown as { name: string; owner: string; organizationId: string; parentId: string })
     ).rejects.toThrow('Folder name is required');
   });
 });

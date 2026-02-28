@@ -55,6 +55,15 @@ interface MockComment {
   save?: jest.Mock;
 }
 
+type NotifyArgs = { emitter: (id: string, payload: unknown) => void };
+type NotificationPayload = {
+  actorUserId?: string;
+  type?: string;
+  documentId?: string;
+  message?: string;
+  metadata?: Record<string, unknown>;
+};
+
 describe('Comment Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -254,8 +263,16 @@ describe('Comment Service', () => {
       (DocumentModel.findById as jest.Mock).mockResolvedValue(doc);
       (hasActiveMembership as jest.Mock).mockResolvedValue(true);
       (CommentModel.create as jest.Mock).mockResolvedValue(created);
-      (notifyOrganizationMembers as jest.Mock).mockImplementation(
-        async (args: { emitter: (id: string, payload: unknown) => void }) => {
+      type NotifyArgs = { emitter: (id: string, payload: unknown) => void };
+      type NotificationPayload = {
+        actorUserId?: string;
+        type?: string;
+        documentId?: string;
+        message?: string;
+        metadata?: Record<string, unknown>;
+      };
+      (notifyOrganizationMembers as unknown as jest.MockedFunction<(args: NotifyArgs) => Promise<void>>).mockImplementation(
+        async (args: NotifyArgs) => {
           args.emitter('recipient-user-id', { hello: 'world' });
         }
       );
@@ -275,7 +292,7 @@ describe('Comment Service', () => {
         content: 'hola'
       });
       expect(notifyOrganizationMembers).toHaveBeenCalledTimes(1);
-      const payload = (notifyOrganizationMembers as jest.Mock).mock.calls[0][0];
+      const payload = (notifyOrganizationMembers as unknown as jest.MockedFunction<(args: NotifyArgs) => Promise<void>>).mock.calls[0][0] as unknown as NotificationPayload;
       expect(payload.actorUserId).toBe(userId);
       expect(payload.type).toBe('DOC_COMMENTED');
       expect(payload.documentId).toBe(doc._id.toString());
@@ -313,7 +330,7 @@ describe('Comment Service', () => {
       });
 
       // Assert
-      const payload = (notifyOrganizationMembers as jest.Mock).mock.calls[0][0];
+      const payload = (notifyOrganizationMembers as unknown as jest.MockedFunction<(args: NotifyArgs) => Promise<void>>).mock.calls[0][0] as unknown as NotificationPayload;
       expect(payload.message).toBe('New comment on: fallback.pdf');
     });
 
@@ -340,7 +357,7 @@ describe('Comment Service', () => {
       });
 
       // Assert
-      const payload = (notifyOrganizationMembers as jest.Mock).mock.calls[0][0];
+      const payload = (notifyOrganizationMembers as unknown as jest.MockedFunction<(args: NotifyArgs) => Promise<void>>).mock.calls[0][0] as unknown as NotificationPayload;
       expect(payload.message).toBe('New comment on a document');
     });
   });
@@ -543,8 +560,8 @@ describe('Comment Service', () => {
       (CommentModel.findById as jest.Mock).mockResolvedValue(comment);
       (DocumentModel.findById as jest.Mock).mockResolvedValue(doc);
       (hasActiveMembership as jest.Mock).mockResolvedValue(true);
-      (notifyOrganizationMembers as jest.Mock).mockImplementation(
-        async (args: { emitter: (id: string, payload: unknown) => void }) => {
+      (notifyOrganizationMembers as unknown as jest.MockedFunction<(args: NotifyArgs) => Promise<void>>).mockImplementation(
+        async (args: NotifyArgs) => {
           args.emitter('recipient', { ok: true });
         }
       );
@@ -560,7 +577,7 @@ describe('Comment Service', () => {
       expect(comment.content).toBe('edited');
       expect(comment.save).toHaveBeenCalledTimes(1);
       expect(notifyOrganizationMembers).toHaveBeenCalledTimes(1);
-      const payload = (notifyOrganizationMembers as jest.Mock).mock.calls[0][0];
+      const payload = (notifyOrganizationMembers as unknown as jest.MockedFunction<(args: NotifyArgs) => Promise<void>>).mock.calls[0][0] as unknown as NotificationPayload;
       expect(payload.actorUserId).toBe(userId.toString());
       expect(payload.type).toBe('DOC_COMMENTED');
       expect(payload.documentId).toBe(comment.document.toString());

@@ -15,6 +15,7 @@ import {
 } from '../../../src/controllers/document.controller';
 import * as documentService from '../../../src/services/document.service';
 import HttpError from '../../../src/models/error.model';
+import { IDocument } from '../../../src/models/document.model';
 
 jest.mock('../../../src/services/document.service');
 jest.mock('../../../src/utils/path-sanitizer');
@@ -23,7 +24,7 @@ jest.mock('../../../src/services/membership.service');
 describe('Document Controller', () => {
   let mockRequest: Partial<AuthRequest>;
   let mockResponse: Partial<Response>;
-  let mockNext: jest.Mock;
+  let mockNext: jest.MockedFunction<(err?: unknown) => void>;
 
   const mockUserId = new mongoose.Types.ObjectId().toString();
   const mockOrgId = new mongoose.Types.ObjectId().toString();
@@ -31,7 +32,7 @@ describe('Document Controller', () => {
 
   beforeEach(() => {
     mockRequest = {
-      user: { id: mockUserId, email: 'test@example.com' } as any,
+      user: { id: mockUserId, email: 'test@example.com' } as AuthRequest['user'],
       body: {},
       params: {},
       query: {},
@@ -43,7 +44,7 @@ describe('Document Controller', () => {
       sendFile: jest.fn().mockReturnThis(),
       setHeader: jest.fn().mockReturnThis()
     };
-    mockNext = jest.fn();
+    mockNext = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
     jest.clearAllMocks();
   });
 
@@ -308,7 +309,7 @@ describe('Document Controller', () => {
       mockRequest.params = { organizationId: mockOrgId };
       mockRequest.query = { limit: '5' };
 
-      const mockRecentDocs: any[] = [];
+      const mockRecentDocs: IDocument[] = [];
       (documentService.getUserRecentDocuments as jest.Mock).mockResolvedValue(mockRecentDocs);
 
       await getRecent(mockRequest as AuthRequest, mockResponse as Response, mockNext);
@@ -352,7 +353,22 @@ describe('Document Controller', () => {
     it('should get document by ID successfully', async () => {
       mockRequest.params = { id: mockDocId };
 
-      const mockDocument = { _id: mockDocId, filename: 'document.pdf' };
+      const mockDocument: IDocument = {
+        _id: new mongoose.Types.ObjectId(),
+        filename: 'document.pdf',
+        mimeType: 'application/pdf',
+        size: 123,
+        uploadedBy: new mongoose.Types.ObjectId(),
+        organization: new mongoose.Types.ObjectId(),
+        folder: new mongoose.Types.ObjectId(),
+        path: '/uploads/document.pdf',
+        uploadedAt: new Date(),
+        sharedWith: [],
+        isDeleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        // Add additional required fields with mock values as needed for your IDocument interface
+      } as unknown as IDocument;
       (documentService.findDocumentById as jest.Mock).mockResolvedValue(mockDocument);
 
       await getById(mockRequest as AuthRequest, mockResponse as Response, mockNext);
@@ -376,7 +392,25 @@ describe('Document Controller', () => {
       mockRequest.params = { id: mockDocId };
       mockRequest.body = { userIds: ['user456', 'user789'] };
 
-      const mockSharedDoc = { _id: mockDocId, sharedWith: ['user456', 'user789'] };
+      const mockSharedDoc: IDocument = {
+        _id: new mongoose.Types.ObjectId(),
+        filename: 'shared.pdf',
+        mimeType: 'application/pdf',
+        size: 123,
+        uploadedBy: new mongoose.Types.ObjectId(),
+        organization: new mongoose.Types.ObjectId(),
+        folder: new mongoose.Types.ObjectId(),
+        path: '/uploads/shared.pdf',
+        uploadedAt: new Date(),
+        isDeleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        sharedWith: [
+          new mongoose.Types.ObjectId('64b7f7f7f7f7f7f7f7f7f7f7'),
+          new mongoose.Types.ObjectId('64b7f7f7f7f7f7f7f7f7f7f8')
+        ],
+        // Add any additional required fields with mock values as needed
+      } as unknown as IDocument;
       (documentService.shareDocument as jest.Mock).mockResolvedValue(mockSharedDoc);
 
       await share(mockRequest as AuthRequest, mockResponse as Response, mockNext);
@@ -446,7 +480,22 @@ describe('Document Controller', () => {
       mockRequest.params = { id: mockDocId };
       mockRequest.body = { targetFolderId: 'folder-456' };
 
-      const mockMovedDoc = { _id: mockDocId, folder: 'folder-456' };
+      const mockMovedDoc: IDocument = {
+        _id: new mongoose.Types.ObjectId(),
+        filename: 'moved.pdf',
+        mimeType: 'application/pdf',
+        size: 123,
+        uploadedBy: new mongoose.Types.ObjectId(),
+        organization: new mongoose.Types.ObjectId(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        folder: new mongoose.Types.ObjectId(),
+        path: '/uploads/moved.pdf',
+        uploadedAt: new Date(),
+        sharedWith: [],
+        isDeleted: false,
+        // Add any additional required fields with mock values as needed
+      } as unknown as IDocument;
       (documentService.moveDocument as jest.Mock).mockResolvedValue(mockMovedDoc);
 
       await move(mockRequest as AuthRequest, mockResponse as Response, mockNext);
@@ -486,7 +535,21 @@ describe('Document Controller', () => {
       mockRequest.params = { id: mockDocId };
       mockRequest.body = { targetFolderId: 'folder-789' };
 
-      const mockCopiedDoc = { _id: 'new-doc-id', filename: 'document-copy.pdf' };
+      const mockCopiedDoc: IDocument = {
+        _id: new mongoose.Types.ObjectId(),
+        filename: 'document-copy.pdf',
+        mimeType: 'application/pdf',
+        size: 123,
+        uploadedBy: new mongoose.Types.ObjectId(),
+        organization: new mongoose.Types.ObjectId(),
+        folder: new mongoose.Types.ObjectId(),
+        path: '/uploads/document-copy.pdf',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        uploadedAt: new Date(),
+        sharedWith: [],
+        // Add any additional required fields with mock values as needed
+      } as unknown as IDocument;
       (documentService.copyDocument as jest.Mock).mockResolvedValue(mockCopiedDoc);
 
       await copy(mockRequest as AuthRequest, mockResponse as Response, mockNext);

@@ -752,7 +752,7 @@ describe('notification.service (unit)', () => {
 
       Membership.find.mockReturnValue({
         lean: jest.fn().mockResolvedValue([{ user: null }, {}, { user: undefined }])
-      } as any);
+      } as unknown);
 
       const res = await notificationService.notifyOrganizationMembers({
         actorUserId: oid(),
@@ -812,7 +812,7 @@ describe('notification.service (unit)', () => {
 
       Membership.find.mockReturnValue({
         lean: jest.fn().mockResolvedValue([{ user: recipient1 }])
-      } as any);
+      } as unknown);
 
       const inserted = [
         makeInsertedNotification({

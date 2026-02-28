@@ -8,7 +8,8 @@
  */
 
 // Load environment variables from .env for tests
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Mock pdf-parse to avoid loading native bindings in tests
 jest.mock('pdf-parse', () => ({
@@ -29,7 +30,7 @@ jest.mock('pdf-parse', () => ({
 jest.mock('mammoth', () => ({
   __esModule: true,
   default: {
-    extractRawText: jest.fn(async (_buffer: any) => ({ value: '' }))
+    extractRawText: jest.fn(async (_buffer: unknown) => ({ value: '' }))
   }
 }));
 
@@ -42,8 +43,8 @@ jest.mock('../src/services/search.service', () => ({
 }));
 
 // Optional: silence noisy logs from Elasticsearch config during tests
-const originalConsoleError = console.error;
-console.error = (...args: any[]) => {
+const originalConsoleErrorUnit = console.error;
+console.error = (...args: unknown[]) => {
   const msg = String(args[0] || '');
   // Suppress known noisy messages from Elasticsearch/indexing and search
   if (
@@ -55,7 +56,7 @@ console.error = (...args: any[]) => {
   ) {
     return; // suppress in tests
   }
-  originalConsoleError(...args);
+  originalConsoleErrorUnit(...args);
 };
 
 // Mock email service to avoid real SMTP attempts during tests
@@ -93,105 +94,122 @@ jest.mock('../src/configurations/elasticsearch-config', () => {
 
 // Provide a global hook for OpenAI chat completions so tests can set it reliably.
 // Default implementation returns a small mock response to avoid real API calls
-(global as any).__OPENAI_CREATE_IMPL__ = async (_opts: any) => ({
+(global as unknown as { __OPENAI_CREATE_IMPL__?: (...args: unknown[]) => Promise<unknown> }).__OPENAI_CREATE_IMPL__ = async (_opts: unknown) => ({
   choices: [{ message: { content: 'Mocked answer from OpenAI (test)' } }],
   usage: { total_tokens: 5 },
   id: 'mocked-response'
 });
-(global as any).__OPENAI_CREATE__ = async (...args: any[]) => {
-  if ((global as any).__OPENAI_CREATE_IMPL__) {
-    return (global as any).__OPENAI_CREATE_IMPL__(...args);
+(global as unknown as { __OPENAI_CREATE__?: (...args: unknown[]) => Promise<unknown> }).__OPENAI_CREATE__ = async (...args: unknown[]) => {
+  const g = global as unknown as { __OPENAI_CREATE_IMPL__?: (...args: unknown[]) => Promise<unknown> };
+  if (g.__OPENAI_CREATE_IMPL__) {
+    return g.__OPENAI_CREATE_IMPL__(...args);
   }
   return { choices: [{ message: { content: 'Mocked answer from OpenAI (fallback)' } }] };
 };
 
 // Patch MongoDB Atlas module to use an in-memory collection implementation
-{
-  const stores: Record<string, any[]> = {};
+jest.mock('../src/configurations/database-config/mongoAtlas', () => {
+  const stores: Record<string, unknown[]> = {};
 
   const collectionFactory = (name: string) => {
     stores[name] = stores[name] || [];
 
     return {
-      insertMany: async (docs: any[]) => {
-        stores[name].push(...docs.map(d => ({ ...d })));
+      insertMany: jest.fn().mockImplementation(async (docs: unknown[]) => {
+        stores[name].push(...docs.map(d => ({ ...(d as Record<string, unknown>) })));
         return { insertedCount: docs.length };
-      },
-      deleteMany: async (filter: any) => {
-        if (!filter || !filter.documentId) {
+      }),
+      deleteMany: jest.fn().mockImplementation(async (filter: unknown) => {
+        if (!filter || !(filter as Record<string, unknown>).hasOwnProperty('documentId')) {
           const deleted = stores[name].length;
           stores[name] = [];
           return { deletedCount: deleted };
         }
         const before = stores[name].length;
-        stores[name] = stores[name].filter(d => d.documentId !== filter.documentId);
-        return { deletedCount: before - stores[name].length };
-      },
-      find: (filter: any) => ({
-        sort: () => ({
-          toArray: async () => (stores[name] || []).filter(d => d.documentId === filter.documentId)
-        })
+        const docId = String((filter as Record<string, unknown>).documentId as unknown);
+        stores[name] = (stores[name] || []).filter(d => (d as Record<string, unknown>).documentId !== docId);
+        return { deletedCount: before - (stores[name] || []).length };
       }),
-      countDocuments: async (filter: any, _opts?: any) => {
-        if (filter && filter.documentId)
-          return (stores[name] || []).filter(d => d.documentId === filter.documentId).length;
+      find: jest.fn().mockImplementation((filter: unknown) => ({
+        sort: () => ({
+          toArray: async () => (stores[name] || []).filter(d => (d as Record<string, unknown>).documentId === (filter as Record<string, unknown>).documentId)
+        })
+      })),
+      countDocuments: jest.fn().mockImplementation(async (filter: unknown, _opts?: unknown) => {
+        if (filter && (filter as Record<string, unknown>).hasOwnProperty('documentId'))
+          return (stores[name] || []).filter(d => (d as Record<string, unknown>).documentId === (filter as Record<string, unknown>).documentId).length;
         return (stores[name] || []).length;
-      },
-      distinct: async (field: string) =>
-        Array.from(new Set((stores[name] || []).map(d => d[field]))),
-      aggregate: (pipeline: any[]) => ({
+      }),
+      distinct: jest.fn().mockImplementation(async (field: string) =>
+        Array.from(new Set((stores[name] || []).map(d => (d as Record<string, unknown>)[field])))),
+      aggregate: jest.fn().mockImplementation((pipeline: unknown[]) => ({
         toArray: async () => {
-          const all = stores[name] || [];
+          const all = (stores[name] || []) as unknown[];
 
-          // Try to detect a $vectorSearch stage to honor filter and limit
           const vsStage = Array.isArray(pipeline)
-            ? pipeline.find(p => p && (p.$vectorSearch || p['$vectorSearch']))
+            ? pipeline.find(p => {
+                if (!p || typeof p !== 'object') return false;
+                const obj = p as Record<string, unknown>;
+                return ('$vectorSearch' in obj) || ('$vectorSearch' in obj);
+              })
             : null;
 
-          let results = all;
+          let results = all.slice();
 
-          if (vsStage) {
-            const stage = vsStage.$vectorSearch || vsStage['$vectorSearch'];
-            // Apply documentId filter if present
-            const filter = stage && stage.filter;
-            if (filter && filter.documentId && filter.documentId.$eq) {
-              const docId = filter.documentId.$eq;
-              results = results.filter(d => d.documentId === docId);
+          if (vsStage && typeof vsStage === 'object') {
+            const stageObj = vsStage as Record<string, unknown>;
+            const stage = (stageObj['$vectorSearch'] ?? stageObj['$vectorSearch']) as Record<string, unknown> | undefined;
+
+            const filter = stage && (stage['filter'] as Record<string, unknown> | undefined);
+            let docId: string | undefined;
+            if (filter && 'documentId' in filter) {
+              const docField = filter['documentId'] as Record<string, unknown> | undefined;
+              if (docField && '$eq' in docField) {
+                docId = String(docField['$eq']);
+              }
+            }
+            if (docId) {
+              results = (results as unknown[]).filter(d => (d as Record<string, unknown>).documentId === docId);
             }
 
-            // Apply limit if provided
-            const limit = stage && stage.limit ? stage.limit : undefined;
+            const limitVal = stage && stage['limit'];
+            const limit = typeof limitVal === 'number' ? limitVal : undefined;
             if (typeof limit === 'number') {
-              results = results.slice(0, limit);
+              results = (results as unknown[]).slice(0, limit);
             }
           }
 
-          // Map to include projected fields and a deterministic score
-          return results.map((d: any, i: number) => ({
-            _id: d._id ?? `mock-${i}`,
-            documentId: d.documentId,
-            content: d.content,
-            embedding: d.embedding,
-            createdAt: d.createdAt,
-            chunkIndex: d.chunkIndex,
-            wordCount: d.wordCount,
-            score: typeof d.score === 'number' ? d.score : 0.8
+          return (results as unknown[]).map((d: unknown, i: number) => ({
+            _id: ((d as Record<string, unknown>)['_id'] ?? `mock-${i}`) as unknown,
+            documentId: (d as Record<string, unknown>)['documentId'],
+            content: (d as Record<string, unknown>)['content'],
+            embedding: (d as Record<string, unknown>)['embedding'],
+            createdAt: (d as Record<string, unknown>)['createdAt'],
+            chunkIndex: (d as Record<string, unknown>)['chunkIndex'],
+            wordCount: (d as Record<string, unknown>)['wordCount'],
+            score: typeof (d as Record<string, unknown>)['score'] === 'number' ? (d as Record<string, unknown>)['score'] : 0.8
           }));
         }
-      }),
-      command: async (_cmd: any) => ({ ok: 1 })
+      })),
+      command: jest.fn().mockResolvedValue({ ok: 1 })
     };
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const atlasModule = require('../src/configurations/database-config/mongoAtlas');
-  if (atlasModule) {
-    atlasModule.getDb = async () => ({
-      collection: (name: string) => collectionFactory(name),
-      command: async () => ({ ok: 1 })
-    });
-    atlasModule.getClient = () => null;
-    atlasModule.closeAtlasConnection = async () => undefined;
-    atlasModule.isConnected = () => true;
-  }
-}
+  const getDb = jest.fn().mockResolvedValue({
+    collection: (name: string) => collectionFactory(name),
+    command: async () => ({ ok: 1 })
+  });
+
+  // Provide a client-like object synchronously so tests calling `getClient()` receive a usable object
+  const fakeClient = {
+    db: jest.fn(() => ({
+      collection: (name: string) => collectionFactory(name)
+    }))
+  };
+
+  const getClient = jest.fn().mockReturnValue(fakeClient);
+  const closeAtlasConnection = jest.fn().mockResolvedValue(undefined);
+  const isConnected = jest.fn().mockReturnValue(true);
+
+  return { __esModule: true, getDb, getClient, closeAtlasConnection, isConnected };
+});

@@ -1,4 +1,5 @@
 import request from 'supertest';
+import type { Response } from 'supertest';
 import app from '../../src/app';
 import DocumentModel from '../../src/models/document.model';
 import DeletionAudit from '../../src/models/deletion-audit.model';
@@ -7,7 +8,8 @@ import { registerAndLogin, uploadTestFile } from '../helpers';
 describe('Deletion Routes', () => {
   let authCookies: string[];
   let userId: string;
-  let document: any;
+  let document: Record<string, unknown>;
+  let documentId: string;
 
   beforeEach(async () => {
     // Usar helper existente para registrar y hacer login
@@ -26,27 +28,37 @@ describe('Deletion Routes', () => {
       content: 'Test content for deletion'
     });
 
-    document = (uploadResponse.body as any).document;
+    {
+      const b = uploadResponse.body as unknown as Record<string, unknown>;
+      document = b['document'] as Record<string, unknown>;
+      documentId = document['id'] as string;
+    }
   });
+
+  function bodyOf(res: Response): Record<string, unknown> {
+    return (res.body as unknown) as Record<string, unknown>;
+  }
 
   describe('POST /api/deletion/:id/trash', () => {
     it('should move document to trash successfully', async () => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
       const response = await request(app)
-        .post(`/api/deletion/${document.id}/trash`)
+        .post(`/api/deletion/${documentId}/trash`)
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .send({ reason: 'Test deletion' })
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.message).toContain('moved to trash');
-      expect(response.body.data.isDeleted).toBe(true);
-      expect(response.body.data.deletionReason).toBe('Test deletion');
+      const body = response.body as unknown as Record<string, unknown>;
+      expect(body['success']).toBe(true);
+      expect((body['message'] as string)).toContain('moved to trash');
+      const data = body['data'] as Record<string, unknown>;
+      expect(data['isDeleted']).toBe(true);
+      expect(data['deletionReason']).toBe('Test deletion');
 
       // Verificar que se creó el registro de auditoría
       const auditRecord = await DeletionAudit.findOne({
-        documentId: document.id,
+        documentId: documentId,
         action: 'move_to_trash'
       });
       expect(auditRecord).not.toBeNull();
@@ -68,14 +80,14 @@ describe('Deletion Routes', () => {
 
       // Mover primero a papelera
       await request(app)
-        .post(`/api/deletion/${document.id}/trash`)
+        .post(`/api/deletion/${documentId}/trash`)
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .send()
         .expect(200);
 
       // Intentar mover de nuevo
       await request(app)
-        .post(`/api/deletion/${document.id}/trash`)
+        .post(`/api/deletion/${documentId}/trash`)
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .send()
         .expect(400);
@@ -88,7 +100,7 @@ describe('Deletion Routes', () => {
 
       // Mover documento a papelera primero
       await request(app)
-        .post(`/api/deletion/${document.id}/trash`)
+        .post(`/api/deletion/${documentId}/trash`)
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .send();
     });
@@ -97,19 +109,21 @@ describe('Deletion Routes', () => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
       const response = await request(app)
-        .post(`/api/deletion/${document.id}/restore`)
+        .post(`/api/deletion/${documentId}/restore`)
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .send()
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.message).toContain('restored');
-      expect(response.body.data.isDeleted).toBe(false);
-      expect(response.body.data.deletedAt).toBeUndefined();
+      const body = response.body as unknown as Record<string, unknown>;
+      expect(body['success']).toBe(true);
+      expect((body['message'] as string)).toContain('restored');
+      const data = body['data'] as Record<string, unknown>;
+      expect(data['isDeleted']).toBe(false);
+      expect(data['deletedAt']).toBeUndefined();
 
       // Verificar registro de auditoría
       const auditRecord = await DeletionAudit.findOne({
-        documentId: document.id,
+        documentId: documentId,
         action: 'restore_from_trash'
       });
       expect(auditRecord).not.toBeNull();
@@ -120,14 +134,14 @@ describe('Deletion Routes', () => {
 
       // Restaurar primero
       await request(app)
-        .post(`/api/deletion/${document.id}/restore`)
+        .post(`/api/deletion/${documentId}/restore`)
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .send()
         .expect(200);
 
       // Intentar restaurar de nuevo
       await request(app)
-        .post(`/api/deletion/${document.id}/restore`)
+        .post(`/api/deletion/${documentId}/restore`)
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .send()
         .expect(400);
@@ -140,7 +154,7 @@ describe('Deletion Routes', () => {
 
       // Mover documento a papelera
       await request(app)
-        .post(`/api/deletion/${document.id}/trash`)
+        .post(`/api/deletion/${documentId}/trash`)
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .send();
     });
@@ -153,10 +167,13 @@ describe('Deletion Routes', () => {
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveLength(1);
-      expect(response.body.data[0].isDeleted).toBe(true);
-      expect(response.body.data[0].originalname).toBe('test-deletion.pdf');
+      const body = response.body as unknown as Record<string, unknown>;
+      expect(body['success']).toBe(true);
+      const data = body['data'] as unknown[];
+      expect(data).toHaveLength(1);
+      const first = data[0] as Record<string, unknown>;
+      expect(first['isDeleted']).toBe(true);
+      expect(first['originalname']).toBe('test-deletion.pdf');
     });
 
     it('should return empty array when trash is empty', async () => {
@@ -164,7 +181,7 @@ describe('Deletion Routes', () => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
       await request(app)
-        .post(`/api/deletion/${document.id}/restore`)
+        .post(`/api/deletion/${documentId}/restore`)
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .send();
 
@@ -173,8 +190,9 @@ describe('Deletion Routes', () => {
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveLength(0);
+      const b = bodyOf(response);
+      expect(b['success']).toBe(true);
+      expect((b['data'] as unknown[])).toHaveLength(0);
     });
 
     it('should support pagination', async () => {
@@ -185,9 +203,11 @@ describe('Deletion Routes', () => {
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.pagination).toBeDefined();
-      expect(response.body.pagination.currentPage).toBe(1);
+      const body = response.body as unknown as Record<string, unknown>;
+      expect(body['success']).toBe(true);
+      const pagination = body['pagination'] as Record<string, unknown>;
+      expect(pagination).toBeDefined();
+      expect((pagination['currentPage'] as number)).toBe(1);
     });
   });
 
@@ -197,7 +217,7 @@ describe('Deletion Routes', () => {
 
       // Mover documento a papelera primero
       await request(app)
-        .post(`/api/deletion/${document.id}/trash`)
+        .post(`/api/deletion/${documentId}/trash`)
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .send();
     });
@@ -206,21 +226,22 @@ describe('Deletion Routes', () => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
       const response = await request(app)
-        .delete(`/api/deletion/${document.id}/permanent`)
+        .delete(`/api/deletion/${documentId}/permanent`)
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .send({ secureDeleteMethod: 'simple' })
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.message).toContain('permanently deleted');
+      const body = response.body as unknown as Record<string, unknown>;
+      expect(body['success']).toBe(true);
+      expect((body['message'] as string)).toContain('permanently deleted');
 
       // Verificar que el documento ya no existe
-      const deletedDoc = await DocumentModel.findById(document.id);
+      const deletedDoc = await DocumentModel.findById(documentId);
       expect(deletedDoc).toBeNull();
 
       // Verificar registro de auditoría
       const auditRecord = await DeletionAudit.findOne({
-        documentId: document.id,
+        documentId: documentId,
         action: 'permanent_delete'
       });
       expect(auditRecord).not.toBeNull();
@@ -231,12 +252,12 @@ describe('Deletion Routes', () => {
 
       // Restaurar primero
       await request(app)
-        .post(`/api/deletion/${document.id}/restore`)
+        .post(`/api/deletion/${documentId}/restore`)
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .send();
 
       await request(app)
-        .delete(`/api/deletion/${document.id}/permanent`)
+        .delete(`/api/deletion/${documentId}/permanent`)
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .send()
         .expect(400);
@@ -249,7 +270,7 @@ describe('Deletion Routes', () => {
 
       // Mover documento a papelera
       await request(app)
-        .post(`/api/deletion/${document.id}/trash`)
+        .post(`/api/deletion/${documentId}/trash`)
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .send();
     });
@@ -263,8 +284,10 @@ describe('Deletion Routes', () => {
         .send({ secureDeleteMethod: 'simple' })
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.deletedCount).toBe(1);
+      const body = response.body as unknown as Record<string, unknown>;
+      expect(body['success']).toBe(true);
+      const data = body['data'] as Record<string, unknown>;
+      expect((data['deletedCount'] as number)).toBe(1);
 
       // Verificar que no hay documentos en papelera
       const remainingDocs = await DocumentModel.find({
@@ -290,13 +313,15 @@ describe('Deletion Routes', () => {
         .send()
         .expect(200);
 
-      expect(response.body.data.deletedCount).toBe(0);
+      const body = response.body as unknown as Record<string, unknown>;
+      const data = body['data'] as Record<string, unknown>;
+      expect((data['deletedCount'] as number)).toBe(0);
     });
   });
 
   describe('Authorization', () => {
     it('should return 401 without auth token', async () => {
-      await request(app).post(`/api/deletion/${document.id}/trash`).send().expect(401);
+      await request(app).post(`/api/deletion/${documentId}/trash`).send().expect(401);
     });
 
     it('should return 403 for unauthorized user', async () => {
@@ -312,7 +337,7 @@ describe('Deletion Routes', () => {
       );
 
       await request(app)
-        .post(`/api/deletion/${document.id}/trash`)
+        .post(`/api/deletion/${documentId}/trash`)
         .set('Cookie', otherTokenCookie?.split(';')[0] || '')
         .send()
         .expect(403);

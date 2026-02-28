@@ -76,8 +76,9 @@ describe('Multi-Organization Membership Flow', () => {
         .send({ userId: userAId, role: 'member' })
         .expect(201);
 
-      expect(inviteResponse.body.success).toBe(true);
-      expect(inviteResponse.body.invitation).toBeDefined();
+      const inviteBody = inviteResponse.body as unknown as Record<string, unknown>;
+      expect(inviteBody['success']).toBe(true);
+      expect(inviteBody['invitation']).toBeDefined();
 
       // Verificar que la invitación está en estado PENDING
       const invitation = await Membership.findOne({
@@ -110,8 +111,10 @@ describe('Multi-Organization Membership Flow', () => {
         .set('Cookie', userACookies.join('; '))
         .expect(200);
 
-      expect(acceptResponse.body.success).toBe(true);
-      expect(acceptResponse.body.membership.status).toBe(MembershipStatus.ACTIVE);
+      const acceptBody = acceptResponse.body as unknown as Record<string, unknown>;
+      expect(acceptBody['success']).toBe(true);
+      const membership = acceptBody['membership'] as Record<string, unknown>;
+      expect(membership['status']).toBe(MembershipStatus.ACTIVE);
 
       // Verificar que User A tiene dos rootFolders (uno por organización)
       const rootFolders = await Folder.find({
@@ -159,7 +162,8 @@ describe('Multi-Organization Membership Flow', () => {
         .send({ userId: userAId, role: 'member' })
         .expect(409);
 
-      expect(duplicateResponse.body.success).toBe(false);
+      const duplicateBody = duplicateResponse.body as unknown as Record<string, unknown>;
+      expect(duplicateBody['success']).toBe(false);
     });
 
     it('should prevent creating rootFolder if already active in organization', async () => {
@@ -187,7 +191,8 @@ describe('Multi-Organization Membership Flow', () => {
         .set('Cookie', userACookies.join('; '))
         .expect(400);
 
-      expect(retryResponse.body.success).toBe(false);
+      const retryBody = retryResponse.body as unknown as Record<string, unknown>;
+      expect(retryBody['success']).toBe(false);
     });
   });
 

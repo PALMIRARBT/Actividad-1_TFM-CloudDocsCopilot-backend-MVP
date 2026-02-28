@@ -29,7 +29,7 @@ describe('EmailService (Simple)', () => {
         })
       }));
 
-      const { sendConfirmationEmail } = require('../../../src/mail/emailService');
+      const { sendConfirmationEmail } = (await import('../../../src/mail/emailService')) as unknown as typeof import('../../../src/mail/emailService');
 
       // Act
       const result = await sendConfirmationEmail('test@example.com', 'Test Subject', '<p>Test</p>');
@@ -42,13 +42,13 @@ describe('EmailService (Simple)', () => {
 
     it('should call sendMail with correct parameters', async () => {
       // Arrange
-      const mockSendMail = jest.fn().mockResolvedValue({ messageId: 'test-456' });
+      const mockSendMail: jest.Mock = jest.fn().mockResolvedValue({ messageId: 'test-456' });
 
       jest.mock('nodemailer', () => ({
         createTransport: () => ({ sendMail: mockSendMail })
       }));
 
-      const { sendConfirmationEmail } = require('../../../src/mail/emailService');
+      const { sendConfirmationEmail } = (await import('../../../src/mail/emailService')) as unknown as typeof import('../../../src/mail/emailService');
 
       // Act
       await sendConfirmationEmail('user@test.com', 'Welcome', '<h1>Hello</h1>');

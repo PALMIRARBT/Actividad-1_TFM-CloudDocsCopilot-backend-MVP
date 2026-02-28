@@ -1,19 +1,20 @@
 // Load environment variables from .env for integration tests
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Force AI provider to mock in test runs to avoid external LLM calls
 // Always force the mock provider in the test environment to ensure deterministic AI behavior
 process.env.AI_PROVIDER = 'mock';
 
 // Ensure common storage and fixture directories exist for integration tests
-const fs = require('fs');
-const path = require('path');
+import * as fs from 'fs';
+import * as path from 'path';
 const storageBase = path.join(process.cwd(), 'storage');
 const fixturesBase = path.join(process.cwd(), 'tests', 'fixtures', 'test-files');
 try {
   if (!fs.existsSync(storageBase)) fs.mkdirSync(storageBase, { recursive: true });
   if (!fs.existsSync(fixturesBase)) fs.mkdirSync(fixturesBase, { recursive: true });
-} catch (e) {
+} catch {
   // ignore - tests will surface file errors where appropriate
 }
 
@@ -36,30 +37,30 @@ jest.mock('pdf-parse', () => ({
 jest.mock('mammoth', () => ({
   __esModule: true,
   default: {
-    extractRawText: jest.fn(async (_buffer: any) => ({ value: '' }))
+    extractRawText: jest.fn(async (_buffer: unknown): Promise<{ value: string }> => ({ value: '' }))
   }
 }));
 // Mock Ollama provider to ensure deterministic behaviour if imported directly
 jest.mock('../src/services/ai/providers/ollama.provider', () => {
-  class FakeOllamaProvider {
+    class FakeOllamaProvider {
     name = 'ollama-mock';
-    async checkConnection() {
+    async checkConnection(): Promise<boolean> {
       return true;
     }
-    async generateResponse(prompt: string, _opts?: any) {
+    async generateResponse(prompt: string, _opts?: unknown): Promise<{ response: string; model: string }> {
       // Return a deterministic JSON response string
       const payload = JSON.stringify({ summary: `Resumen mock para: ${prompt.substring(0,50)}`, keyPoints: ['kp1','kp2'] });
       return { response: payload, model: 'llama-mock' };
     }
-    async summarizeDocument(text: string) {
+    async summarizeDocument(text: string): Promise<{ summary: string; keyPoints: string[] }> {
       return { summary: `Resumen mock: ${text.substring(0,100)}`, keyPoints: ['kp1','kp2'] };
     }
-    async generateEmbedding(_text: string) {
+    async generateEmbedding(_text: string): Promise<{ embedding: number[]; dimensions: number; model: string }> {
       return { embedding: new Array(768).fill(0.01), dimensions: 768, model: 'ollama-embed-mock' };
     }
-    getEmbeddingDimensions() { return 768; }
-    getEmbeddingModel() { return 'ollama-embed-mock'; }
-    getChatModel() { return 'llama-mock'; }
+    getEmbeddingDimensions(): number { return 768; }
+    getEmbeddingModel(): string { return 'ollama-embed-mock'; }
+    getChatModel(): string { return 'llama-mock'; }
   }
 
   return { __esModule: true, OllamaProvider: FakeOllamaProvider };
@@ -75,7 +76,7 @@ jest.mock('../src/services/search.service', () => ({
 
 // Optional: silence only specific noisy errors from Elasticsearch/indexing
 const originalConsoleError = console.error;
-console.error = (...args: any[]) => {
+console.error = (...args: unknown[]): void => {
   const msg = String(args[0] || '');
   if (
     msg.includes('Error indexing document') ||
@@ -117,29 +118,21 @@ jest.mock('../src/configurations/elasticsearch-config', () => {
   return { __esModule: true, default: mockClient };
 });
 
-// Patch embedding service methods to avoid external API calls during tests
-// NOTE: With AI_PROVIDER='mock' in tests, the embedding service will use the mock provider
-// So these overrides are mostly redundant, but kept for backward compatibility with tests
-// that don't set AI_PROVIDER.
-{
+// Mock embedding service methods to avoid external API calls during tests
+jest.mock('../src/services/ai/embedding.service', () => {
   const EMBEDDING_DIMENSIONS = 1536;
-  const makeVector = () => new Array(EMBEDDING_DIMENSIONS).fill(0.01);
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const embeddingModule = require('../src/services/ai/embedding.service');
-  if (embeddingModule && embeddingModule.embeddingService) {
-    // Only override if methods are not already defined by the provider system
-    if (!process.env.AI_PROVIDER || process.env.AI_PROVIDER === '') {
-      embeddingModule.embeddingService.generateEmbedding = jest.fn(async (_text: string) =>
-        makeVector()
-      );
-      embeddingModule.embeddingService.generateEmbeddings = jest.fn(async (_texts: string[]) =>
-        _texts.map(() => makeVector())
-      );
-      embeddingModule.embeddingService.getDimensions = jest.fn(() => EMBEDDING_DIMENSIONS);
-      embeddingModule.embeddingService.getModel = jest.fn(() => 'mock-embedding-model');
+  const makeVector = (): number[] => new Array(EMBEDDING_DIMENSIONS).fill(0.01) as number[];
+
+  return {
+    __esModule: true,
+    embeddingService: {
+      generateEmbedding: jest.fn(async (_text: string): Promise<number[]> => makeVector()),
+      generateEmbeddings: jest.fn(async (_texts: string[]): Promise<number[][]> => _texts.map(() => makeVector())),
+      getDimensions: jest.fn((): number => EMBEDDING_DIMENSIONS),
+      getModel: jest.fn((): string => 'mock-embedding-model')
     }
-  }
-}
+  };
+});
 
 // Note: OpenAI client instance is not globally mocked here to allow per-test overrides.
 
@@ -148,14 +141,15 @@ jest.mock('../src/configurations/elasticsearch-config', () => {
 
 // Provide a global hook for OpenAI chat completions so tests can set it reliably.
 // Default implementation returns a small mock response to avoid real API calls
-(global as any).__OPENAI_CREATE_IMPL__ = async (_opts: any) => ({
+(global as unknown as { __OPENAI_CREATE_IMPL__?: (...args: unknown[]) => Promise<unknown> }).__OPENAI_CREATE_IMPL__ = async (_opts: unknown) => ({
   choices: [{ message: { content: 'Mocked answer from OpenAI (test)' } }],
   usage: { total_tokens: 5 },
   id: 'mocked-response'
 });
-(global as any).__OPENAI_CREATE__ = async (...args: any[]) => {
-  if ((global as any).__OPENAI_CREATE_IMPL__) {
-    return (global as any).__OPENAI_CREATE_IMPL__(...args);
+(global as unknown as { __OPENAI_CREATE__?: (...args: unknown[]) => Promise<unknown> }).__OPENAI_CREATE__ = async (...args: unknown[]) => {
+  const g = global as unknown as { __OPENAI_CREATE_IMPL__?: (...args: unknown[]) => Promise<unknown> };
+  if (g.__OPENAI_CREATE_IMPL__) {
+    return g.__OPENAI_CREATE_IMPL__(...args);
   }
   return { choices: [{ message: { content: 'Mocked answer from OpenAI (fallback)' } }] };
 };
@@ -164,93 +158,108 @@ jest.mock('../src/configurations/elasticsearch-config', () => {
 // they need the LLM to use the global OpenAI hook. Do not force it globally
 // here to avoid interfering with unit tests.
 
-// Patch MongoDB Atlas module to use an in-memory collection implementation
-{
-  const stores: Record<string, any[]> = {};
+// Removed duplicate in-memory mongo collection factory; the real jest.mock below
+// provides the in-memory implementation used by tests.
 
-  const collectionFactory = (name: string) => {
+// Provide a jest.mock for mongoAtlas to use the in-memory collection implementation
+jest.mock('../src/configurations/database-config/mongoAtlas', () => {
+  const stores: Record<string, unknown[]> = {};
+
+  const _collectionFactory = (name: string) => {
     stores[name] = stores[name] || [];
 
     return {
-      insertMany: async (docs: any[]) => {
-        stores[name].push(...docs.map(d => ({ ...d })));
+      insertMany: async (docs: unknown[]) => {
+        stores[name].push(...docs.map(d => ({ ...(d as Record<string, unknown>) })));
         return { insertedCount: docs.length };
       },
-      deleteMany: async (filter: any) => {
-        if (!filter || !filter.documentId) {
+      deleteMany: async (filter: unknown) => {
+        if (!filter || !(filter as Record<string, unknown>).hasOwnProperty('documentId')) {
           const deleted = stores[name].length;
           stores[name] = [];
           return { deletedCount: deleted };
         }
         const before = stores[name].length;
-        stores[name] = stores[name].filter(d => d.documentId !== filter.documentId);
-        return { deletedCount: before - stores[name].length };
+        const docId = String((filter as Record<string, unknown>).documentId as unknown);
+        stores[name] = (stores[name] || []).filter(d => (d as Record<string, unknown>).documentId !== docId);
+        return { deletedCount: before - (stores[name] || []).length };
       },
-      find: (filter: any) => ({
+      find: (filter: unknown) => ({
         sort: () => ({
-          toArray: async () => (stores[name] || []).filter(d => d.documentId === filter.documentId)
+          toArray: async () => ((stores[name] || []) as unknown[]).filter(d => (d as Record<string, unknown>).documentId === (filter as Record<string, unknown>).documentId) as unknown[]
         })
       }),
-      countDocuments: async (filter: any, _opts?: any) => {
-        if (filter && filter.documentId)
-          return (stores[name] || []).filter(d => d.documentId === filter.documentId).length;
-        return (stores[name] || []).length;
+      countDocuments: async (filter: unknown, _opts?: unknown) => {
+        if (filter && (filter as Record<string, unknown>).hasOwnProperty('documentId'))
+          return ((stores[name] || []) as unknown[]).filter(d => (d as Record<string, unknown>).documentId === (filter as Record<string, unknown>).documentId).length;
+        return ((stores[name] || []) as unknown[]).length;
       },
       distinct: async (field: string) =>
-        Array.from(new Set((stores[name] || []).map(d => d[field]))),
-      aggregate: (pipeline: any[]) => ({
+        Array.from(new Set(((stores[name] || []) as unknown[]).map(d => (d as Record<string, unknown>)[field]))) as unknown[],
+      aggregate: (pipeline: unknown[]) => ({
         toArray: async () => {
-          const all = stores[name] || [];
+          const all = (stores[name] || []) as unknown[];
 
-          // Try to detect a $vectorSearch stage to honor filter and limit
           const vsStage = Array.isArray(pipeline)
-            ? pipeline.find(p => p && (p.$vectorSearch || p['$vectorSearch']))
+            ? pipeline.find(p => {
+                if (!p || typeof p !== 'object') return false;
+                const obj = p as Record<string, unknown>;
+                return ('$vectorSearch' in obj) || ('$vectorSearch' in obj);
+              })
             : null;
 
-          let results = all;
+          let results = all.slice();
 
-          if (vsStage) {
-            const stage = vsStage.$vectorSearch || vsStage['$vectorSearch'];
-            // Apply documentId filter if present
-            const filter = stage && stage.filter;
-            if (filter && filter.documentId && filter.documentId.$eq) {
-              const docId = filter.documentId.$eq;
-              results = results.filter(d => d.documentId === docId);
+          if (vsStage && typeof vsStage === 'object') {
+            const stageObj = vsStage as Record<string, unknown>;
+            const stage = (stageObj['$vectorSearch'] ?? stageObj['$vectorSearch']) as Record<string, unknown> | undefined;
+
+            const filter = stage && (stage['filter'] as Record<string, unknown> | undefined);
+            let docId: string | undefined;
+            if (filter && 'documentId' in filter) {
+              const docField = filter['documentId'] as Record<string, unknown> | undefined;
+              if (docField && '$eq' in docField) {
+                docId = String(docField['$eq']);
+              }
+            }
+            if (docId) {
+              results = (results as unknown[]).filter(d => (d as Record<string, unknown>).documentId === docId);
             }
 
-            // Apply limit if provided
-            const limit = stage && stage.limit ? stage.limit : undefined;
+            const limitVal = stage && stage['limit'];
+            const limit = typeof limitVal === 'number' ? limitVal : undefined;
             if (typeof limit === 'number') {
-              results = results.slice(0, limit);
+              results = (results as unknown[]).slice(0, limit);
             }
           }
 
-          // Map to include projected fields and a deterministic score
-          return results.map((d: any, i: number) => ({
-            _id: d._id ?? `mock-${i}`,
-            documentId: d.documentId,
-            content: d.content,
-            embedding: d.embedding,
-            createdAt: d.createdAt,
-            chunkIndex: d.chunkIndex,
-            wordCount: d.wordCount,
-            score: typeof d.score === 'number' ? d.score : 0.8
-          }));
+          return (results as unknown[]).map((d: unknown, i: number) => ({
+            _id: ((d as Record<string, unknown>)['_id'] ?? `mock-${i}`) as unknown,
+            documentId: (d as Record<string, unknown>)['documentId'],
+            content: (d as Record<string, unknown>)['content'],
+            embedding: (d as Record<string, unknown>)['embedding'],
+            createdAt: (d as Record<string, unknown>)['createdAt'],
+            chunkIndex: (d as Record<string, unknown>)['chunkIndex'],
+            wordCount: (d as Record<string, unknown>)['wordCount'],
+            score: typeof (d as Record<string, unknown>)['score'] === 'number' ? (d as Record<string, unknown>)['score'] : 0.8
+          })) as unknown[];
         }
       }),
-      command: async (_cmd: any) => ({ ok: 1 })
+      command: async (_cmd: unknown) => ({ ok: 1 })
     };
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const atlasModule = require('../src/configurations/database-config/mongoAtlas');
-  if (atlasModule) {
-    atlasModule.getDb = async () => ({
-      collection: (name: string) => collectionFactory(name),
-      command: async () => ({ ok: 1 })
-    });
-    atlasModule.getClient = () => null;
-    atlasModule.closeAtlasConnection = async () => undefined;
-    atlasModule.isConnected = () => true;
-  }
-}
+  // Expose a minimal getDb/getClient implementation so production code calling
+  // `getDb()` or `getClient()` works against the in-memory collection factory.
+  const getDb = async () => ({ collection: (name: string) => _collectionFactory(name) });
+  const getClient = async () => null;
+
+  return {
+    __esModule: true,
+    _collectionFactory,
+    getDb,
+    getClient,
+    isConnected: () => true,
+    closeAtlasConnection: async () => undefined
+  };
+});

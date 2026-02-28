@@ -1,6 +1,13 @@
 jest.resetModules();
+import type { CorsOptions } from 'cors';
 
-const { default: getCorsOptions } = require('../../../src/configurations/cors-config');
+let getCorsOptions: () => CorsOptions;
+
+beforeEach(async () => {
+  jest.resetModules();
+  const mod = (await import('../../../src/configurations/cors-config')) as unknown;
+  getCorsOptions = ((mod as { default?: () => CorsOptions }).default ?? (mod as () => CorsOptions)) as () => CorsOptions;
+});
 
 describe('cors-config', () => {
   beforeEach(() => {

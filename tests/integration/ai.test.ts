@@ -1,4 +1,5 @@
 import { request, app } from '../setup';
+import type { Response } from 'supertest';
 import { registerAndLogin, getAuthCookie } from '../helpers/auth.helper';
 import DocumentModel from '../../src/models/document.model';
 import mongoose from 'mongoose';
@@ -17,6 +18,12 @@ const describeOrSkip = describe;
  * NOTA: Estos tests requieren OPENAI_API_KEY y MONGODB_ATLAS_URI configurados.
  * Se saltarán automáticamente si no están disponibles.
  */
+type ApiBody = { success?: boolean; data?: unknown };
+
+function bodyOf(res: Response): ApiBody {
+  return (res.body as unknown) as ApiBody;
+}
+
 describeOrSkip('AI Endpoints', () => {
   let authCookies: string[];
   let organizationId: string;
@@ -92,13 +99,18 @@ describeOrSkip('AI Endpoints', () => {
         .set('Cookie', cookieHeader);
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data).toBeDefined();
-      expect(res.body.data.text).toBeDefined();
-      expect(res.body.data.text).toContain('documento de prueba');
-      expect(res.body.data.charCount).toBeGreaterThan(0);
-      expect(res.body.data.wordCount).toBeGreaterThan(0);
-      expect(res.body.data.mimeType).toBe('text/plain');
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
+      const data = b.data as Record<string, unknown>;
+      expect(data).toBeDefined();
+      const text = data['text'] as string;
+      expect(text).toBeDefined();
+      expect(text).toContain('documento de prueba');
+      const charCount = data['charCount'] as number;
+      expect(charCount).toBeGreaterThan(0);
+      const wordCount = data['wordCount'] as number;
+      expect(wordCount).toBeGreaterThan(0);
+      expect(data['mimeType']).toBe('text/plain');
     });
 
     it('should fail with invalid document ID', async () => {
@@ -109,12 +121,12 @@ describeOrSkip('AI Endpoints', () => {
         .set('Cookie', cookieHeader);
 
       expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
     });
 
     it('should fail without authentication', async () => {
       const res = await request(app).get(`/api/ai/documents/${documentId}/extract-text`);
-
       expect(res.status).toBe(401);
     });
 
@@ -127,7 +139,8 @@ describeOrSkip('AI Endpoints', () => {
         .set('Cookie', cookieHeader);
 
       expect(res.status).toBe(404);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
     });
   });
 
@@ -145,11 +158,14 @@ describeOrSkip('AI Endpoints', () => {
         .send({ text: textContent });
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data).toBeDefined();
-      expect(res.body.data.documentId).toBe(documentId);
-      expect(res.body.data.chunksCreated).toBeGreaterThanOrEqual(1);
-      expect(res.body.data.dimensions).toBe(1536);
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
+      const data = b.data as Record<string, unknown>;
+      expect(data).toBeDefined();
+      expect(data['documentId']).toBe(documentId);
+      const chunksCreated = data['chunksCreated'] as number;
+      expect(chunksCreated).toBeGreaterThanOrEqual(1);
+      expect(data['dimensions']).toBe(1536);
     }, 30000); // Timeout extendido para llamadas a OpenAI
 
     it('should fail without text content', async () => {
@@ -161,7 +177,8 @@ describeOrSkip('AI Endpoints', () => {
         .send({});
 
       expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
     });
 
     it('should fail with empty text', async () => {
@@ -173,7 +190,8 @@ describeOrSkip('AI Endpoints', () => {
         .send({ text: '' });
 
       expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
     });
 
     it('should fail without authentication', async () => {
@@ -205,9 +223,12 @@ describeOrSkip('AI Endpoints', () => {
         .set('Cookie', cookieHeader);
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data).toBeDefined();
-      expect(res.body.data.deletedCount).toBeGreaterThanOrEqual(0);
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
+      const data = b.data as Record<string, unknown>;
+      expect(data).toBeDefined();
+      const deletedCount = data['deletedCount'] as number;
+      expect(deletedCount).toBeGreaterThanOrEqual(0);
     });
 
     it('should fail with invalid document ID', async () => {
@@ -218,7 +239,8 @@ describeOrSkip('AI Endpoints', () => {
         .set('Cookie', cookieHeader);
 
       expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
     });
 
     it('should fail without authentication', async () => {
@@ -250,12 +272,16 @@ describeOrSkip('AI Endpoints', () => {
       });
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data).toBeDefined();
-      expect(res.body.data.answer).toBeDefined();
-      expect(typeof res.body.data.answer).toBe('string');
-      expect(res.body.data.sources).toBeDefined();
-      expect(Array.isArray(res.body.data.sources)).toBe(true);
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
+      const data = b.data as Record<string, unknown>;
+      expect(data).toBeDefined();
+      const answer = data['answer'] as string;
+      expect(answer).toBeDefined();
+      expect(typeof answer).toBe('string');
+      const sources = data['sources'] as unknown;
+      expect(sources).toBeDefined();
+      expect(Array.isArray(sources)).toBe(true);
     }, 30000);
 
     it('should fail without question', async () => {
@@ -267,7 +293,8 @@ describeOrSkip('AI Endpoints', () => {
         .send({ organizationId: organizationId });
 
       expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
     });
 
     it('should fail without organizationId', async () => {
@@ -279,7 +306,8 @@ describeOrSkip('AI Endpoints', () => {
         .send({ question: 'Test question?' });
 
       expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
     });
 
     it('should fail without authentication', async () => {
@@ -314,12 +342,16 @@ describeOrSkip('AI Endpoints', () => {
         .send({ question: '¿De qué trata este documento?' });
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data).toBeDefined();
-      expect(res.body.data.answer).toBeDefined();
-      expect(typeof res.body.data.answer).toBe('string');
-      expect(res.body.data.sources).toBeDefined();
-      expect(res.body.data.sources).toContain(documentId);
+      const b = bodyOf(res);
+      expect(b.success).toBe(true);
+      const data = b.data as Record<string, unknown>;
+      expect(data).toBeDefined();
+      const answer = data['answer'] as string;
+      expect(answer).toBeDefined();
+      expect(typeof answer).toBe('string');
+      const sources = data['sources'] as unknown[];
+      expect(sources).toBeDefined();
+      expect(sources).toContain(documentId);
     }, 30000);
 
     it('should fail without question', async () => {
@@ -331,7 +363,8 @@ describeOrSkip('AI Endpoints', () => {
         .send({});
 
       expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
     });
 
     it('should fail with invalid document ID', async () => {
@@ -343,7 +376,8 @@ describeOrSkip('AI Endpoints', () => {
         .send({ question: 'Test question?' });
 
       expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
+      const b = bodyOf(res);
+      expect(b.success).toBe(false);
     });
 
     it('should fail without authentication', async () => {

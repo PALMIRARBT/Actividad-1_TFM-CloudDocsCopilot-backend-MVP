@@ -32,16 +32,17 @@ jest.mock('../../../src/configurations/elasticsearch-config', () => ({
   getInstance: () => mockClient
 }));
 
-let svc: any;
-beforeAll(() => {
-  // require after mocks are applied
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  svc = require('../../../src/services/search.service');
+let svc: unknown;
+beforeAll(async () => {
+  // import after mocks are applied
+  svc = (await import('../../../src/services/search.service')) as unknown;
 });
+
+const S = (): typeof import('../../../src/services/search.service') => svc as unknown as typeof import('../../../src/services/search.service');
 
 describe('SearchService - Extended Coverage', () => {
   it('indexes and removes without throwing on 404', async () => {
-    const doc: any = {
+    const doc: unknown = {
       _id: { toString: () => 'doc1' },
       filename: 'f',
       originalname: 'f',
@@ -52,9 +53,9 @@ describe('SearchService - Extended Coverage', () => {
       folder: null,
       uploadedAt: new Date()
     };
-    await expect(svc.indexDocument(doc)).resolves.toBeUndefined();
+    await expect(S().indexDocument(doc as unknown)).resolves.toBeUndefined();
     // removeDocumentFromIndex should not throw on 404
-    await expect(svc.removeDocumentFromIndex('missing-id')).resolves.toBeUndefined();
+    await expect(S().removeDocumentFromIndex('missing-id')).resolves.toBeUndefined();
   });
 
   it('searchDocuments returns mapped results and respects filters', async () => {
@@ -78,7 +79,7 @@ describe('SearchService - Extended Coverage', () => {
       took: 5
     });
 
-    const res = await svc.searchDocuments({
+    const res = await S().searchDocuments({
       query: 'a',
       userId: 'u',
       organizationId: 'org1',
@@ -106,7 +107,7 @@ describe('SearchService - Extended Coverage', () => {
       took: 1
     });
 
-    const suggestions = await svc.getAutocompleteSuggestions('d', 'u', 5);
+    const suggestions = await S().getAutocompleteSuggestions('d', 'u', 5);
     expect(Array.isArray(suggestions)).toBe(true);
     expect(suggestions.includes('dup')).toBe(true);
   });

@@ -1,5 +1,7 @@
+// Extend Express Request type to include 'user'
+import { Request } from 'express';
 describe('authenticateToken middleware', () => {
-  const baseReq = () => ({ headers: {}, cookies: {} as any });
+  const baseReq = (): Partial<import('express').Request> => ({ headers: {}, cookies: {} as unknown as Record<string, string> });
 
   afterEach(() => {
     jest.resetAllMocks();
@@ -8,16 +10,16 @@ describe('authenticateToken middleware', () => {
 
   it('returns 401 when token is missing', async () => {
     jest.resetModules();
-    const { authenticateToken } = require('../../../src/middlewares/auth.middleware');
+    const { authenticateToken } = (await import('../../../src/middlewares/auth.middleware')) as unknown as typeof import('../../../src/middlewares/auth.middleware');
 
-    const req: any = baseReq();
-    const res: any = { cookie: jest.fn() };
-    const next = jest.fn();
+    const req = baseReq();
+    const res: Partial<import('express').Response> = { cookie: jest.fn() as unknown as import('express').Response['cookie'] };
+    const next = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
 
-    await authenticateToken(req, res, next);
+    await authenticateToken(req as import('express').Request, res as import('express').Response, next as unknown as import('express').NextFunction);
 
     expect(next).toHaveBeenCalled();
-    const err = next.mock.calls[0][0];
+    const err = next.mock.calls[0][0] as unknown as { statusCode?: number; message?: string };
     expect(err.statusCode).toBe(401);
     expect(err.message).toMatch(/Access token required/);
   });
@@ -30,17 +32,17 @@ describe('authenticateToken middleware', () => {
       })
     }));
 
-    const { authenticateToken } = require('../../../src/middlewares/auth.middleware');
+    const { authenticateToken } = (await import('../../../src/middlewares/auth.middleware')) as unknown as typeof import('../../../src/middlewares/auth.middleware');
 
-    const req: any = baseReq();
-    req.cookies.token = 'bad';
-    const res: any = { cookie: jest.fn() };
-    const next = jest.fn();
+    const req = baseReq();
+    (req.cookies as Record<string, string>).token = 'bad';
+    const res: Partial<import('express').Response> = { cookie: jest.fn() as unknown as import('express').Response['cookie'] };
+    const next = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
 
-    await authenticateToken(req, res, next);
+    await authenticateToken(req as import('express').Request, res as import('express').Response, next as unknown as import('express').NextFunction);
 
     expect(next).toHaveBeenCalled();
-    const err = next.mock.calls[0][0];
+    const err = next.mock.calls[0][0] as unknown as { statusCode?: number; message?: string };
     expect(err.statusCode).toBe(401);
     expect(err.message).toMatch(/Invalid token/);
   });
@@ -53,17 +55,17 @@ describe('authenticateToken middleware', () => {
       })
     }));
 
-    const { authenticateToken } = require('../../../src/middlewares/auth.middleware');
+    const { authenticateToken } = (await import('../../../src/middlewares/auth.middleware')) as unknown as typeof import('../../../src/middlewares/auth.middleware');
 
-    const req: any = baseReq();
-    req.cookies.token = 'expired';
-    const res: any = { cookie: jest.fn() };
-    const next = jest.fn();
+    const req = baseReq();
+    (req.cookies as Record<string, string>).token = 'expired';
+    const res: Partial<import('express').Response> = { cookie: jest.fn() as unknown as import('express').Response['cookie'] };
+    const next = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
 
-    await authenticateToken(req, res, next);
+    await authenticateToken(req as import('express').Request, res as import('express').Response, next as unknown as import('express').NextFunction);
 
     expect(next).toHaveBeenCalled();
-    const err = next.mock.calls[0][0];
+    const err = next.mock.calls[0][0] as unknown as { statusCode?: number; message?: string };
     expect(err.statusCode).toBe(401);
     expect(err.message).toMatch(/Token expired/);
   });
@@ -77,19 +79,21 @@ describe('authenticateToken middleware', () => {
       findById: jest.fn(() => Promise.resolve(null))
     }));
 
-    const { authenticateToken } = require('../../../src/middlewares/auth.middleware');
-    const User = require('../../../src/models/user.model');
+    const { authenticateToken } = (await import('../../../src/middlewares/auth.middleware')) as {
+      authenticateToken: (req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => Promise<void>;
+    };
+    const User = jest.requireMock('../../../src/models/user.model') as { findById: jest.Mock };
 
-    const req: any = baseReq();
-    req.cookies.token = 't';
-    const res: any = { cookie: jest.fn() };
-    const next = jest.fn();
+    const req = baseReq();
+    (req.cookies as Record<string, string>).token = 't';
+    const res: Partial<import('express').Response> = { cookie: jest.fn() as unknown as import('express').Response['cookie'] };
+    const next = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
 
-    await authenticateToken(req, res, next);
+    await authenticateToken(req as import('express').Request, res as import('express').Response, next as unknown as import('express').NextFunction);
 
     expect(User.findById).toHaveBeenCalledWith('u1');
     expect(next).toHaveBeenCalled();
-    const err = next.mock.calls[0][0];
+    const err = next.mock.calls[0][0] as unknown as { statusCode?: number; message?: string };
     expect(err.statusCode).toBe(401);
     expect(err.message).toMatch(/User no longer exists/);
   });
@@ -103,17 +107,19 @@ describe('authenticateToken middleware', () => {
       findById: jest.fn(() => Promise.resolve({ _id: 'u1', active: false }))
     }));
 
-    const { authenticateToken } = require('../../../src/middlewares/auth.middleware');
+    const { authenticateToken } = (await import('../../../src/middlewares/auth.middleware')) as {
+      authenticateToken: (req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => Promise<void>;
+    };
 
-    const req: any = baseReq();
-    req.cookies.token = 't';
-    const res: any = { cookie: jest.fn() };
-    const next = jest.fn();
+    const req = baseReq();
+    (req.cookies as Record<string, string>).token = 't';
+    const res: Partial<import('express').Response> = { cookie: jest.fn() as unknown as import('express').Response['cookie'] };
+    const next = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
 
-    await authenticateToken(req, res, next);
+    await authenticateToken(req as import('express').Request, res as import('express').Response, next as unknown as import('express').NextFunction);
 
     expect(next).toHaveBeenCalled();
-    const err = next.mock.calls[0][0];
+    const err = next.mock.calls[0][0] as unknown as { statusCode?: number; message?: string };
     expect(err.statusCode).toBe(401);
     expect(err.message).toMatch(/User account deactivated/);
   });
@@ -127,17 +133,19 @@ describe('authenticateToken middleware', () => {
       findById: jest.fn(() => Promise.resolve({ _id: 'u1', email: 'b@x', active: true }))
     }));
 
-    const { authenticateToken } = require('../../../src/middlewares/auth.middleware');
+    const { authenticateToken } = (await import('../../../src/middlewares/auth.middleware')) as {
+      authenticateToken: (req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => Promise<void>;
+    };
 
-    const req: any = baseReq();
-    req.cookies.token = 't';
-    const res: any = { cookie: jest.fn() };
-    const next = jest.fn();
+    const req = baseReq();
+    (req.cookies as Record<string, string>).token = 't';
+    const res: Partial<import('express').Response> = { cookie: jest.fn() as unknown as import('express').Response['cookie'] };
+    const next = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
 
-    await authenticateToken(req, res, next);
+    await authenticateToken(req as import('express').Request, res as import('express').Response, next as unknown as import('express').NextFunction);
 
     expect(next).toHaveBeenCalled();
-    const err = next.mock.calls[0][0];
+    const err = next.mock.calls[0][0] as unknown as { statusCode?: number; message?: string };
     expect(err.statusCode).toBe(401);
     expect(err.message).toMatch(/email change/);
   });
@@ -153,17 +161,19 @@ describe('authenticateToken middleware', () => {
       )
     }));
 
-    const { authenticateToken } = require('../../../src/middlewares/auth.middleware');
+    const { authenticateToken } = (await import('../../../src/middlewares/auth.middleware')) as {
+      authenticateToken: (req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => Promise<void>;
+    };
 
-    const req: any = baseReq();
-    req.cookies.token = 't';
-    const res: any = { cookie: jest.fn() };
-    const next = jest.fn();
+    const req = baseReq();
+    (req.cookies as Record<string, string>).token = 't';
+    const res: Partial<import('express').Response> = { cookie: jest.fn() as unknown as import('express').Response['cookie'] };
+    const next = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
 
-    await authenticateToken(req, res, next);
+    await authenticateToken(req as import('express').Request, res as import('express').Response, next as unknown as import('express').NextFunction);
 
     expect(next).toHaveBeenCalled();
-    const err = next.mock.calls[0][0];
+    const err = next.mock.calls[0][0] as unknown as { statusCode?: number; message?: string };
     expect(err.statusCode).toBe(401);
     expect(err.message).toMatch(/password change/);
   });
@@ -186,19 +196,25 @@ describe('authenticateToken middleware', () => {
       )
     }));
 
-    const { authenticateToken } = require('../../../src/middlewares/auth.middleware');
+    const { authenticateToken } = (await import('../../../src/middlewares/auth.middleware')) as unknown as typeof import('../../../src/middlewares/auth.middleware');
 
-    const req: any = baseReq();
-    req.cookies.token = 't';
-    const res: any = { cookie: jest.fn() };
-    const next = jest.fn();
+    const req = baseReq();
+    (req.cookies as Record<string, string>).token = 't';
+    const res: Partial<import('express').Response> = { cookie: jest.fn() as unknown as import('express').Response['cookie'] };
+    const next = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
 
-    await authenticateToken(req, res, next);
+    await authenticateToken(req as import('express').Request, res as import('express').Response, next as unknown as import('express').NextFunction);
 
     expect(next).toHaveBeenCalledWith();
     expect(res.cookie).toHaveBeenCalled();
-    expect(req.user).toBeDefined();
-    expect(req.user.email).toBe('a@x');
-    expect(req.user.role).toBe('member');
+    
+    interface TestRequest extends Request {
+      user?: { email: string; role: string };
+    }
+    
+        const user = (req as TestRequest).user;
+        expect(user).toBeDefined();
+        expect(user!.email).toBe('a@x');
+        expect(user!.role).toBe('member');
   });
 });

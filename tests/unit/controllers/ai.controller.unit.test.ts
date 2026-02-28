@@ -20,23 +20,27 @@ jest.mock('../../../src/services/membership.service', () => ({
   hasActiveMembership: jest.fn(async () => true)
 }));
 
-const { askQuestion } = require('../../../src/controllers/ai.controller');
+let askQuestion: (req: import('../../../src/types/auth-request').AuthRequest, res: import('express').Response, next: (err?: unknown) => void) => Promise<void>;
+
+beforeAll(async () => {
+  const mod = (await import('../../../src/controllers/ai.controller')) as unknown as typeof import('../../../src/controllers/ai.controller');
+  askQuestion = mod.askQuestion;
+});
 
 describe('AI Controller - askQuestion', () => {
   it('calls next with HttpError when question missing', async () => {
-    const req: any = { body: {} };
-    const res: any = { json: jest.fn() };
-    const next = jest.fn();
+    const req = { body: {}, cookies: {} as Record<string, unknown> } as import('../../../src/types/auth-request').AuthRequest;
+    const res = { json: jest.fn() } as Partial<import('express').Response>;
+    const next = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
 
     // Ensure membership service mock is active for this call (override if needed)
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const membershipModule = require('../../../src/services/membership.service');
+      const membershipModule = (await import('../../../src/services/membership.service')) as unknown as typeof import('../../../src/services/membership.service');
       if (membershipModule) {
         membershipModule.hasActiveMembership = jest.fn(async () => true);
       }
     } catch {
-      // ignore if require fails in certain environments
+      // ignore if import fails in certain environments
     }
 
     await askQuestion(req, res, next);
@@ -53,9 +57,9 @@ describe('AI Controller - askQuestion', () => {
 
   it('calls ragService and returns answer when inputs valid', async () => {
     // use a valid 24-char hex string for user id to satisfy membership validation
-    const req: any = { body: { question: 'Q', organizationId: 'o1' }, user: { id: '507f1f77bcf86cd799439011' } };
-    const res: any = { json: jest.fn() };
-    const next = jest.fn();
+    const req = { body: { question: 'Q', organizationId: 'o1' }, user: { id: '507f1f77bcf86cd799439011' }, cookies: {} as Record<string, unknown> } as import('../../../src/types/auth-request').AuthRequest;
+    const res = { json: jest.fn() } as Partial<import('express').Response>;
+    const next = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
 
     await askQuestion(req, res, next);
 
