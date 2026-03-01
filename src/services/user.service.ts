@@ -148,11 +148,9 @@ export async function updateAvatar(id: string, { avatar }: UpdateAvatarDto): Pro
   if (!user) {
     try {
       // Debug information for intermittent test failures: log id and total users
-      // eslint-disable-next-line no-console
       console.warn('[user.service] updateAvatar - user not found for id:', id);
-      // eslint-disable-next-line no-console
       console.warn('[user.service] total users in collection:', await User.countDocuments());
-    } catch (e) {
+    } catch {
       // ignore logging errors
     }
     throw new HttpError(404, 'User not found');

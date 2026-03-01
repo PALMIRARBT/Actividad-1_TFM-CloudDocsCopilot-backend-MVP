@@ -127,24 +127,20 @@ jest.mock('../src/middlewares/auth.middleware', () => {
   // Instrument Model.deleteMany to detect accidental wipes during tests
   try {
     const originalDeleteMany = RealUser.deleteMany.bind(RealUser);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     RealUser.deleteMany = async function (filter: unknown) {
-      // eslint-disable-next-line no-console
       console.warn('[TEST-MOCK] RealUser.deleteMany called with filter:', filter);
-      // eslint-disable-next-line no-console
       console.warn(new Error('[TEST-MOCK] deleteMany stack').stack);
       // Call original
       // @ts-ignore - allow calling original mongoose Model method
       return originalDeleteMany(filter as any);
     };
-  } catch (e) {
+  } catch {
     // ignore instrumentation failures
   }
   const HttpError = jest.requireActual('../src/models/error.model').default;
 
   async function authenticateToken(req: any, _res: any, next: any) {
     // Debug: indicate mock loaded (won't print in CI unless test run)
-    // eslint-disable-next-line no-console
     console.log('[TEST-MOCK] authenticateToken invoked');
     // Try cookie first
     let token: string | undefined;
@@ -172,7 +168,6 @@ jest.mock('../src/middlewares/auth.middleware', () => {
       // some test runners may invoke middleware before those writes are
       // visible across separate mongoose instances. Log the decoded id
       // instead of performing `countDocuments()` which caused noisy 0 counts.
-      // eslint-disable-next-line no-console
       console.log('[TEST-MOCK] token decoded for user:', String(decoded.id));
       req.user = {
         id: String(decoded.id),
