@@ -27,8 +27,8 @@ module.exports = {
     '@typescript-eslint/no-unsafe-argument': 'error',
 
     // Buenas prácticas de TypeScript
-    '@typescript-eslint/explicit-function-return-type': 'warn',
-    '@typescript-eslint/explicit-module-boundary-types': 'warn',
+    '@typescript-eslint/explicit-function-return-type': 'off',
+    '@typescript-eslint/explicit-module-boundary-types': 'off',
 
     // Evitar console.log en producción
     'no-console': ['warn', { allow: ['warn', 'error'] }],

@@ -1,6 +1,6 @@
 // Extend Express Request type to include 'user'
 import { Request } from 'express';
-describe('authenticateToken middleware', () => {
+describe('authenticateToken middleware', (): void => {
   const baseReq = (): Partial<import('express').Request> => ({ headers: {}, cookies: {} as unknown as Record<string, string> });
 
   afterEach(() => {
@@ -8,7 +8,7 @@ describe('authenticateToken middleware', () => {
     jest.resetModules();
   });
 
-  it('returns 401 when token is missing', async () => {
+  it('returns 401 when token is missing', async (): Promise<void> => {
     jest.resetModules();
     const { authenticateToken } = (await import('../../../src/middlewares/auth.middleware')) as unknown as typeof import('../../../src/middlewares/auth.middleware');
 
@@ -70,7 +70,7 @@ describe('authenticateToken middleware', () => {
     expect(err.message).toMatch(/Token expired/);
   });
 
-  it('returns 401 when user not found', async () => {
+  it('returns 401 when user not found', async (): Promise<void> => {
     jest.resetModules();
     jest.mock('../../../src/services/jwt.service', () => ({
       verifyToken: jest.fn(() => ({ id: 'u1' }))
@@ -98,7 +98,7 @@ describe('authenticateToken middleware', () => {
     expect(err.message).toMatch(/User no longer exists/);
   });
 
-  it('returns 401 when user is deactivated', async () => {
+  it('returns 401 when user is deactivated', async (): Promise<void> => {
     jest.resetModules();
     jest.mock('../../../src/services/jwt.service', () => ({
       verifyToken: jest.fn(() => ({ id: 'u1' }))
@@ -124,7 +124,7 @@ describe('authenticateToken middleware', () => {
     expect(err.message).toMatch(/User account deactivated/);
   });
 
-  it('invalidates token on email mismatch', async () => {
+  it('invalidates token on email mismatch', async (): Promise<void> => {
     jest.resetModules();
     jest.mock('../../../src/services/jwt.service', () => ({
       verifyToken: jest.fn(() => ({ id: 'u1', email: 'a@x' }))
@@ -150,7 +150,7 @@ describe('authenticateToken middleware', () => {
     expect(err.message).toMatch(/email change/);
   });
 
-  it('invalidates token on tokenVersion mismatch', async () => {
+  it('invalidates token on tokenVersion mismatch', async (): Promise<void> => {
     jest.resetModules();
     jest.mock('../../../src/services/jwt.service', () => ({
       verifyToken: jest.fn(() => ({ id: 'u1', tokenVersion: 2 }))
@@ -178,7 +178,7 @@ describe('authenticateToken middleware', () => {
     expect(err.message).toMatch(/password change/);
   });
 
-  it('succeeds and sets req.user and refreshes cookie when token valid', async () => {
+  it('succeeds and sets req.user and refreshes cookie when token valid', async (): Promise<void> => {
     jest.resetModules();
     jest.mock('../../../src/services/jwt.service', () => ({
       verifyToken: jest.fn(() => ({ id: 'u1', email: 'a@x', tokenVersion: 1 }))

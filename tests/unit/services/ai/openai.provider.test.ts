@@ -9,32 +9,32 @@ jest.mock('../../../../src/configurations/openai-config', () => ({
 
 import { OpenAIProvider } from '../../../../src/services/ai/providers/openai.provider';
 
-describe('OpenAIProvider', () => {
+describe('OpenAIProvider', (): void => {
   let provider: OpenAIProvider;
 
   beforeEach(() => {
     provider = new OpenAIProvider();
   });
 
-  test('getters return expected values', () => {
+  test('getters return expected values', (): void => {
     expect(provider.getEmbeddingDimensions()).toBe(1536);
     expect(typeof provider.getEmbeddingModel()).toBe('string');
     expect(typeof provider.getChatModel()).toBe('string');
   });
 
-  test('generateEmbedding throws on empty text', async () => {
+  test('generateEmbedding throws on empty text', async (): Promise<void> => {
     await expect(provider.generateEmbedding('')).rejects.toThrow('Text cannot be empty');
   });
 
-  test('generateEmbeddings throws on empty array', async () => {
+  test('generateEmbeddings throws on empty array', async (): Promise<void> => {
     await expect(provider.generateEmbeddings([])).rejects.toThrow('Texts array cannot be empty');
   });
 
-  test('generateResponse throws on empty prompt', async () => {
+  test('generateResponse throws on empty prompt', async (): Promise<void> => {
     await expect(provider.generateResponse('')).rejects.toThrow('Prompt cannot be empty');
   });
 
-  test('classifyDocument returns fallback on invalid JSON', async () => {
+  test('classifyDocument returns fallback on invalid JSON', async (): Promise<void> => {
     // spy generateResponse to return non-json
     const mockResp = { response: 'not json', model: 'm', tokens: { prompt: 0, completion: 0, total: 0 } };
     type ResponseShape = { response: string; model: string; tokens: { prompt: number; completion: number; total: number } };
@@ -45,7 +45,7 @@ describe('OpenAIProvider', () => {
     expect(res).toHaveProperty('confidence');
   });
 
-  test('summarizeDocument returns fallback on invalid JSON', async () => {
+  test('summarizeDocument returns fallback on invalid JSON', async (): Promise<void> => {
     const mockResp = { response: 'no json', model: 'm', tokens: { prompt: 0, completion: 0, total: 0 } };
     type ResponseShape = { response: string; model: string; tokens: { prompt: number; completion: number; total: number } };
     type GenResp = { generateResponse: (input: string) => Promise<ResponseShape> };

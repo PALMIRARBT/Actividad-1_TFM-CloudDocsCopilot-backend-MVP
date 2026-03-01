@@ -27,7 +27,7 @@ jest.mock('openai', () => {
   };
 });
 
-describe('OpenAI Configuration', () => {
+describe('OpenAI Configuration', (): void => {
   let originalEnv: NodeJS.ProcessEnv;
 
   beforeEach(() => {
@@ -43,8 +43,8 @@ describe('OpenAI Configuration', () => {
     process.env = originalEnv;
   });
 
-  describe('getOpenAIClient', () => {
-    it('should return OpenAI client instance when API key is configured', () => {
+  describe('getOpenAIClient', (): void => {
+    it('should return OpenAI client instance when API key is configured', (): void => {
       process.env.OPENAI_API_KEY = 'test-api-key-123';
 
       const client = OpenAIClient.getInstance();
@@ -53,7 +53,7 @@ describe('OpenAI Configuration', () => {
       expect(client.chat).toBeDefined();
     });
 
-    it('should throw error when API key is not configured', async () => {
+    it('should throw error when API key is not configured', async (): Promise<void> => {
       delete process.env.OPENAI_API_KEY;
 
       jest.resetModules();
@@ -75,7 +75,7 @@ describe('OpenAI Configuration', () => {
       expect(client1).toBe(client2);
     });
 
-    it('should reject empty API key', async () => {
+    it('should reject empty API key', async (): Promise<void> => {
       process.env.OPENAI_API_KEY = '';
 
       jest.resetModules();
@@ -88,7 +88,7 @@ describe('OpenAI Configuration', () => {
       }).toThrow('OPENAI_API_KEY');
     });
 
-    it('should reject whitespace-only API key', async () => {
+    it('should reject whitespace-only API key', async (): Promise<void> => {
       process.env.OPENAI_API_KEY = '   ';
 
       jest.resetModules();
@@ -101,7 +101,7 @@ describe('OpenAI Configuration', () => {
       }).toThrow('OPENAI_API_KEY');
     });
 
-    it('should handle API key from environment correctly', () => {
+    it('should handle API key from environment correctly', (): void => {
       const testKey = 'sk-test-key-from-env-12345';
       process.env.OPENAI_API_KEY = testKey;
 
@@ -110,7 +110,7 @@ describe('OpenAI Configuration', () => {
       expect(client).toBeDefined();
     });
 
-    it('should expose chat completions API', () => {
+    it('should expose chat completions API', (): void => {
       process.env.OPENAI_API_KEY = 'test-key';
 
       const client = OpenAIClient.getInstance();
@@ -119,7 +119,7 @@ describe('OpenAI Configuration', () => {
       expect(client.chat.completions).toBeDefined();
     });
 
-    it('should be ready for embeddings API', () => {
+    it('should be ready for embeddings API', (): void => {
       process.env.OPENAI_API_KEY = 'test-key';
 
       const client = OpenAIClient.getInstance();
@@ -129,7 +129,7 @@ describe('OpenAI Configuration', () => {
     });
   });
 
-  describe('configuration validation', () => {
+  describe('configuration validation', (): void => {
     it('should validate API key format (starts with sk-)', () => {
       // OpenAI keys typically start with 'sk-'
       process.env.OPENAI_API_KEY = 'sk-valid-key-format';
@@ -139,7 +139,7 @@ describe('OpenAI Configuration', () => {
       expect(client).toBeDefined();
     });
 
-    it('should accept various valid API key formats', () => {
+    it('should accept various valid API key formats', (): void => {
       const validKeys = ['sk-test123', 'sk-proj-abc123', 'test-key-for-dev'];
 
       validKeys.forEach(key => {
@@ -151,8 +151,8 @@ describe('OpenAI Configuration', () => {
     });
   });
 
-  describe('error handling', () => {
-    it('should provide helpful error message when key is missing', async () => {
+  describe('error handling', (): void => {
+    it('should provide helpful error message when key is missing', async (): Promise<void> => {
       delete process.env.OPENAI_API_KEY;
 
       jest.resetModules();
@@ -172,7 +172,7 @@ describe('OpenAI Configuration', () => {
       }
     });
 
-    it('should handle undefined environment variable', async () => {
+    it('should handle undefined environment variable', async (): Promise<void> => {
       process.env.OPENAI_API_KEY = undefined as unknown as string;
 
       jest.resetModules();

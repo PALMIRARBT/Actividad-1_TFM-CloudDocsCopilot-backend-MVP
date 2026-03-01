@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 /**
  * Tests de integración para gestión de perfil de usuario
  */
-describe('User Profile Management', () => {
+describe('User Profile Management', (): void => {
   let token: string;
   let userId: string;
   let organizationId: string;
@@ -65,7 +65,7 @@ describe('User Profile Management', () => {
     token = maybeToken;
   });
 
-  describe('PUT /api/users/:id - Update Profile & Preferences', () => {
+  describe('PUT /api/users/:id - Update Profile & Preferences', (): void => {
     it('should update user preferences (partial update)', async () => {
       const updateData = {
         preferences: {
@@ -96,7 +96,7 @@ describe('User Profile Management', () => {
       expect(userInDb!.preferences.aiAnalysis).toBe(true);
     });
 
-    it('should update user profile info without affecting preferences', async () => {
+    it('should update user profile info without affecting preferences', async (): Promise<void> => {
       const newName = 'Updated Name';
       const response = await request(app)
         .put(`/api/users/${userId}`)
@@ -116,8 +116,8 @@ describe('User Profile Management', () => {
     });
   });
 
-  describe('PATCH /api/users/:id/avatar - Avatar Upload', () => {
-    it('should accept an avatar URL via JSON', async () => {
+  describe('PATCH /api/users/:id/avatar - Avatar Upload', (): void => {
+    it('should accept an avatar URL via JSON', async (): Promise<void> => {
       const avatarUrl = 'https://example.com/avatar.jpg';
 
       const response = await request(app)
@@ -131,7 +131,7 @@ describe('User Profile Management', () => {
       expect(user['avatar']).toBe(avatarUrl);
     });
 
-    it('should accept an image file via multipart/form-data', async () => {
+    it('should accept an image file via multipart/form-data', async (): Promise<void> => {
       const buffer = Buffer.from('fake image content');
 
       const response = await request(app)
@@ -146,8 +146,8 @@ describe('User Profile Management', () => {
     });
   });
 
-  describe('DELETE /api/users/me - Danger Zone', () => {
-    it('should allow user to delete their own account', async () => {
+  describe('DELETE /api/users/me - Danger Zone', (): void => {
+    it('should allow user to delete their own account', async (): Promise<void> => {
       // Create user to delete first, to avoid breaking other tests if shared state (though beforeEach handles this)
       await request(app)
         .delete('/api/users/me')

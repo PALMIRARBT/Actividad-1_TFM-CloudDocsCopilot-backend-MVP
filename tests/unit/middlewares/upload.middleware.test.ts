@@ -16,7 +16,7 @@ type MulterFile = {
   buffer?: Buffer;
 };
 
-describe('upload.middleware', () => {
+describe('upload.middleware', (): void => {
   it('fileFilter allows known mimetype', (done): void => {
     const file: MulterFile & { stream: NodeJS.ReadableStream } = {
       fieldname: 'file',

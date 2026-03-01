@@ -25,7 +25,7 @@ jest.mock('../../../src/services/search.service', () => ({
   getAutocompleteSuggestions: jest.fn().mockResolvedValue([])
 }));
 
-describe('AI Classification & Summarization - Integration Tests', () => {
+describe('AI Classification & Summarization - Integration Tests', (): void => {
   let authCookies: string[];
   let userId: string;
   let organizationId: string;
@@ -60,8 +60,8 @@ describe('AI Classification & Summarization - Integration Tests', () => {
     rootFolderId = user.rootFolder.toString();
   });
 
-  describe('POST /api/ai/documents/:documentId/classify - Manual Classification', () => {
-    it('should classify a document with extracted text', async () => {
+  describe('POST /api/ai/documents/:documentId/classify - Manual Classification', (): void => {
+    it('should classify a document with extracted text', async (): Promise<void> => {
       // Crear documento con texto extraído simulado (tipo contrato)
       const document = await DocumentModel.create({
         filename: 'contrato-servicios.pdf',
@@ -120,7 +120,7 @@ describe('AI Classification & Summarization - Integration Tests', () => {
       expect(updatedDoc?.aiTags).toEqual(body.data?.tags as unknown[]);
     });
 
-    it('should return 400 if document has no extracted text', async () => {
+    it('should return 400 if document has no extracted text', async (): Promise<void> => {
       // Documento sin texto extraído
       const document = await DocumentModel.create({
         filename: 'sin-texto.pdf',
@@ -143,7 +143,7 @@ describe('AI Classification & Summarization - Integration Tests', () => {
       expect(body.error).toContain('no extracted text');
     });
 
-    it('should return 404 for non-existent document', async () => {
+    it('should return 404 for non-existent document', async (): Promise<void> => {
       const fakeId = '507f1f77bcf86cd799439011';
 
       const response = await request(app)
@@ -156,7 +156,7 @@ describe('AI Classification & Summarization - Integration Tests', () => {
       expect(body.error).toContain('not found');
     });
 
-    it('should return 403 if user does not have access to document', async () => {
+    it('should return 403 if user does not have access to document', async (): Promise<void> => {
       // Crear otro usuario usando registerAndLogin
       const otherAuth = await registerAndLogin({
         name: 'Other User',
@@ -194,8 +194,8 @@ describe('AI Classification & Summarization - Integration Tests', () => {
     });
   });
 
-  describe('POST /api/ai/documents/:documentId/summarize - Manual Summarization', () => {
-    it('should summarize a document with extracted text', async () => {
+  describe('POST /api/ai/documents/:documentId/summarize - Manual Summarization', (): void => {
+    it('should summarize a document with extracted text', async (): Promise<void> => {
       // Crear documento con texto largo
       const document = await DocumentModel.create({
         filename: 'informe-trimestral.pdf',
@@ -261,7 +261,7 @@ describe('AI Classification & Summarization - Integration Tests', () => {
       expect(updatedDoc?.aiKeyPoints).toEqual(body.data?.keyPoints as unknown[]);
     });
 
-    it('should return 400 if document has no extracted text', async () => {
+    it('should return 400 if document has no extracted text', async (): Promise<void> => {
       const document = await DocumentModel.create({
         filename: 'vacio.pdf',
         mimeType: 'application/pdf',
@@ -284,8 +284,8 @@ describe('AI Classification & Summarization - Integration Tests', () => {
     });
   });
 
-  describe('Automatic Classification on Upload', () => {
-    it('should automatically classify and summarize during processing job', async () => {
+  describe('Automatic Classification on Upload', (): void => {
+    it('should automatically classify and summarize during processing job', async (): Promise<void> => {
       // Este test verifica la clasificación y resumen manual
       // (El job automático requiere archivos físicos, se prueba en auto-processing.test.ts)
 
@@ -354,8 +354,8 @@ describe('AI Classification & Summarization - Integration Tests', () => {
     }, 30000); // Timeout extendido para procesamiento AI
   });
 
-  describe('Category Validation', () => {
-    it('should only return valid categories from DOCUMENT_CATEGORIES', async () => {
+  describe('Category Validation', (): void => {
+    it('should only return valid categories from DOCUMENT_CATEGORIES', async (): Promise<void> => {
       const document = await DocumentModel.create({
         filename: 'manual-usuario.pdf',
         mimeType: 'application/pdf',
@@ -411,8 +411,8 @@ describe('AI Classification & Summarization - Integration Tests', () => {
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle AI provider errors gracefully', async () => {
+  describe('Error Handling', (): void => {
+    it('should handle AI provider errors gracefully', async (): Promise<void> => {
       // Este test verifica que si el proveedor de IA falla,
       // el endpoint devuelve un error apropiado
 

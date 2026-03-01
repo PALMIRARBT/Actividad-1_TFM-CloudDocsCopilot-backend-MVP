@@ -18,17 +18,17 @@ describe('TextExtractionService (unit, deterministic)', () => {
     jest.clearAllMocks();
   });
 
-  it('countWords via private method works', () => {
+  it('countWords via private method works', (): void => {
     const n = textExtractionService.countWords('one two  three');
     expect(n).toBe(3);
   });
 
-  it('isSupportedMimeType and getSupportedMimeTypes', () => {
+  it('isSupportedMimeType and getSupportedMimeTypes', (): void => {
     expect(textExtractionService.isSupportedMimeType('text/plain')).toBe(true);
     expect(Array.isArray(textExtractionService.getSupportedMimeTypes())).toBe(true);
   });
 
-  it('extractFromTextAsync reads file and returns expected shape', async () => {
+  it('extractFromTextAsync reads file and returns expected shape', async (): Promise<void> => {
     // Mock fs.promises.readFile with proper typing
     type FSProms = { readFile: (path: string, enc?: string) => Promise<string | Buffer> };
     jest.spyOn(fs.promises as unknown as FSProms, 'readFile').mockResolvedValueOnce('hello world');

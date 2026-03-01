@@ -25,7 +25,7 @@ import { OllamaProvider } from '../../../../src/services/ai/providers/ollama.pro
 type GenResp = { response: string };
 
 describe('OllamaProvider (unit, deterministic)', () => {
-  it('generateEmbedding returns embedding with correct dimensions and model', async () => {
+  it('generateEmbedding returns embedding with correct dimensions and model', async (): Promise<void> => {
     const provider = new OllamaProvider();
 
     const res = await provider.generateEmbedding('hello');
@@ -34,12 +34,12 @@ describe('OllamaProvider (unit, deterministic)', () => {
     expect(res.model).toBe(provider.getEmbeddingModel());
   });
 
-  it('generateEmbedding rejects empty text', async () => {
+  it('generateEmbedding rejects empty text', async (): Promise<void> => {
     const provider = new OllamaProvider();
     await expect(provider.generateEmbedding('')).rejects.toThrow('Text cannot be empty');
   });
 
-  it('generateEmbeddings processes array and returns same length', async () => {
+  it('generateEmbeddings processes array and returns same length', async (): Promise<void> => {
     const provider = new OllamaProvider();
     const texts = ['a', 'b', 'c'];
     const res = await provider.generateEmbeddings(texts);
@@ -47,7 +47,7 @@ describe('OllamaProvider (unit, deterministic)', () => {
     expect(res[0].embedding.length).toBe(provider.getEmbeddingDimensions());
   });
 
-  it('classifyDocument parses JSON response from generateResponse', async () => {
+  it('classifyDocument parses JSON response from generateResponse', async (): Promise<void> => {
     const provider = new OllamaProvider();
 
     // Spy on the instance method and return typed response
@@ -63,7 +63,7 @@ describe('OllamaProvider (unit, deterministic)', () => {
     expect(Array.isArray(cls.tags)).toBe(true);
   });
 
-  it('summarizeDocument parses JSON response from generateResponse', async () => {
+  it('summarizeDocument parses JSON response from generateResponse', async (): Promise<void> => {
     const provider = new OllamaProvider();
     const payload = { summary: 'short', keyPoints: ['a', 'b', 'c'] };
       const mockValue = {

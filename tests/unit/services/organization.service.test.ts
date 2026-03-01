@@ -17,7 +17,7 @@ describe('organization.service (unit)', () => {
 
   afterEach((): void => jest.restoreAllMocks());
 
-  it('createOrganization throws 404 when owner not found', async () => {
+  it('createOrganization throws 404 when owner not found', async (): Promise<void> => {
     const User = await import('../../../src/models/user.model');
     (User as unknown as { findById: jest.Mock }).findById.mockResolvedValue(null);
 
@@ -26,7 +26,7 @@ describe('organization.service (unit)', () => {
     ).rejects.toThrow('Owner user not found');
   });
 
-  it('getOrganizationById throws 404 when not found', async () => {
+  it('getOrganizationById throws 404 when not found', async (): Promise<void> => {
     const Organization = await import('../../../src/models/organization.model');
     (Organization as unknown as { findById: jest.Mock }).findById.mockReturnValue({ populate: () => ({ populate: () => Promise.resolve(null) }) } as unknown);
 
@@ -35,7 +35,7 @@ describe('organization.service (unit)', () => {
     );
   });
 
-  it('getOrganizationStorageStats throws 404 when org not found', async () => {
+  it('getOrganizationStorageStats throws 404 when org not found', async (): Promise<void> => {
     const Organization = await import('../../../src/models/organization.model');
     (Organization as unknown as { findById: jest.Mock }).findById.mockResolvedValue(null);
 

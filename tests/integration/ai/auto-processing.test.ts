@@ -53,7 +53,7 @@ import { processDocumentAI } from '../../../src/jobs/process-document-ai.job';
 // Use require to ensure Jest's mock factory is applied and we get the mocked module
 let textExtractionService: { extractText: jest.Mock; isSupportedMimeType: jest.Mock };
 
-describe('Auto-processing AI Integration Tests', () => {
+describe('Auto-processing AI Integration Tests', (): void => {
   const testOrganizationId = '507f1f77bcf86cd799439011';
 
   beforeAll(async (): Promise<void> => {
@@ -115,8 +115,8 @@ describe('Auto-processing AI Integration Tests', () => {
     await DocumentModel.deleteMany({});
   });
 
-  describe('processDocumentAI', () => {
-    it('should extract text and update document status to completed', async () => {
+  describe('processDocumentAI', (): void => {
+    it('should extract text and update document status to completed', async (): Promise<void> => {
       // Arrange: Crear documento de prueba
       const doc = await DocumentModel.create({
         filename: 'test-document.txt',
@@ -149,7 +149,7 @@ describe('Auto-processing AI Integration Tests', () => {
       expect(updatedDoc?.aiError).toBeNull();
     });
 
-    it('should mark document as completed without processing if MIME type is unsupported', async () => {
+    it('should mark document as completed without processing if MIME type is unsupported', async (): Promise<void> => {
       // Arrange: Crear documento con MIME type no soportado
       const doc = await DocumentModel.create({
         filename: 'test-video.mp4',
@@ -178,7 +178,7 @@ describe('Auto-processing AI Integration Tests', () => {
       expect(updatedDoc?.aiProcessedAt).toBeInstanceOf(Date);
     });
 
-    it('should mark document as failed if extraction throws error', async () => {
+    it('should mark document as failed if extraction throws error', async (): Promise<void> => {
       // Arrange: Crear documento con path inválido
       const doc = await DocumentModel.create({
         filename: 'nonexistent.txt',
@@ -209,7 +209,7 @@ describe('Auto-processing AI Integration Tests', () => {
       expect(updatedDoc?.aiError).toContain('not found'); // Error de archivo no encontrado
     });
 
-    it('should not reprocess document if already completed', async () => {
+    it('should not reprocess document if already completed', async (): Promise<void> => {
       // Arrange: Documento ya procesado
       const doc = await DocumentModel.create({
         filename: 'already-processed.txt',
@@ -265,8 +265,8 @@ describe('Auto-processing AI Integration Tests', () => {
     });
   });
 
-  describe('Text Extraction Service Integration', () => {
-    it('should support common document types', () => {
+  describe('Text Extraction Service Integration', (): void => {
+    it('should support common document types', (): void => {
       expect(textExtractionService.isSupportedMimeType('text/plain')).toBe(true);
       expect(textExtractionService.isSupportedMimeType('application/pdf')).toBe(true);
       expect(
@@ -278,7 +278,7 @@ describe('Auto-processing AI Integration Tests', () => {
       expect(textExtractionService.isSupportedMimeType('text/markdown')).toBe(true);
     });
 
-    it('should reject unsupported document types', () => {
+    it('should reject unsupported document types', (): void => {
       expect(textExtractionService.isSupportedMimeType('video/mp4')).toBe(false);
       expect(textExtractionService.isSupportedMimeType('audio/mpeg')).toBe(false);
       // Images are supported via OCR
@@ -286,8 +286,8 @@ describe('Auto-processing AI Integration Tests', () => {
     });
   });
 
-  describe('AI Status Tracking', () => {
-    it('should track processing status through lifecycle', async () => {
+  describe('AI Status Tracking', (): void => {
+    it('should track processing status through lifecycle', async (): Promise<void> => {
       // Arrange: Documento inicial
       const doc = await DocumentModel.create({
         filename: 'lifecycle-test.txt',
@@ -315,7 +315,7 @@ describe('Auto-processing AI Integration Tests', () => {
       expect(finalDoc?.aiError).toBeNull();
     });
 
-    it('should initialize new documents with status "pending"', async () => {
+    it('should initialize new documents with status "pending"', async (): Promise<void> => {
       const doc = await DocumentModel.create({
         filename: 'new-doc.txt',
         originalname: 'New Document.txt',

@@ -11,7 +11,7 @@ import Organization from '../../src/models/organization.model';
  * Tests de integración para endpoints de Membership
  * Prueba la gestión de membresías, invitaciones, roles y organización activa
  */
-describe('Membership Endpoints', () => {
+describe('Membership Endpoints', (): void => {
   let ownerCookies: string[];
   let ownerUserId: string;
   let adminCookies: string[];
@@ -123,7 +123,7 @@ describe('Membership Endpoints', () => {
     }
   });
 
-  describe('GET /api/memberships/my-organizations', () => {
+  describe('GET /api/memberships/my-organizations', (): void => {
     it('should return all organizations where user is member', async (): Promise<void> => {
       const response = await request(app)
         .get('/api/memberships/my-organizations')
@@ -148,7 +148,7 @@ describe('Membership Endpoints', () => {
     });
   });
 
-  describe('GET /api/memberships/active-organization', () => {
+  describe('GET /api/memberships/active-organization', (): void => {
     it('should return active organization for user', async (): Promise<void> => {
       const response = await request(app)
         .get('/api/memberships/active-organization')
@@ -168,7 +168,7 @@ describe('Membership Endpoints', () => {
     });
   });
 
-  describe('POST /api/memberships/set-active', () => {
+  describe('POST /api/memberships/set-active', (): void => {
     it('should switch active organization successfully', async (): Promise<void> => {
       const response = await request(app)
         .post('/api/memberships/set-active')
@@ -216,7 +216,7 @@ describe('Membership Endpoints', () => {
     });
   });
 
-  describe('GET /api/memberships/organization/:organizationId/members', () => {
+  describe('GET /api/memberships/organization/:organizationId/members', (): void => {
     it('should return all members of organization', async (): Promise<void> => {
       const response = await request(app)
         .get(`/api/memberships/organization/${organizationId}/members`)
@@ -255,7 +255,7 @@ describe('Membership Endpoints', () => {
     });
   });
 
-  describe('POST /api/memberships/organization/:organizationId/members', () => {
+  describe('POST /api/memberships/organization/:organizationId/members', (): void => {
     it('should invite user to organization successfully (as owner)', async (): Promise<void> => {
       const newUserAuth = await registerAndLogin({
         name: 'New User',
@@ -341,7 +341,7 @@ describe('Membership Endpoints', () => {
     });
   });
 
-  describe('PATCH /api/memberships/organization/:organizationId/members/:membershipId', () => {
+  describe('PATCH /api/memberships/organization/:organizationId/members/:membershipId', (): void => {
     it('should update member role successfully (as owner)', async (): Promise<void> => {
       expect(memberMembershipId).toBeDefined();
 
@@ -415,7 +415,7 @@ describe('Membership Endpoints', () => {
     });
   });
 
-  describe('DELETE /api/memberships/organization/:organizationId/members/:membershipId', () => {
+  describe('DELETE /api/memberships/organization/:organizationId/members/:membershipId', (): void => {
     it('should remove member successfully (as owner)', async (): Promise<void> => {
       // First invite a new user to remove
       const toRemoveAuth = await registerAndLogin({
@@ -522,7 +522,7 @@ describe('Membership Endpoints', () => {
     });
   });
 
-  describe('DELETE /api/memberships/:organizationId/leave', () => {
+  describe('DELETE /api/memberships/:organizationId/leave', (): void => {
     it('should allow member to leave organization', async (): Promise<void> => {
       // Create a new user to leave
       const toLeaveAuth = await registerAndLogin({

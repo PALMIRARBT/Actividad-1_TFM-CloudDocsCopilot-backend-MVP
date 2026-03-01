@@ -152,7 +152,7 @@ describe('notification.service (unit)', () => {
     };
   };
 
-  describe('createNotificationForUser', () => {
+  describe('createNotificationForUser', (): void => {
     it('throws 400 for invalid ids (organizationId, recipientUserId, actorUserId, entityId)', async () => {
       await expect(
         notificationService.createNotificationForUser({
@@ -272,7 +272,7 @@ describe('notification.service (unit)', () => {
       expect(res).toBe(created);
     });
 
-    it('uses defaultEmitter when emitter not provided and swallows emitToUser errors', async () => {
+    it('uses defaultEmitter when emitter not provided and swallows emitToUser errors', async (): Promise<void> => {
       const organizationId = oid();
       const recipientUserId = oid();
       const actorUserId = oid();
@@ -340,7 +340,7 @@ describe('notification.service (unit)', () => {
     });
   });
 
-  describe('notifyMembersOfOrganization', () => {
+  describe('notifyMembersOfOrganization', (): void => {
     it('throws 400 for invalid ids (organizationId, actorUserId, entityId)', async () => {
       await expect(
         notificationService.notifyMembersOfOrganization({
@@ -470,7 +470,7 @@ describe('notification.service (unit)', () => {
       expect(res).toBe(inserted);
     });
 
-    it('uses defaultEmitter when emitter not provided and swallows emitToUser errors', async () => {
+    it('uses defaultEmitter when emitter not provided and swallows emitToUser errors', async (): Promise<void> => {
       const organizationId = oid();
       const actorUserId = oid();
       const entityId = oid();
@@ -512,7 +512,7 @@ describe('notification.service (unit)', () => {
       expect(getActiveOrganization).not.toHaveBeenCalled();
     });
 
-    it('filters out falsy membership user ids and returns [] if all are invalid', async () => {
+    it('filters out falsy membership user ids and returns [] if all are invalid', async (): Promise<void> => {
       Membership.find.mockReturnValue(makeQueryChain<Partial<MembershipRecipient>>([{ user: null }, {}, { user: undefined }]));
 
       const res = await notificationService.notifyMembersOfOrganization({
@@ -567,8 +567,8 @@ describe('notification.service (unit)', () => {
     });
   });
 
-  describe('notifyOrganizationMembers', () => {
-    it('throws 400 for invalid actorUserId', async () => {
+  describe('notifyOrganizationMembers', (): void => {
+    it('throws 400 for invalid actorUserId', async (): Promise<void> => {
       await expect(
         notificationService.notifyOrganizationMembers({
           actorUserId: 'bad',
@@ -578,7 +578,7 @@ describe('notification.service (unit)', () => {
       ).rejects.toThrow('Invalid actor user ID');
     });
 
-    it('throws 400 for invalid entityId when using entityKind+entityId', async () => {
+    it('throws 400 for invalid entityId when using entityKind+entityId', async (): Promise<void> => {
       await expect(
         notificationService.notifyOrganizationMembers({
           actorUserId: oid(),
@@ -598,7 +598,7 @@ describe('notification.service (unit)', () => {
       ).rejects.toThrow('Missing entityId (or documentId) for notification');
     });
 
-    it('throws 403 when no active organization', async () => {
+    it('throws 403 when no active organization', async (): Promise<void> => {
       getActiveOrganization.mockResolvedValue(null);
 
       await expect(
@@ -706,7 +706,7 @@ describe('notification.service (unit)', () => {
       expect(res).toBe(inserted);
     });
 
-    it('uses defaultEmitter when emitter not provided and swallows emitToUser errors', async () => {
+    it('uses defaultEmitter when emitter not provided and swallows emitToUser errors', async (): Promise<void> => {
       const actorUserId = oid();
       const documentId = oid();
       const activeOrgId = oid();
@@ -747,7 +747,7 @@ describe('notification.service (unit)', () => {
       expect(emitToUser).toHaveBeenCalledTimes(1);
     });
 
-    it('filters out falsy membership user ids and returns [] if all are invalid', async () => {
+    it('filters out falsy membership user ids and returns [] if all are invalid', async (): Promise<void> => {
       getActiveOrganization.mockResolvedValue(oid());
 
       Membership.find.mockReturnValue({
@@ -841,8 +841,8 @@ describe('notification.service (unit)', () => {
     });
   });
 
-  describe('listNotifications', () => {
-    it('throws 400 for invalid userId', async () => {
+  describe('listNotifications', (): void => {
+    it('throws 400 for invalid userId', async (): Promise<void> => {
       await expect(notificationService.listNotifications({ userId: 'bad' })).rejects.toThrow(
         'Invalid user ID'
       );
@@ -926,7 +926,7 @@ describe('notification.service (unit)', () => {
       );
     });
 
-    it('when organizationId provided but invalid: treats as no org context and returns only INVITATION_CREATED', async () => {
+    it('when organizationId provided but invalid: treats as no org context and returns only INVITATION_CREATED', async (): Promise<void> => {
       const userId = oid();
 
       const qc = makeQueryChain<unknown>([]);
@@ -938,7 +938,7 @@ describe('notification.service (unit)', () => {
       ).rejects.toThrow('No active organization. Please create or join an organization first.');
     });
 
-    it('adds readAt=null filter when unreadOnly is true', async () => {
+    it('adds readAt=null filter when unreadOnly is true', async (): Promise<void> => {
       const userId = oid();
       const orgId = oid();
 
@@ -959,8 +959,8 @@ describe('notification.service (unit)', () => {
     });
   });
 
-  describe('markNotificationRead', () => {
-    it('throws 400 for invalid userId or notificationId', async () => {
+  describe('markNotificationRead', (): void => {
+    it('throws 400 for invalid userId or notificationId', async (): Promise<void> => {
       await expect(notificationService.markNotificationRead('bad', oid())).rejects.toThrow(
         'Invalid user ID'
       );
@@ -970,7 +970,7 @@ describe('notification.service (unit)', () => {
       );
     });
 
-    it('throws 404 when updateOne matchedCount is 0', async () => {
+    it('throws 404 when updateOne matchedCount is 0', async (): Promise<void> => {
       NotificationModel.updateOne.mockResolvedValue({ matchedCount: 0 });
 
       await expect(notificationService.markNotificationRead(oid(), oid())).rejects.toThrow(
@@ -978,7 +978,7 @@ describe('notification.service (unit)', () => {
       );
     });
 
-    it('updates readAt when notification exists', async () => {
+    it('updates readAt when notification exists', async (): Promise<void> => {
       const userId = oid();
       const notificationId = oid();
       NotificationModel.updateOne.mockResolvedValue({ matchedCount: 1 });
@@ -998,8 +998,8 @@ describe('notification.service (unit)', () => {
     });
   });
 
-  describe('markAllRead', () => {
-    it('throws 400 for invalid userId', async () => {
+  describe('markAllRead', (): void => {
+    it('throws 400 for invalid userId', async (): Promise<void> => {
       await expect(notificationService.markAllRead('bad')).rejects.toThrow('Invalid user ID');
     });
 
@@ -1078,7 +1078,7 @@ describe('notification.service (unit)', () => {
       expect(filterArg.$or).toBeUndefined();
     });
 
-    it('when organizationId provided but invalid: treats as no org context and marks only INVITATION_CREATED', async () => {
+    it('when organizationId provided but invalid: treats as no org context and marks only INVITATION_CREATED', async (): Promise<void> => {
       const userId = oid();
 
       NotificationModel.updateMany.mockResolvedValue({ acknowledged: true });

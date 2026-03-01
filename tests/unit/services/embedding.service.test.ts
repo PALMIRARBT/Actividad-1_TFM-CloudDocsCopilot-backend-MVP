@@ -40,7 +40,7 @@ let embeddingService: EmbeddingServiceType;
 let mockProvider: ProviderStub;
 
 // Tests that work with current mock setup (dimension validation tests moved to separate file)
-describe('Embedding Service', () => {
+describe('Embedding Service', (): void => {
   beforeEach(async (): Promise<void> => {
     // Reset modules and mock the provider factory so we control provider behaviour
     jest.resetModules();
@@ -60,7 +60,7 @@ describe('Embedding Service', () => {
     embeddingService = (mod as unknown as { embeddingService: EmbeddingServiceType }).embeddingService;
   });
 
-  describe('generateEmbedding', () => {
+  describe('generateEmbedding', (): void => {
     it('should generate embedding for valid text', async (): Promise<void> => {
       const mockEmbedding = Array(1536)
         .fill(0)
@@ -117,7 +117,7 @@ describe('Embedding Service', () => {
     });
   });
 
-  describe('generateEmbeddings', () => {
+  describe('generateEmbeddings', (): void => {
     it('should generate embeddings for multiple texts', async (): Promise<void> => {
       const mockEmbeddings = [Array(1536).fill(0.1), Array(1536).fill(0.2), Array(1536).fill(0.3)];
 

@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 
-describe('emailService', () => {
+describe('emailService', (): void => {
   const sendMailMock: jest.Mock = jest.fn();
 
   beforeEach(() => {
@@ -13,7 +13,7 @@ describe('emailService', () => {
     sendMailMock.mockReset();
   });
 
-  it('sends an email using nodemailer transport', async () => {
+  it('sends an email using nodemailer transport', async (): Promise<void> => {
     jest.resetModules();
     jest.mock('nodemailer', () => ({
       default: { createTransport: jest.fn(() => ({ sendMail: sendMailMock })) },
@@ -30,7 +30,7 @@ describe('emailService', () => {
     expect(sendMailMock).toHaveBeenCalledWith({ from: 'me@example.com', to: 'to@example.com', subject: 'subj', html: '<b>hi</b>' });
   });
 
-  it('respects EMAIL_ALLOW_INSECURE_TLS=true', async () => {
+  it('respects EMAIL_ALLOW_INSECURE_TLS=true', async (): Promise<void> => {
     process.env.EMAIL_ALLOW_INSECURE_TLS = 'true';
     jest.resetModules();
     jest.mock('nodemailer', () => ({
@@ -45,7 +45,7 @@ describe('emailService', () => {
     expect((cfg.tls as Record<string, unknown>).rejectUnauthorized).toBe(false);
   });
 
-  it('uses secure=true when EMAIL_SECURE=true', async () => {
+  it('uses secure=true when EMAIL_SECURE=true', async (): Promise<void> => {
     process.env.EMAIL_SECURE = 'true';
     jest.resetModules();
     jest.mock('nodemailer', () => ({
@@ -60,7 +60,7 @@ describe('emailService', () => {
     expect(cfg.secure).toBe(true);
   });
 
-  it('uses secure=true when port is 465', async () => {
+  it('uses secure=true when port is 465', async (): Promise<void> => {
     process.env.EMAIL_PORT = '465';
     process.env.EMAIL_SECURE = 'false';
     jest.resetModules();
@@ -75,7 +75,7 @@ describe('emailService', () => {
     expect((cfgRec.secure as boolean)).toBe(true);
   });
 
-  it('throws when transporter.sendMail rejects', async () => {
+  it('throws when transporter.sendMail rejects', async (): Promise<void> => {
     jest.resetModules();
     jest.mock('nodemailer', () => ({
       __esModule: true,
@@ -88,7 +88,7 @@ describe('emailService', () => {
     await expect(sendConfirmationEmail('x', 'y', 'z')).rejects.toThrow('fail');
   });
 
-  it('passes correct auth credentials from env', async () => {
+  it('passes correct auth credentials from env', async (): Promise<void> => {
     process.env.EMAIL_USER = 'user1';
     process.env.EMAIL_PASS = 'pass1';
     jest.resetModules();
@@ -108,7 +108,7 @@ describe('emailService', () => {
     expect(auth.pass).toBe('pass1');
   });
 
-  it('supports different ports and host settings', async () => {
+  it('supports different ports and host settings', async (): Promise<void> => {
     process.env.EMAIL_PORT = '2525';
     process.env.EMAIL_HOST = 'mail.test';
     jest.resetModules();
@@ -130,7 +130,7 @@ describe('emailService', () => {
 jest.resetModules();
 jest.unmock('../../../src/mail/emailService');
 
-describe('Email Service', () => {
+describe('Email Service', (): void => {
   const originalEnv = process.env;
 
   beforeEach(() => {
@@ -148,8 +148,8 @@ describe('Email Service', () => {
     process.env = originalEnv;
   });
 
-  describe('sendConfirmationEmail', () => {
-    it('should send email successfully and return message info', async () => {
+  describe('sendConfirmationEmail', (): void => {
+    it('should send email successfully and return message info', async (): Promise<void> => {
       // Arrange
       jest.mock('nodemailer', () => ({
         default: { createTransport: () => ({
@@ -174,7 +174,7 @@ describe('Email Service', () => {
       ).resolves.toBeDefined();
     });
 
-    it('should call sendMail with correct parameters', async () => {
+    it('should call sendMail with correct parameters', async (): Promise<void> => {
       // Arrange
       const mockSendMail = jest.fn().mockResolvedValue({ accepted: [], messageId: 'test' });
       jest.mock('nodemailer', () => ({
@@ -196,7 +196,7 @@ describe('Email Service', () => {
       });
     });
 
-    it('should use secure TLS by default', async () => {
+    it('should use secure TLS by default', async (): Promise<void> => {
       // Arrange
       let capturedConfig: unknown;
       jest.mock('nodemailer', () => ({
@@ -220,7 +220,7 @@ describe('Email Service', () => {
       expect((config.tls as Record<string, unknown>).rejectUnauthorized).toBe(true);
     });
 
-    it('should allow insecure TLS when flag is true', async () => {
+    it('should allow insecure TLS when flag is true', async (): Promise<void> => {
       // Arrange
       jest.resetModules();
       process.env.EMAIL_ALLOW_INSECURE_TLS = 'true';
@@ -247,7 +247,7 @@ describe('Email Service', () => {
       expect((config.tls as Record<string, unknown>).rejectUnauthorized).toBe(false);
     });
 
-    it('should set secure true for port 465', async () => {
+    it('should set secure true for port 465', async (): Promise<void> => {
       // Arrange
       jest.resetModules();
       process.env.EMAIL_PORT = '465';
@@ -275,7 +275,7 @@ describe('Email Service', () => {
       expect(config.secure).toBe(true);
     });
 
-    it('should propagate transporter errors', async () => {
+    it('should propagate transporter errors', async (): Promise<void> => {
       // Arrange
       jest.mock('nodemailer', () => ({
         default: { createTransport: () => ({
@@ -294,7 +294,7 @@ describe('Email Service', () => {
       ).rejects.toThrow('SMTP failed');
     });
 
-    it('should set secure true when EMAIL_SECURE is explicitly true', async () => {
+    it('should set secure true when EMAIL_SECURE is explicitly true', async (): Promise<void> => {
       // Arrange
       jest.resetModules();
       process.env.EMAIL_SECURE = 'true';
@@ -321,7 +321,7 @@ describe('Email Service', () => {
       expect(config.secure).toBe(true);
     });
 
-    it('should use default port 587 when EMAIL_PORT is not set', async () => {
+    it('should use default port 587 when EMAIL_PORT is not set', async (): Promise<void> => {
       // Arrange
       jest.resetModules();
       delete process.env.EMAIL_PORT;
@@ -344,7 +344,7 @@ describe('Email Service', () => {
       expect(config.port).toBe(587);
     });
 
-    it('should handle authentication errors', async () => {
+    it('should handle authentication errors', async (): Promise<void> => {
       // Arrange
       jest.mock('nodemailer', () => ({
         default: { createTransport: () => ({
@@ -367,7 +367,7 @@ describe('Email Service', () => {
       ).rejects.toThrow('Invalid login');
     });
 
-    it('should send email with HTML content', async () => {
+    it('should send email with HTML content', async (): Promise<void> => {
       // Arrange
       const mockSendMail = jest.fn().mockResolvedValue({
         accepted: ['user@example.com'],
@@ -391,7 +391,7 @@ describe('Email Service', () => {
       );
     });
 
-    it('should use EMAIL_USER as from address', async () => {
+    it('should use EMAIL_USER as from address', async (): Promise<void> => {
       // Arrange
       jest.resetModules();
       process.env.EMAIL_USER = 'noreply@company.com';

@@ -9,7 +9,7 @@ beforeEach(async () => {
   getCorsOptions = ((mod as { default?: () => CorsOptions }).default ?? (mod as () => CorsOptions)) as () => CorsOptions;
 });
 
-describe('cors-config', () => {
+describe('cors-config', (): void => {
   beforeEach(() => {
     jest.resetModules();
     delete process.env.NODE_ENV;
@@ -17,7 +17,7 @@ describe('cors-config', () => {
     delete process.env.ALLOW_NO_ORIGIN;
   });
 
-  it('returns development options by default and allows localhost origin', () => {
+  it('returns development options by default and allows localhost origin', (): void => {
     process.env.NODE_ENV = 'development';
     const opts = getCorsOptions();
     const originFn = opts.origin as (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void;
@@ -35,7 +35,7 @@ describe('cors-config', () => {
     expect(cb).toHaveBeenCalledWith(null, true);
   });
 
-  it('production blocks when ALLOWED_ORIGINS not set', () => {
+  it('production blocks when ALLOWED_ORIGINS not set', (): void => {
     process.env.NODE_ENV = 'production';
     const opts = getCorsOptions();
     const originFn = opts.origin as (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => void;
@@ -44,7 +44,7 @@ describe('cors-config', () => {
     expect(cb).toHaveBeenCalled();
   });
 
-  it('production allows origin in ALLOWED_ORIGINS', () => {
+  it('production allows origin in ALLOWED_ORIGINS', (): void => {
     process.env.NODE_ENV = 'production';
     process.env.ALLOWED_ORIGINS = 'https://app.example.com,https://www.example.com';
     const opts = getCorsOptions();
@@ -54,7 +54,7 @@ describe('cors-config', () => {
     expect(cb).toHaveBeenCalledWith(null, true);
   });
 
-  it('production rejects missing origin header when ALLOW_NO_ORIGIN is false', () => {
+  it('production rejects missing origin header when ALLOW_NO_ORIGIN is false', (): void => {
     process.env.NODE_ENV = 'production';
     process.env.ALLOWED_ORIGINS = 'https://app.example.com';
     process.env.ALLOW_NO_ORIGIN = 'false';

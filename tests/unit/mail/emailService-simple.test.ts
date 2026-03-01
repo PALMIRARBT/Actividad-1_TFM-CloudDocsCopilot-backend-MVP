@@ -17,8 +17,8 @@ describe('EmailService (Simple)', () => {
     process.env = originalEnv;
   });
 
-  describe('sendConfirmationEmail', () => {
-    it('should send email successfully', async () => {
+  describe('sendConfirmationEmail', (): void => {
+    it('should send email successfully', async (): Promise<void> => {
       // Arrange
       jest.mock('nodemailer', () => ({
         createTransport: () => ({
@@ -40,7 +40,7 @@ describe('EmailService (Simple)', () => {
       expect(result.messageId).toBe('test-123');
     });
 
-    it('should call sendMail with correct parameters', async () => {
+    it('should call sendMail with correct parameters', async (): Promise<void> => {
       // Arrange
       const mockSendMail: jest.Mock = jest.fn().mockResolvedValue({ messageId: 'test-456' });
 

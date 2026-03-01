@@ -7,8 +7,8 @@ import { UserBuilder } from '../builders';
  * Tests de validación de contraseñas
  * Prueba que las contraseñas cumplan con los requisitos de seguridad
  */
-describe('Password Validation', () => {
-  describe('POST /api/auth/register - Password Strength', () => {
+describe('Password Validation', (): void => {
+  describe('POST /api/auth/register - Password Strength', (): void => {
     // Agregar delay entre cada test para evitar rate limiting
     afterEach(async () => {
       await mediumDelay();
@@ -16,14 +16,14 @@ describe('Password Validation', () => {
 
     // Tests dinámicos usando fixture de contraseñas débiles
     weakPasswordUsers.forEach(testCase => {
-      it(`should reject password: ${testCase.expectedError}`, async () => {
+      it(`should reject password: ${testCase.expectedError}`, async (): Promise<void> => {
         const response = await request(app).post('/api/auth/register').send(testCase).expect(400);
         const body = response.body as unknown as Record<string, unknown>;
         expect((body['error'] as string)).toContain(testCase.expectedError);
       });
     });
 
-    it('should accept strong password', async () => {
+    it('should accept strong password', async (): Promise<void> => {
       // Crear organización de prueba primero
       const auth = await registerAndLogin();
 
@@ -41,8 +41,8 @@ describe('Password Validation', () => {
     });
   });
 
-  describe('PATCH /api/users/:id/password - Change Password Validation', () => {
-    it('should reject weak new password', async () => {
+  describe('PATCH /api/users/:id/password - Change Password Validation', (): void => {
+    it('should reject weak new password', async (): Promise<void> => {
       // Register and login user for this test
       const oldPassword = 'OldPass@123';
       const auth = await registerAndLogin({
@@ -67,7 +67,7 @@ describe('Password Validation', () => {
       expect((body['error'] as string)).toContain('Password validation failed');
     });
 
-    it('should reject new password without special character', async () => {
+    it('should reject new password without special character', async (): Promise<void> => {
       // Register and login user for this test
       const oldPassword = 'OldPass@123';
       const auth = await registerAndLogin({
@@ -92,7 +92,7 @@ describe('Password Validation', () => {
       expect((body['error'] as string)).toContain('special character');
     });
 
-    it('should accept strong new password', async () => {
+    it('should accept strong new password', async (): Promise<void> => {
       // Register and login user for this test
       const oldPassword = 'OldPass@123';
       const auth = await registerAndLogin({

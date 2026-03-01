@@ -27,8 +27,8 @@ afterEach(() => {
   delete process.env.NODE_ENV;
 });
 
-describe('Auth Service - email branches', () => {
-  it('registerUser sends confirmation email when enabled', async () => {
+describe('Auth Service - email branches', (): void => {
+  it('registerUser sends confirmation email when enabled', async (): Promise<void> => {
     process.env.SEND_CONFIRMATION_EMAIL = 'true';
     process.env.NODE_ENV = 'production';
     mockBcryptHashEmail.mockResolvedValue('h');
@@ -55,7 +55,7 @@ describe('Auth Service - email branches', () => {
     expect(res).toHaveProperty('_id');
   });
 
-  it('registerUser swallows email errors and still returns user', async () => {
+  it('registerUser swallows email errors and still returns user', async (): Promise<void> => {
     process.env.SEND_CONFIRMATION_EMAIL = 'true';
     process.env.NODE_ENV = 'production';
     mockBcryptHashEmail.mockResolvedValue('h');

@@ -8,7 +8,7 @@ import { FolderBuilder } from '../builders';
  * Tests de integración para endpoints de carpetas
  * Prueba creación, listado, eliminación y renombrado de carpetas
  */
-describe('Folder Endpoints', () => {
+describe('Folder Endpoints', (): void => {
   let authCookies: string[];
   let userId: string;
   let organizationId: string;
@@ -35,8 +35,8 @@ describe('Folder Endpoints', () => {
     return (res.body as unknown) as Record<string, unknown>;
   }
 
-  describe('POST /api/folders', () => {
-    it('should create a new folder', async () => {
+  describe('POST /api/folders', (): void => {
+    it('should create a new folder', async (): Promise<void> => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
       const response = await request(app)
         .post('/api/folders')
@@ -57,7 +57,7 @@ describe('Folder Endpoints', () => {
       expect((folder['owner'] as unknown as { toString: () => string }).toString()).toBe(userId);
     });
 
-    it('should fail without authentication token', async () => {
+    it('should fail without authentication token', async (): Promise<void> => {
       const response = await request(app)
         .post('/api/folders')
         .send({ name: basicFolder.name })
@@ -97,8 +97,8 @@ describe('Folder Endpoints', () => {
     });
   });
 
-  describe('GET /api/folders', () => {
-    it('should list user folders', async () => {
+  describe('GET /api/folders', (): void => {
+    it('should list user folders', async (): Promise<void> => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
       // Create some folders
       for (const folder of multipleFolders.slice(0, 2)) {
@@ -125,13 +125,13 @@ describe('Folder Endpoints', () => {
       expect((folders as unknown[]).length).toBeGreaterThanOrEqual(2);
     });
 
-    it('should fail without authentication', async () => {
+    it('should fail without authentication', async (): Promise<void> => {
       await request(app).get('/api/folders').expect(401);
     });
   });
 
-  describe('DELETE /api/folders/:id', () => {
-    it('should delete an empty folder', async () => {
+  describe('DELETE /api/folders/:id', (): void => {
+    it('should delete an empty folder', async (): Promise<void> => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
       const createResponse = await request(app)
         .post('/api/folders')
@@ -151,14 +151,14 @@ describe('Folder Endpoints', () => {
         .expect(200);
     });
 
-    it('should fail to delete folder with documents without force', async () => {
+    it('should fail to delete folder with documents without force', async (): Promise<void> => {
       // This test would require creating documents in the folder first
       // Left as skeleton for future implementation
     });
   });
 
-  describe('PATCH /api/folders/:id', () => {
-    it('should rename a folder', async () => {
+  describe('PATCH /api/folders/:id', (): void => {
+    it('should rename a folder', async (): Promise<void> => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
       const originalFolder = new FolderBuilder().withName('Nombre Original').build();
       const newName = 'Nuevo Nombre';
@@ -187,7 +187,7 @@ describe('Folder Endpoints', () => {
       expect(folder['name']).toBe(newName);
     });
 
-    it('should fail without authentication', async () => {
+    it('should fail without authentication', async (): Promise<void> => {
       await request(app).patch('/api/folders/123456').send({ name: 'Nuevo Nombre' }).expect(401);
     });
   });

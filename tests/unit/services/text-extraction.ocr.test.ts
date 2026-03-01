@@ -4,7 +4,7 @@
 import path from 'path';
 import fs from 'fs';
 
-describe('TextExtractionService OCR unit tests', () => {
+describe('TextExtractionService OCR unit tests', (): void => {
   const fixturesDir = path.join(process.cwd(), 'tests', 'fixtures', 'test-files');
 
   beforeAll((): void => {

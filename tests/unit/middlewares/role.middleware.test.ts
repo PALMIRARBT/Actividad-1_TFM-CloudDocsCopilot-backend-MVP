@@ -2,8 +2,8 @@ import type { Request, Response, NextFunction } from 'express';
 import HttpError from '../../../src/models/error.model';
 import { requireAdmin } from '../../../src/middlewares/role.middleware';
 
-describe('requireAdmin middleware', () => {
-  it('returns 403 when no user present', () => {
+describe('requireAdmin middleware', (): void => {
+  it('returns 403 when no user present', (): void => {
     const req = {} as Partial<Request>;
     const res = {} as Partial<Response>;
     const next = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
@@ -16,7 +16,7 @@ describe('requireAdmin middleware', () => {
     expect(err.statusCode).toBe(403);
   });
 
-  it('returns 403 when user is not admin', () => {
+  it('returns 403 when user is not admin', (): void => {
     const req = { user: { role: 'member' } } as Partial<Request>;
     const res = {} as Partial<Response>;
     const next = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
@@ -29,7 +29,7 @@ describe('requireAdmin middleware', () => {
     expect(err.statusCode).toBe(403);
   });
 
-  it('calls next without error when user is admin', () => {
+  it('calls next without error when user is admin', (): void => {
     const req = { user: { role: 'admin' } } as Partial<Request>;
     const res = {} as Partial<Response>;
     const next = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;

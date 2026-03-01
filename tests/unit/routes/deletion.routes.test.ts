@@ -1,7 +1,7 @@
 import express from 'express';
 import deletionRoutes from '../../../src/routes/deletion.routes';
 
-describe('Deletion Routes', () => {
+describe('Deletion Routes', (): void => {
   let router: express.Router;
 
   beforeEach(() => {
@@ -9,8 +9,8 @@ describe('Deletion Routes', () => {
     router = deletionRoutes;
   });
 
-  describe('Route Configuration', () => {
-    it('should export an Express router', () => {
+  describe('Route Configuration', (): void => {
+    it('should export an Express router', (): void => {
       // Arrange
       // (router already assigned in beforeEach)
 
@@ -22,7 +22,7 @@ describe('Deletion Routes', () => {
       expect(router.stack).toBeDefined();
     });
 
-    it('should have configured GET /trash route', () => {
+    it('should have configured GET /trash route', (): void => {
       // Arrange
       const routes = router.stack
         .filter((layer) => layer.route)
@@ -36,7 +36,7 @@ describe('Deletion Routes', () => {
       expect(hasTrashRoute).toBe(true);
     });
 
-    it('should have configured DELETE /trash route', () => {
+    it('should have configured DELETE /trash route', (): void => {
       // Arrange
       const routes = router.stack
         .filter((layer) => layer.route)
@@ -50,7 +50,7 @@ describe('Deletion Routes', () => {
       expect(hasTrashRoute).toBe(true);
     });
 
-    it('should have configured POST /:id/trash route', () => {
+    it('should have configured POST /:id/trash route', (): void => {
       // Arrange
       const routes = router.stack
         .filter((layer) => layer.route)
@@ -64,7 +64,7 @@ describe('Deletion Routes', () => {
       expect(hasRoute).toBe(true);
     });
 
-    it('should have configured POST /:id/restore route', () => {
+    it('should have configured POST /:id/restore route', (): void => {
       // Arrange
       const routes = router.stack
         .filter((layer) => layer.route)
@@ -78,7 +78,7 @@ describe('Deletion Routes', () => {
       expect(hasRoute).toBe(true);
     });
 
-    it('should have configured DELETE /:id/permanent route', () => {
+    it('should have configured DELETE /:id/permanent route', (): void => {
       // Arrange
       const routes = router.stack
         .filter((layer) => layer.route)
@@ -92,7 +92,7 @@ describe('Deletion Routes', () => {
       expect(hasRoute).toBe(true);
     });
 
-    it('should have configured GET /:id/history route', () => {
+    it('should have configured GET /:id/history route', (): void => {
       // Arrange
       const routes = router.stack
         .filter((layer) => layer.route)
@@ -106,7 +106,7 @@ describe('Deletion Routes', () => {
       expect(hasRoute).toBe(true);
     });
 
-    it('should apply middleware to all routes', () => {
+    it('should apply middleware to all routes', (): void => {
       // Arrange
       const middlewares = router.stack.filter((layer) => !layer.route && layer.handle);
 

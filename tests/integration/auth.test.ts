@@ -9,7 +9,7 @@ import mongoose from 'mongoose';
  * Tests de integración para endpoints de autenticación
  * Prueba el registro, login y validaciones de seguridad
  */
-describe('Auth Endpoints', () => {
+describe('Auth Endpoints', (): void => {
   let testOrgId: string;
 
   type ApiBody = { success?: boolean; user?: unknown; message?: string; error?: string };
@@ -29,8 +29,8 @@ describe('Auth Endpoints', () => {
     testOrgId = org._id.toString();
   });
 
-  describe('POST /api/auth/register', () => {
-    it('should register a new user', async () => {
+  describe('POST /api/auth/register', (): void => {
+    it('should register a new user', async (): Promise<void> => {
       const userData = new UserBuilder().withUniqueEmail('test').withStrongPassword().build();
 
       const response = await request(app)
@@ -44,7 +44,7 @@ describe('Auth Endpoints', () => {
       expect(userObj['email']).toBe(userData.email);
     });
 
-    it('should fail with incomplete data', async () => {
+    it('should fail with incomplete data', async (): Promise<void> => {
       const userData = {
         email: new UserBuilder().withUniqueEmail('incomplete').build().email
         // Missing name and password
@@ -55,7 +55,7 @@ describe('Auth Endpoints', () => {
       expect(b.error).toBeDefined();
     });
 
-    it('should fail with duplicate email', async () => {
+    it('should fail with duplicate email', async (): Promise<void> => {
       const userData = new UserBuilder()
         .withName('Usuario Test')
         .withEmail('duplicate@example.com')
@@ -78,7 +78,7 @@ describe('Auth Endpoints', () => {
     });
   });
 
-  describe('POST /api/auth/login', () => {
+  describe('POST /api/auth/login', (): void => {
     beforeEach(async () => {
       // Register user before each login test
       await request(app)
@@ -86,7 +86,7 @@ describe('Auth Endpoints', () => {
         .send({ ...authUser, organizationId: testOrgId });
     });
 
-    it('should login with correct credentials', async () => {
+    it('should login with correct credentials', async (): Promise<void> => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
@@ -110,7 +110,7 @@ describe('Auth Endpoints', () => {
       expect(tokenCookie).toMatch(/HttpOnly/);
     });
 
-    it('should fail with incorrect credentials', async () => {
+    it('should fail with incorrect credentials', async (): Promise<void> => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
@@ -123,7 +123,7 @@ describe('Auth Endpoints', () => {
       expect(b.error).toBeDefined();
     });
 
-    it('should fail with non-existent email', async () => {
+    it('should fail with non-existent email', async (): Promise<void> => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
@@ -137,7 +137,7 @@ describe('Auth Endpoints', () => {
     });
   });
 
-  describe('POST /api/auth/logout', () => {
+  describe('POST /api/auth/logout', (): void => {
     beforeEach(async () => {
       // Register user before logout test
       await request(app)
@@ -145,7 +145,7 @@ describe('Auth Endpoints', () => {
         .send({ ...authUser, organizationId: testOrgId });
     });
 
-    it('should logout successfully and clear cookie', async () => {
+    it('should logout successfully and clear cookie', async (): Promise<void> => {
       // Primero hacer login
       const loginResponse = await request(app)
         .post('/api/auth/login')

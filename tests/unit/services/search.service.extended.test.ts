@@ -40,7 +40,7 @@ beforeAll(async (): Promise<void> => {
 
 const S = (): typeof import('../../../src/services/search.service') => svc as unknown as typeof import('../../../src/services/search.service');
 
-describe('SearchService - Extended Coverage', () => {
+describe('SearchService - Extended Coverage', (): void => {
   it('indexes and removes without throwing on 404', async (): Promise<void> => {
     const doc: unknown = {
       _id: { toString: () => 'doc1' },

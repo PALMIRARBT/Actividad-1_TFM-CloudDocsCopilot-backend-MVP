@@ -5,7 +5,7 @@ const mockGetInstanceNull = jest.fn();
 
 afterEach((): void => jest.clearAllMocks());
 
-describe('search.service - indexDocument null fields', () => {
+describe('search.service - indexDocument null fields', (): void => {
   it('indexDocument handles null organization and folder', async (): Promise<void> => {
     const client = { index: jest.fn().mockResolvedValue(true) };
     const es = (await import('../../../src/configurations/elasticsearch-config')) as unknown as {

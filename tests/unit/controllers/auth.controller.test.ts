@@ -15,7 +15,7 @@ jest.mock('../../../src/services/auth.service');
 
 const mockedAuthService = jest.mocked(authService, { shallow: false });
 
-describe('Auth Controller', () => {
+describe('Auth Controller', (): void => {
   let mockRequest: Partial<AuthRequest>;
   let mockResponse: Partial<Response>;
   let mockNext: jest.MockedFunction<(err?: unknown) => void>;
@@ -36,7 +36,7 @@ describe('Auth Controller', () => {
     jest.clearAllMocks();
   });
 
-  describe('register', () => {
+  describe('register', (): void => {
     it('should register user successfully with valid data', async (): Promise<void> => {
       mockRequest.body = {
         name: 'Test User',
@@ -177,7 +177,7 @@ describe('Auth Controller', () => {
     });
   });
 
-  describe('login', () => {
+  describe('login', (): void => {
     it('should login user successfully and set HttpOnly cookie', async (): Promise<void> => {
       mockRequest.body = {
         email: 'test@example.com',
@@ -318,7 +318,7 @@ describe('Auth Controller', () => {
     });
   });
 
-  describe('logout', () => {
+  describe('logout', (): void => {
     it('should clear token cookie successfully', async (): Promise<void> => {
       await logout(mockRequest as unknown as AuthRequest, mockResponse as unknown as Response, mockNext);
 
@@ -362,7 +362,7 @@ describe('Auth Controller', () => {
     });
   });
 
-  describe('confirmAccount', () => {
+  describe('confirmAccount', (): void => {
     it('should confirm account and redirect with confirmed status', async (): Promise<void> => {
       mockRequest.params = { token: 'valid-token-123' };
 
@@ -429,7 +429,7 @@ describe('Auth Controller', () => {
     });
   });
 
-  describe('forgotPassword', () => {
+  describe('forgotPassword', (): void => {
     it('should process password reset request successfully', async (): Promise<void> => {
       mockRequest.body = { email: 'test@example.com' };
 
@@ -464,7 +464,7 @@ describe('Auth Controller', () => {
     });
   });
 
-  describe('resetPasswordController', () => {
+  describe('resetPasswordController', (): void => {
     it('should reset password successfully', async (): Promise<void> => {
       mockRequest.body = {
         token: 'reset-token-123',

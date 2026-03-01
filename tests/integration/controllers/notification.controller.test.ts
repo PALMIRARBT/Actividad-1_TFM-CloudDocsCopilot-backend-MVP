@@ -35,7 +35,7 @@ function makeRes(): Response {
 describe('notification.controller (unit)', () => {
   afterEach(() => jest.clearAllMocks());
 
-  describe('list', () => {
+  describe('list', (): void => {
     it('parses query params (defaults) and returns payload', async () => {
       const req = {
         user: { id: 'user1' },
@@ -117,8 +117,8 @@ describe('notification.controller (unit)', () => {
     });
   });
 
-  describe('markRead', () => {
-    it('returns 400 when id missing', async () => {
+  describe('markRead', (): void => {
+    it('returns 400 when id missing', async (): Promise<void> => {
       const req = {
         user: { id: 'user1' },
         params: {}
@@ -136,7 +136,7 @@ describe('notification.controller (unit)', () => {
       expect((err as Error).message).toBe('Notification ID is required');
     });
 
-    it('marks notification as read', async () => {
+    it('marks notification as read', async (): Promise<void> => {
       const req = {
         user: { id: 'user1' },
         params: { id: 'n1' }
@@ -175,8 +175,8 @@ describe('notification.controller (unit)', () => {
     });
   });
 
-  describe('markAllRead', () => {
-    it('uses organizationId from body if provided', async () => {
+  describe('markAllRead', (): void => {
+    it('uses organizationId from body if provided', async (): Promise<void> => {
       const req = {
         user: { id: 'user1' },
         body: { organizationId: 'org1' }
@@ -197,7 +197,7 @@ describe('notification.controller (unit)', () => {
       expect(next).not.toHaveBeenCalled();
     });
 
-    it('passes undefined organizationId when body missing', async () => {
+    it('passes undefined organizationId when body missing', async (): Promise<void> => {
       const req = {
         user: { id: 'user1' },
         body: undefined

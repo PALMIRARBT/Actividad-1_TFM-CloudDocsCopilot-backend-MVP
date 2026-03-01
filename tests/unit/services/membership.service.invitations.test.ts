@@ -31,15 +31,15 @@ jest.mock('path', () => ({ join: (...args: any[]) => args.join('/') }));
 
 afterEach(() => jest.clearAllMocks());
 
-describe('membership.service invitations', () => {
-  it('createInvitation validates userId format', async () => {
+describe('membership.service invitations', (): void => {
+  it('createInvitation validates userId format', async (): Promise<void> => {
     const { createInvitation } = (await import('../../../src/services/membership.service')) as unknown as typeof import('../../../src/services/membership.service');
     await expect(
       createInvitation({ userId: 'bad', organizationId: 'o1', invitedBy: 'i1' } as unknown as { userId: string; organizationId: string; invitedBy: string })
     ).rejects.toThrow();
   });
 
-  it('createInvitation handles organization not found', async () => {
+  it('createInvitation handles organization not found', async (): Promise<void> => {
     // mock findById to return a chainable query with populate()
     mockOrgFindById.mockReturnValue({ populate: jest.fn().mockResolvedValue(null) });
     const { createInvitation } = (await import('../../../src/services/membership.service')) as unknown as typeof import('../../../src/services/membership.service');
@@ -52,7 +52,7 @@ describe('membership.service invitations', () => {
     ).rejects.toThrow('Organization not found');
   });
 
-  it('createInvitation handles user/inviter missing', async () => {
+  it('createInvitation handles user/inviter missing', async (): Promise<void> => {
     const org = {
       _id: 'o1',
       active: true,
@@ -73,7 +73,7 @@ describe('membership.service invitations', () => {
     ).rejects.toThrow('User not found');
   });
 
-  it('createInvitation returns membership and sends email on success', async () => {
+  it('createInvitation returns membership and sends email on success', async (): Promise<void> => {
     const org = {
       _id: 'o1',
       active: true,

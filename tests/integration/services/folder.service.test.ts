@@ -10,7 +10,7 @@ import * as path from 'path';
 
 let mongoServer: MongoMemoryServer;
 
-describe('FolderService Integration Tests', () => {
+describe('FolderService Integration Tests', (): void => {
   let testUserId: mongoose.Types.ObjectId;
   let testUser2Id: mongoose.Types.ObjectId;
   let testOrgId: mongoose.Types.ObjectId;
@@ -126,8 +126,8 @@ describe('FolderService Integration Tests', () => {
     }
   });
 
-  describe('validateFolderAccess', () => {
-    it('should validate owner access', async () => {
+  describe('validateFolderAccess', (): void => {
+    it('should validate owner access', async (): Promise<void> => {
       const result = await folderService.validateFolderAccess(
         rootFolderId.toString(),
         testUserId.toString(),
@@ -137,7 +137,7 @@ describe('FolderService Integration Tests', () => {
       expect(result).toBe(true);
     });
 
-    it('should fail if user does not have required role', async () => {
+    it('should fail if user does not have required role', async (): Promise<void> => {
       // Compartir carpeta con viewer role
       const folder = await Folder.findById(rootFolderId);
       folder!.shareWith(testUser2Id.toString(), 'viewer');
@@ -148,7 +148,7 @@ describe('FolderService Integration Tests', () => {
       ).rejects.toThrow('User does not have owner access to this folder');
     });
 
-    it('should fail if folder does not exist', async () => {
+    it('should fail if folder does not exist', async (): Promise<void> => {
       const fakeId = new mongoose.Types.ObjectId();
 
       await expect(
@@ -157,8 +157,8 @@ describe('FolderService Integration Tests', () => {
     });
   });
 
-  describe('createFolder', () => {
-    it('should create a folder with required parentId', async () => {
+  describe('createFolder', (): void => {
+    it('should create a folder with required parentId', async (): Promise<void> => {
       const newFolder = await folderService.createFolder({
         name: 'Projects',
         displayName: 'My Projects',
@@ -176,7 +176,7 @@ describe('FolderService Integration Tests', () => {
       expect(newFolder.path).toContain('Projects');
     });
 
-    it('should create physical directory', async () => {
+    it('should create physical directory', async (): Promise<void> => {
       await folderService.createFolder({
         name: 'Documents',
         owner: testUserId.toString(),
@@ -189,7 +189,7 @@ describe('FolderService Integration Tests', () => {
       expect(fs.existsSync(userPath)).toBe(true);
     });
 
-    it('should fail without parentId', async () => {
+    it('should fail without parentId', async (): Promise<void> => {
       await expect(
         folderService.createFolder({
           name: 'Invalid Folder',
@@ -200,7 +200,7 @@ describe('FolderService Integration Tests', () => {
       ).rejects.toThrow('Parent folder ID is required');
     });
 
-    it('should fail if parent folder does not exist', async () => {
+    it('should fail if parent folder does not exist', async (): Promise<void> => {
       const fakeParentId = new mongoose.Types.ObjectId();
 
       await expect(
@@ -213,7 +213,7 @@ describe('FolderService Integration Tests', () => {
       ).rejects.toThrow('Folder not found');
     });
 
-    it('should fail if user does not have editor access to parent', async () => {
+    it('should fail if user does not have editor access to parent', async (): Promise<void> => {
       // User2 no tiene acceso a la carpeta raíz de User1
       await expect(
         folderService.createFolder({
@@ -226,8 +226,8 @@ describe('FolderService Integration Tests', () => {
     });
   });
 
-  describe('getFolderContents', () => {
-    it('should return folder with subfolders and documents', async () => {
+  describe('getFolderContents', (): void => {
+    it('should return folder with subfolders and documents', async (): Promise<void> => {
       // Crear subcarpeta
       const subfolder = await Folder.create({
         name: 'Subfolder',
@@ -263,7 +263,7 @@ describe('FolderService Integration Tests', () => {
       expect(result.documents[0]._id).toEqual(document._id);
     });
 
-    it('should fail if user does not have access', async () => {
+    it('should fail if user does not have access', async (): Promise<void> => {
       await expect(
         folderService.getFolderContents({
           folderId: rootFolderId.toString(),
@@ -273,8 +273,8 @@ describe('FolderService Integration Tests', () => {
     });
   });
 
-  describe('getUserFolderTree', () => {
-    it('should return hierarchical folder tree', async () => {
+  describe('getUserFolderTree', (): void => {
+    it('should return hierarchical folder tree', async (): Promise<void> => {
       // Crear estructura de carpetas
       const folder1 = await Folder.create({
         name: 'Folder1',
@@ -309,8 +309,8 @@ describe('FolderService Integration Tests', () => {
     });
   });
 
-  describe('shareFolder', () => {
-    it('should share folder with another user', async () => {
+  describe('shareFolder', (): void => {
+    it('should share folder with another user', async (): Promise<void> => {
       const sharedFolder = await folderService.shareFolder({
         folderId: rootFolderId.toString(),
         userId: testUserId.toString(),
@@ -325,7 +325,7 @@ describe('FolderService Integration Tests', () => {
       expect(hasAccess).toBe(true);
     });
 
-    it('should fail if user is not owner', async () => {
+    it('should fail if user is not owner', async (): Promise<void> => {
       // User2 no es owner
       await expect(
         folderService.shareFolder({
@@ -337,7 +337,7 @@ describe('FolderService Integration Tests', () => {
       ).rejects.toThrow('User does not have owner access to this folder');
     });
 
-    it('should fail if target user does not exist', async () => {
+    it('should fail if target user does not exist', async (): Promise<void> => {
       const fakeUserId = new mongoose.Types.ObjectId();
 
       await expect(
@@ -351,8 +351,8 @@ describe('FolderService Integration Tests', () => {
     });
   });
 
-  describe('deleteFolder', () => {
-    it('should delete empty folder', async () => {
+  describe('deleteFolder', (): void => {
+    it('should delete empty folder', async (): Promise<void> => {
       const folder = await Folder.create({
         name: 'EmptyFolder',
         type: 'folder',
@@ -374,7 +374,7 @@ describe('FolderService Integration Tests', () => {
       expect(deletedFolder).toBeNull();
     });
 
-    it('should fail to delete folder with documents without force', async () => {
+    it('should fail to delete folder with documents without force', async (): Promise<void> => {
       const folder = await Folder.create({
         name: 'FolderWithDoc',
         type: 'folder',
@@ -404,7 +404,7 @@ describe('FolderService Integration Tests', () => {
       ).rejects.toThrow('Folder is not empty');
     });
 
-    it('should delete folder with documents when force is true', async () => {
+    it('should delete folder with documents when force is true', async (): Promise<void> => {
       const folder = await Folder.create({
         name: 'FolderToForceDelete',
         type: 'folder',
@@ -438,7 +438,7 @@ describe('FolderService Integration Tests', () => {
       expect(deletedFolder).toBeNull();
     });
 
-    it('should fail to delete root folder', async () => {
+    it('should fail to delete root folder', async (): Promise<void> => {
       await expect(
         folderService.deleteFolder({
           id: rootFolderId.toString(),
@@ -448,8 +448,8 @@ describe('FolderService Integration Tests', () => {
     });
   });
 
-  describe('renameFolder', () => {
-    it('should rename folder', async () => {
+  describe('renameFolder', (): void => {
+    it('should rename folder', async (): Promise<void> => {
       const folder = await Folder.create({
         name: 'OldName',
         type: 'folder',
@@ -472,7 +472,7 @@ describe('FolderService Integration Tests', () => {
       expect(renamed.path).toContain('NewName');
     });
 
-    it('should update subfolder paths when parent is renamed', async () => {
+    it('should update subfolder paths when parent is renamed', async (): Promise<void> => {
       const parent = await Folder.create({
         name: 'Parent',
         type: 'folder',
@@ -503,7 +503,7 @@ describe('FolderService Integration Tests', () => {
       expect(updatedChild!.path).toBe(`/${testOrgSlug}/${testUserId}/RenamedParent/Child`);
     });
 
-    it('should fail to rename root folder technical name', async () => {
+    it('should fail to rename root folder technical name', async (): Promise<void> => {
       await expect(
         folderService.renameFolder({
           id: rootFolderId.toString(),
@@ -513,7 +513,7 @@ describe('FolderService Integration Tests', () => {
       ).rejects.toThrow('Cannot rename root folder technical name');
     });
 
-    it('should allow changing root folder displayName', async () => {
+    it('should allow changing root folder displayName', async (): Promise<void> => {
       const renamed = await folderService.renameFolder({
         id: rootFolderId.toString(),
         userId: testUserId.toString(),

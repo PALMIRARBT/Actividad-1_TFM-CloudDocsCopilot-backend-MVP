@@ -27,8 +27,8 @@ beforeAll(async () => {
   askQuestion = mod.askQuestion;
 });
 
-describe('AI Controller - askQuestion', () => {
-  it('calls next with HttpError when question missing', async () => {
+describe('AI Controller - askQuestion', (): void => {
+  it('calls next with HttpError when question missing', async (): Promise<void> => {
     const req = { body: {}, cookies: {} as Record<string, unknown> } as import('../../../src/types/auth-request').AuthRequest;
     const res = { json: jest.fn() } as Partial<import('express').Response>;
     const next = jest.fn() as jest.MockedFunction<(err?: unknown) => void>;
@@ -55,7 +55,7 @@ describe('AI Controller - askQuestion', () => {
     }
   });
 
-  it('calls ragService and returns answer when inputs valid', async () => {
+  it('calls ragService and returns answer when inputs valid', async (): Promise<void> => {
     // use a valid 24-char hex string for user id to satisfy membership validation
     const req = { body: { question: 'Q', organizationId: 'o1' }, user: { id: '507f1f77bcf86cd799439011' }, cookies: {} as Record<string, unknown> } as import('../../../src/types/auth-request').AuthRequest;
     const res = { json: jest.fn() } as Partial<import('express').Response>;

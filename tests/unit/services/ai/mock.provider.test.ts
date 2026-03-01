@@ -9,8 +9,8 @@ type MockProv = {
   generateEmbedding: (text: string) => Promise<{ embedding: number[] }>;
 };
 
-describe('Mock AI Provider', () => {
-  it('generateResponse returns expected shape', async () => {
+describe('Mock AI Provider', (): void => {
+  it('generateResponse returns expected shape', async (): Promise<void> => {
     const provider = new MockAIProvider() as unknown as MockProv;
     const res = await provider.generateResponse('prompt', { temperature: 0.5 });
     // Mock provider returns `response` (string) and `model`/`tokens` fields
@@ -18,7 +18,7 @@ describe('Mock AI Provider', () => {
     expect(typeof res.response).toBe('string');
   });
 
-  it('generateEmbedding returns embedding object with numeric array', async () => {
+  it('generateEmbedding returns embedding object with numeric array', async (): Promise<void> => {
     const provider = new MockAIProvider() as unknown as MockProv;
     const embRes = await provider.generateEmbedding('text');
     expect(embRes).toHaveProperty('embedding');

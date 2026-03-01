@@ -17,7 +17,7 @@ jest.mock('../../../src/services/ai/llm.service');
 jest.mock('../../../src/services/ai/prompt.builder');
 jest.mock('../../../src/configurations/database-config/mongoAtlas');
 
-describe('RAGService', () => {
+describe('RAGService', (): void => {
   const doc1Id = new mongoose.Types.ObjectId();
   const doc123Id = new mongoose.Types.ObjectId();
   const chunk1Id = new mongoose.Types.ObjectId();
@@ -42,8 +42,8 @@ describe('RAGService', () => {
     });
   });
 
-  describe('search', () => {
-    it('should perform vector search and return results', async () => {
+  describe('search', (): void => {
+    it('should perform vector search and return results', async (): Promise<void> => {
       const mockEmbedding = Array(1536).fill(0.5);
       const mockDBResults = [
         {
@@ -78,7 +78,7 @@ describe('RAGService', () => {
       expect(mockAggregate).toHaveBeenCalled();
     });
 
-    it('should handle empty search results', async () => {
+    it('should handle empty search results', async (): Promise<void> => {
       const mockEmbedding = Array(1536).fill(0.5);
 
       (embeddingService.generateEmbedding as jest.Mock).mockResolvedValue(mockEmbedding);
@@ -92,7 +92,7 @@ describe('RAGService', () => {
       expect(results).toEqual([]);
     });
 
-    it('should respect limit parameter', async () => {
+    it('should respect limit parameter', async (): Promise<void> => {
       const mockEmbedding = Array(1536).fill(0.5);
 
       (embeddingService.generateEmbedding as jest.Mock).mockResolvedValue(mockEmbedding);
@@ -111,7 +111,7 @@ describe('RAGService', () => {
       expect((limitStage as { $limit?: number }).$limit).toBe(10);
     });
 
-    it('should handle embedding generation errors', async () => {
+    it('should handle embedding generation errors', async (): Promise<void> => {
       (embeddingService.generateEmbedding as jest.Mock).mockRejectedValue(
         new Error('Embedding failed')
       );
@@ -119,7 +119,7 @@ describe('RAGService', () => {
       await expect(ragService.search('Test', 'org123', 5)).rejects.toThrow(HttpError);
     });
 
-    it('should handle database errors', async () => {
+    it('should handle database errors', async (): Promise<void> => {
       const mockEmbedding = Array(1536).fill(0.5);
 
       (embeddingService.generateEmbedding as jest.Mock).mockResolvedValue(mockEmbedding);
@@ -131,7 +131,7 @@ describe('RAGService', () => {
       await expect(ragService.search('Test', 'org123', 5)).rejects.toThrow(HttpError);
     });
 
-    it('should filter by organizationId', async () => {
+    it('should filter by organizationId', async (): Promise<void> => {
       const mockEmbedding = Array(1536).fill(0.5);
 
       (embeddingService.generateEmbedding as jest.Mock).mockResolvedValue(mockEmbedding);
@@ -149,8 +149,8 @@ describe('RAGService', () => {
     });
   });
 
-  describe('searchInDocument', () => {
-    it('should search within a specific document', async () => {
+  describe('searchInDocument', (): void => {
+    it('should search within a specific document', async (): Promise<void> => {
       const mockEmbedding = Array(1536).fill(0.5);
       const mockResults = [
         {
@@ -180,7 +180,7 @@ describe('RAGService', () => {
       expect((matchStage as { $match: Record<string, unknown> }).$match.documentId).toEqual(doc123Id);
     });
 
-    it('should return empty array if document has no chunks', async () => {
+    it('should return empty array if document has no chunks', async (): Promise<void> => {
       const mockEmbedding = Array(1536).fill(0.5);
 
       (embeddingService.generateEmbedding as jest.Mock).mockResolvedValue(mockEmbedding);
@@ -195,8 +195,8 @@ describe('RAGService', () => {
     });
   });
 
-  describe('answerQuestion', () => {
-    it('should generate answer using RAG', async () => {
+  describe('answerQuestion', (): void => {
+    it('should generate answer using RAG', async (): Promise<void> => {
       const mockChunks = [
         {
           _id: chunk1Id,
@@ -231,7 +231,7 @@ describe('RAGService', () => {
       expect(result.chunks![0].score).toBe(0.95);
     });
 
-    it('should handle case when no relevant chunks found', async () => {
+    it('should handle case when no relevant chunks found', async (): Promise<void> => {
       const mockEmbedding = Array(1536).fill(0.5);
 
       (embeddingService.generateEmbedding as jest.Mock).mockResolvedValue(mockEmbedding);
@@ -251,7 +251,7 @@ describe('RAGService', () => {
       expect(result.chunks).toEqual([]);
     });
 
-    it('should handle LLM errors', async () => {
+    it('should handle LLM errors', async (): Promise<void> => {
       const mockEmbedding = Array(1536).fill(0.5);
       const mockChunks = [
         { _id: chunk1Id, documentId: doc1Id, content: 'Some context', chunkIndex: 0, score: 0.9 }
@@ -272,8 +272,8 @@ describe('RAGService', () => {
     });
   });
 
-  describe('answerQuestionInDocument', () => {
-    it('should answer question about specific document', async () => {
+  describe('answerQuestionInDocument', (): void => {
+    it('should answer question about specific document', async (): Promise<void> => {
       const mockChunks = [
         {
           _id: 'chunk1',
@@ -310,7 +310,7 @@ describe('RAGService', () => {
       expect(result.chunks![0].content).toBe('Document specific content');
     });
 
-    it('should handle empty document', async () => {
+    it('should handle empty document', async (): Promise<void> => {
       const mockEmbedding = Array(1536).fill(0.5);
 
       (embeddingService.generateEmbedding as jest.Mock).mockResolvedValue(mockEmbedding);

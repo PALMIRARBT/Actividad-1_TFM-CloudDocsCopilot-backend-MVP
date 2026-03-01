@@ -64,7 +64,7 @@ type NotificationPayload = {
   metadata?: Record<string, unknown>;
 };
 
-describe('Comment Service', () => {
+describe('Comment Service', (): void => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -89,8 +89,8 @@ describe('Comment Service', () => {
     ...overrides
   });
 
-  describe('createComment', () => {
-    it('should throw 400 for invalid document ID', async () => {
+  describe('createComment', (): void => {
+    it('should throw 400 for invalid document ID', async (): Promise<void> => {
       // Arrange
       const invalidId = 'bad';
       const userId = oid();
@@ -102,7 +102,7 @@ describe('Comment Service', () => {
       ).rejects.toThrow('Invalid document ID');
     });
 
-    it('should throw 400 for invalid user ID', async () => {
+    it('should throw 400 for invalid user ID', async (): Promise<void> => {
       // Arrange
       const documentId = oid();
       const invalidUserId = 'bad';
@@ -114,7 +114,7 @@ describe('Comment Service', () => {
       ).rejects.toThrow('Invalid user ID');
     });
 
-    it('should throw 400 when content is empty', async () => {
+    it('should throw 400 when content is empty', async (): Promise<void> => {
       // Arrange
       const documentId = oid();
       const userId = oid();
@@ -126,7 +126,7 @@ describe('Comment Service', () => {
       ).rejects.toThrow('Content is required');
     });
 
-    it('should throw 400 when content is only whitespace', async () => {
+    it('should throw 400 when content is only whitespace', async (): Promise<void> => {
       // Arrange
       const documentId = oid();
       const userId = oid();
@@ -138,7 +138,7 @@ describe('Comment Service', () => {
       ).rejects.toThrow('Content is required');
     });
 
-    it('should throw 404 when document not found', async () => {
+    it('should throw 404 when document not found', async (): Promise<void> => {
       // Arrange
       const documentId = oid();
       const userId = oid();
@@ -151,7 +151,7 @@ describe('Comment Service', () => {
       ).rejects.toThrow('Document not found');
     });
 
-    it('should throw 403 when user has no active membership for org document', async () => {
+    it('should throw 403 when user has no active membership for org document', async (): Promise<void> => {
       // Arrange
       const doc = makeOrgDoc();
       const userId = oid();
@@ -169,7 +169,7 @@ describe('Comment Service', () => {
       ).rejects.toThrow('Access denied to this document');
     });
 
-    it('should throw 403 when user is not uploadedBy or sharedWith for personal document', async () => {
+    it('should throw 403 when user is not uploadedBy or sharedWith for personal document', async (): Promise<void> => {
       // Arrange
       const userId = oid();
       const doc = makePersonalDoc({
@@ -185,7 +185,7 @@ describe('Comment Service', () => {
       ).rejects.toThrow('Access denied to this document');
     });
 
-    it('should create comment when user is uploadedBy for personal document', async () => {
+    it('should create comment when user is uploadedBy for personal document', async (): Promise<void> => {
       // Arrange
       const userId = new mongoose.Types.ObjectId();
       const doc = makePersonalDoc({
@@ -220,7 +220,7 @@ describe('Comment Service', () => {
       expect(notifyOrganizationMembers).not.toHaveBeenCalled();
     });
 
-    it('should create comment when user is in sharedWith for personal document', async () => {
+    it('should create comment when user is in sharedWith for personal document', async (): Promise<void> => {
       // Arrange
       const userId = new mongoose.Types.ObjectId();
       const doc = makePersonalDoc({
@@ -249,7 +249,7 @@ describe('Comment Service', () => {
       expect(notifyOrganizationMembers).not.toHaveBeenCalled();
     });
 
-    it('should create comment for org document and trigger notification with originalname', async () => {
+    it('should create comment for org document and trigger notification with originalname', async (): Promise<void> => {
       // Arrange
       const userId = oid();
       const doc = makeOrgDoc({ originalname: 'Pretty Name.docx' });
@@ -307,7 +307,7 @@ describe('Comment Service', () => {
       expect(result).toBe(created);
     });
 
-    it('should use filename fallback when originalname is missing in org document', async () => {
+    it('should use filename fallback when originalname is missing in org document', async (): Promise<void> => {
       // Arrange
       const userId = oid();
       const doc = makeOrgDoc({ originalname: undefined, filename: 'fallback.pdf' });
@@ -334,7 +334,7 @@ describe('Comment Service', () => {
       expect(payload.message).toBe('New comment on: fallback.pdf');
     });
 
-    it('should use generic message when document name is not available', async () => {
+    it('should use generic message when document name is not available', async (): Promise<void> => {
       // Arrange
       const userId = oid();
       const doc = makeOrgDoc({ originalname: undefined, filename: undefined });
@@ -362,8 +362,8 @@ describe('Comment Service', () => {
     });
   });
 
-  describe('listComments', () => {
-    it('should throw 400 for invalid document ID', async () => {
+  describe('listComments', (): void => {
+    it('should throw 400 for invalid document ID', async (): Promise<void> => {
       // Arrange
       const invalidId = 'bad';
       const userId = oid();
@@ -374,7 +374,7 @@ describe('Comment Service', () => {
       ).rejects.toThrow('Invalid document ID');
     });
 
-    it('should throw 400 for invalid user ID', async () => {
+    it('should throw 400 for invalid user ID', async (): Promise<void> => {
       // Arrange
       const documentId = oid();
       const invalidUserId = 'bad';
@@ -385,7 +385,7 @@ describe('Comment Service', () => {
       ).rejects.toThrow('Invalid user ID');
     });
 
-    it('should return sorted and populated comments when user has access', async () => {
+    it('should return sorted and populated comments when user has access', async (): Promise<void> => {
       // Arrange
       const documentId = new mongoose.Types.ObjectId();
       const userId = new mongoose.Types.ObjectId();
@@ -413,8 +413,8 @@ describe('Comment Service', () => {
     });
   });
 
-  describe('updateComment', () => {
-    it('should throw 400 for invalid comment ID', async () => {
+  describe('updateComment', (): void => {
+    it('should throw 400 for invalid comment ID', async (): Promise<void> => {
       // Arrange
       const invalidId = 'bad';
       const userId = oid();
@@ -426,7 +426,7 @@ describe('Comment Service', () => {
       ).rejects.toThrow('Invalid comment ID');
     });
 
-    it('should throw 400 for invalid user ID', async () => {
+    it('should throw 400 for invalid user ID', async (): Promise<void> => {
       // Arrange
       const commentId = oid();
       const invalidUserId = 'bad';
@@ -438,7 +438,7 @@ describe('Comment Service', () => {
       ).rejects.toThrow('Invalid user ID');
     });
 
-    it('should throw 400 when content is only whitespace', async () => {
+    it('should throw 400 when content is only whitespace', async (): Promise<void> => {
       // Arrange
       const commentId = oid();
       const userId = oid();
@@ -450,7 +450,7 @@ describe('Comment Service', () => {
       ).rejects.toThrow('Content is required');
     });
 
-    it('should throw 404 when comment not found', async () => {
+    it('should throw 404 when comment not found', async (): Promise<void> => {
       // Arrange
       const commentId = oid();
       const userId = oid();
@@ -463,7 +463,7 @@ describe('Comment Service', () => {
       ).rejects.toThrow('Comment not found');
     });
 
-    it('should throw 403 when editing someone else comment', async () => {
+    it('should throw 403 when editing someone else comment', async (): Promise<void> => {
       // Arrange
       const comment: MockComment & { save: jest.Mock } = {
         _id: new mongoose.Types.ObjectId(),
@@ -487,7 +487,7 @@ describe('Comment Service', () => {
       expect(comment.save).not.toHaveBeenCalled();
     });
 
-    it('should throw 403 if user lost access to document', async () => {
+    it('should throw 403 if user lost access to document', async (): Promise<void> => {
       // Arrange
       const userId = new mongoose.Types.ObjectId();
       const comment: MockComment & { save: jest.Mock } = {
@@ -513,7 +513,7 @@ describe('Comment Service', () => {
       expect(comment.save).not.toHaveBeenCalled();
     });
 
-    it('should update comment for personal document without notification', async () => {
+    it('should update comment for personal document without notification', async (): Promise<void> => {
       // Arrange
       const userId = new mongoose.Types.ObjectId();
       const comment: MockComment & { save: jest.Mock } = {
@@ -541,7 +541,7 @@ describe('Comment Service', () => {
       expect(result).toBe(comment);
     });
 
-    it('should update comment for org document and trigger notification with edited flag', async () => {
+    it('should update comment for org document and trigger notification with edited flag', async (): Promise<void> => {
       // Arrange
       const userId = new mongoose.Types.ObjectId();
       const comment: MockComment & { save: jest.Mock } = {

@@ -173,7 +173,7 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
     await User.deleteMany({ email: { $nin: ['owner@test.com', 'member@test.com'] } });
   });
 
-  describe('POST /api/organizations', () => {
+  describe('POST /api/organizations', (): void => {
     it('should create a new organization (default plan FREE)', async () => {
       const orgId = new mongoose.Types.ObjectId().toString();
 
@@ -208,7 +208,7 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
       });
     });
 
-    it('should create a new organization with provided plan', async () => {
+    it('should create a new organization with provided plan', async (): Promise<void> => {
       const orgId = new mongoose.Types.ObjectId().toString();
 
       (organizationService.createOrganization as jest.Mock).mockResolvedValueOnce({
@@ -238,7 +238,7 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
       });
     });
 
-    it('should fail when name is missing', async () => {
+    it('should fail when name is missing', async (): Promise<void> => {
       const res = await request(app)
         .post('/api/organizations')
         .set('Authorization', `Bearer ${testToken}`)
@@ -251,14 +251,14 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
       expect(organizationService.createOrganization).not.toHaveBeenCalled();
     });
 
-    it('should fail without authentication', async () => {
+    it('should fail without authentication', async (): Promise<void> => {
       const res = await request(app).post('/api/organizations').send({ name: 'X' });
       expect(res.status).toBe(401);
     });
   });
 
-  describe('GET /api/organizations', () => {
-    it('should list memberships returned by service', async () => {
+  describe('GET /api/organizations', (): void => {
+    it('should list memberships returned by service', async (): Promise<void> => {
       (organizationService.getUserOrganizations as jest.Mock).mockResolvedValueOnce([
         { organization: { id: 'org1', name: 'Org 1' }, role: 'OWNER' },
         { organization: { id: 'org2', name: 'Org 2' }, role: 'MEMBER' }
@@ -277,13 +277,13 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
       expect(organizationService.getUserOrganizations).toHaveBeenCalledWith(testUserId.toString());
     });
 
-    it('should fail without authentication', async () => {
+    it('should fail without authentication', async (): Promise<void> => {
       const res = await request(app).get('/api/organizations');
       expect(res.status).toBe(401);
     });
   });
 
-  describe('GET /api/organizations/:id', () => {
+  describe('GET /api/organizations/:id', (): void => {
     it('should return org if requester is member (members populated objects)', async () => {
       const orgId = new mongoose.Types.ObjectId().toString();
 
@@ -322,7 +322,7 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
       expect(b.success).toBe(true);
     });
 
-    it('should fail with 403 if requester is not a member', async () => {
+    it('should fail with 403 if requester is not a member', async (): Promise<void> => {
       const orgId = new mongoose.Types.ObjectId().toString();
 
       (organizationService.getOrganizationById as jest.Mock).mockResolvedValueOnce({
@@ -342,7 +342,7 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
       expect(b.error || b.message).toMatch(/Access denied to this organization/i);
     });
 
-    it('should return 404 if organization not found', async () => {
+    it('should return 404 if organization not found', async (): Promise<void> => {
       const orgId = new mongoose.Types.ObjectId().toString();
       (organizationService.getOrganizationById as jest.Mock).mockResolvedValueOnce(null);
 
@@ -356,8 +356,8 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
     });
   });
 
-  describe('PUT /api/organizations/:id', () => {
-    it('should update organization and return success', async () => {
+  describe('PUT /api/organizations/:id', (): void => {
+    it('should update organization and return success', async (): Promise<void> => {
       const orgId = new mongoose.Types.ObjectId().toString();
 
       (organizationService.updateOrganization as jest.Mock).mockResolvedValueOnce({
@@ -423,7 +423,7 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
     });
   });
 
-  describe('DELETE /api/organizations/:id', () => {
+  describe('DELETE /api/organizations/:id', (): void => {
     it('should delete (soft delete) organization and return success', async () => {
       const orgId = new mongoose.Types.ObjectId().toString();
       (organizationService.deleteOrganization as jest.Mock).mockResolvedValueOnce(undefined);
@@ -444,7 +444,7 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
     });
   });
 
-  describe('POST /api/organizations/:id/members', () => {
+  describe('POST /api/organizations/:id/members', (): void => {
     it('should add member (requires userId in body)', async () => {
       const orgId = new mongoose.Types.ObjectId().toString();
       (organizationService.addUserToOrganization as jest.Mock).mockResolvedValueOnce(undefined);
@@ -465,7 +465,7 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
       );
     });
 
-    it('should fail if userId missing', async () => {
+    it('should fail if userId missing', async (): Promise<void> => {
       const orgId = new mongoose.Types.ObjectId().toString();
 
       const res = await request(app)
@@ -480,8 +480,8 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
     });
   });
 
-  describe('DELETE /api/organizations/:id/members/:userId', () => {
-    it('should remove member and return success', async () => {
+  describe('DELETE /api/organizations/:id/members/:userId', (): void => {
+    it('should remove member and return success', async (): Promise<void> => {
       const orgId = new mongoose.Types.ObjectId().toString();
       (organizationService.removeUserFromOrganization as jest.Mock).mockResolvedValueOnce(
         undefined
@@ -503,8 +503,8 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
     });
   });
 
-  describe('GET /api/organizations/:id/stats', () => {
-    it('should return stats if requester is member', async () => {
+  describe('GET /api/organizations/:id/stats', (): void => {
+    it('should return stats if requester is member', async (): Promise<void> => {
       const orgId = new mongoose.Types.ObjectId().toString();
 
       (organizationService.getOrganizationById as jest.Mock).mockResolvedValueOnce({
@@ -537,7 +537,7 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
       expect(organizationService.getOrganizationStorageStats).toHaveBeenCalledWith(orgId);
     });
 
-    it('should fail with 403 if requester is not member', async () => {
+    it('should fail with 403 if requester is not member', async (): Promise<void> => {
       const orgId = new mongoose.Types.ObjectId().toString();
 
       (organizationService.getOrganizationById as jest.Mock).mockResolvedValueOnce({
@@ -556,7 +556,7 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
       expect(b.success).toBe(false);
     });
 
-    it('should fail with 404 if organization does not exist', async () => {
+    it('should fail with 404 if organization does not exist', async (): Promise<void> => {
       const orgId = new mongoose.Types.ObjectId().toString();
       (organizationService.getOrganizationById as jest.Mock).mockResolvedValueOnce(null);
 
@@ -570,7 +570,7 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
     });
   });
 
-  describe('GET /api/organizations/:id/members', () => {
+  describe('GET /api/organizations/:id/members', (): void => {
     it('should list members if requester is member (uses membership service)', async () => {
       const orgId = new mongoose.Types.ObjectId().toString();
 
@@ -612,7 +612,7 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
       expect(membershipService.getOrganizationMembers).toHaveBeenCalledWith(orgId);
     });
 
-    it('should fail with 403 if requester is not member', async () => {
+    it('should fail with 403 if requester is not member', async (): Promise<void> => {
       const orgId = new mongoose.Types.ObjectId().toString();
 
       (organizationService.getOrganizationById as jest.Mock).mockResolvedValueOnce({
@@ -632,7 +632,7 @@ describe('OrganizationController Integration-ish Tests (mongo + supertest, mocke
       expect(membershipService.getOrganizationMembers).not.toHaveBeenCalled();
     });
 
-    it('should fail with 404 if organization not found', async () => {
+    it('should fail with 404 if organization not found', async (): Promise<void> => {
       const orgId = new mongoose.Types.ObjectId().toString();
       (organizationService.getOrganizationById as jest.Mock).mockResolvedValueOnce(null);
 

@@ -38,8 +38,8 @@ function makeRes(): Response {
 describe('comment.controller (unit)', () => {
   afterEach(() => jest.clearAllMocks());
 
-  describe('create', () => {
-    it('returns 400 when content missing', async () => {
+  describe('create', (): void => {
+    it('returns 400 when content missing', async (): Promise<void> => {
         const req = {
             params: { documentId: 'doc1' },
             body: {},
@@ -61,7 +61,7 @@ describe('comment.controller (unit)', () => {
       expect((err as Error).message).toBe('Contenido es requerido');
     });
 
-    it('creates comment and returns 201', async () => {
+    it('creates comment and returns 201', async (): Promise<void> => {
         const req = {
             params: { documentId: 'doc1' },
             body: { content: 'hola' },
@@ -108,8 +108,8 @@ describe('comment.controller (unit)', () => {
     });
   });
 
-  describe('listByDocument', () => {
-    it('returns 400 when documentId missing', async () => {
+  describe('listByDocument', (): void => {
+    it('returns 400 when documentId missing', async (): Promise<void> => {
         const req = {
             params: {},
             body: {},
@@ -128,7 +128,7 @@ describe('comment.controller (unit)', () => {
       expect((err as Error).message).toBe('documentId es requerido');
     });
 
-    it('lists comments and returns count', async () => {
+    it('lists comments and returns count', async (): Promise<void> => {
         const req = {
             params: { documentId: 'doc1' },
             user: { id: 'user1' },
@@ -169,8 +169,8 @@ describe('comment.controller (unit)', () => {
     });
   });
 
-  describe('update', () => {
-    it('returns 400 when content missing', async () => {
+  describe('update', (): void => {
+    it('returns 400 when content missing', async (): Promise<void> => {
         const req = {
             params: { id: 'c1' },
             body: {},
@@ -189,7 +189,7 @@ describe('comment.controller (unit)', () => {
       expect((err as Error).message).toBe('Contenido es requerido');
     });
 
-    it('updates comment and returns success', async () => {
+    it('updates comment and returns success', async (): Promise<void> => {
         const req = {
             params: { id: 'c1' },
             body: { content: 'nuevo' },

@@ -2,13 +2,13 @@ import { request, app } from '../setup';
 import User from '../../src/models/user.model';
 import { signToken } from '../../src/services/jwt.service';
 
-describe('GET /api/users/search', () => {
-  it('returns 401 when not authenticated', async () => {
+describe('GET /api/users/search', (): void => {
+  it('returns 401 when not authenticated', async (): Promise<void> => {
     const res = await request(app).get('/api/users/search?email=test');
     expect(res.status).toBe(401);
   });
 
-  it('returns 400 when email query missing or empty', async () => {
+  it('returns 400 when email query missing or empty', async (): Promise<void> => {
     const user = await User.create({
       name: 'Tester',
       email: 't@test.com',
@@ -28,7 +28,7 @@ describe('GET /api/users/search', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns matching users for authenticated request', async () => {
+  it('returns matching users for authenticated request', async (): Promise<void> => {
     // Crear usuarios de prueba
     const u1 = await User.create({
       name: 'María Pérez',

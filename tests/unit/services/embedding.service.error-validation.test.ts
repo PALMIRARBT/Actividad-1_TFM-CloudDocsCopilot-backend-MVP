@@ -13,7 +13,7 @@ type ProviderMock = {
   getEmbeddingModel: jest.Mock<string, []>;
 };
 
-describe('EmbeddingService - Provider abstraction dimension checks', () => {
+describe('EmbeddingService - Provider abstraction dimension checks', (): void => {
   let embeddingService: EmbeddingServiceType;
   let mockProvider: ProviderMock;
 
@@ -34,8 +34,8 @@ describe('EmbeddingService - Provider abstraction dimension checks', () => {
     embeddingService = ((await import('../../../src/services/ai/embedding.service')) as unknown as typeof import('../../../src/services/ai/embedding.service')).embeddingService as unknown as EmbeddingServiceType;
   });
 
-  describe('generateEmbedding - dimension awareness', () => {
-    it('returns embedding matching provider dimensions when provider returns correct size', async () => {
+  describe('generateEmbedding - dimension awareness', (): void => {
+    it('returns embedding matching provider dimensions when provider returns correct size', async (): Promise<void> => {
       const dims = 1536;
       const embedding = Array(dims).fill(0.1);
 
@@ -64,8 +64,8 @@ describe('EmbeddingService - Provider abstraction dimension checks', () => {
     });
   });
 
-  describe('generateEmbeddings - batch dimension observations', () => {
-    it('returns embeddings array and preserves individual lengths', async () => {
+  describe('generateEmbeddings - batch dimension observations', (): void => {
+    it('returns embeddings array and preserves individual lengths', async (): Promise<void> => {
       const dims = 1536;
       const embA = Array(dims).fill(0.1);
       const embB = Array(dims).fill(0.2);
@@ -81,7 +81,7 @@ describe('EmbeddingService - Provider abstraction dimension checks', () => {
       expect(result[1]).toHaveLength(dims);
     });
 
-    it('throws when provider returns fewer results than input texts', async () => {
+    it('throws when provider returns fewer results than input texts', async (): Promise<void> => {
       const dims = 1536;
       mockProvider.getEmbeddingDimensions.mockReturnValue(dims);
       mockProvider.generateEmbeddings.mockResolvedValue([{ embedding: Array(dims).fill(0) }] as unknown as Array<{ embedding: number[] }>);

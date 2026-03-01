@@ -31,7 +31,7 @@ jest.mock('mongodb', () => {
   };
 });
 
-describe('MongoDB Atlas Configuration - Connection Lifecycle', () => {
+describe('MongoDB Atlas Configuration - Connection Lifecycle', (): void => {
   let originalEnv: NodeJS.ProcessEnv;
 
   beforeEach(() => {
@@ -45,7 +45,7 @@ describe('MongoDB Atlas Configuration - Connection Lifecycle', () => {
   });
 
   describe('connectToMongoAtlas (getDb) - Protocol and Options', () => {
-    it('should accept mongodb+srv protocol', async () => {
+    it('should accept mongodb+srv protocol', async (): Promise<void> => {
       process.env.MONGO_ATLAS_URI = 'mongodb+srv://cluster0.example.mongodb.net/db';
 
       const { getDb } = (await import('../../../src/configurations/database-config/mongoAtlas')) as unknown as {
@@ -54,7 +54,7 @@ describe('MongoDB Atlas Configuration - Connection Lifecycle', () => {
       await expect(getDb()).resolves.not.toThrow();
     });
 
-    it('should use correct MongoDB client options', async () => {
+    it('should use correct MongoDB client options', async (): Promise<void> => {
       process.env.MONGO_ATLAS_URI = 'mongodb+srv://cluster0.example.mongodb.net/test';
 
       const { getDb } = (await import('../../../src/configurations/database-config/mongoAtlas')) as unknown as {
@@ -66,8 +66,8 @@ describe('MongoDB Atlas Configuration - Connection Lifecycle', () => {
     });
   });
 
-  describe('getClient - Instance Management', () => {
-    it('should return client instance after connection', async () => {
+  describe('getClient - Instance Management', (): void => {
+    it('should return client instance after connection', async (): Promise<void> => {
       process.env.MONGO_ATLAS_URI = 'mongodb+srv://cluster0.example.mongodb.net/test';
 
       const {
@@ -103,7 +103,7 @@ describe('MongoDB Atlas Configuration - Connection Lifecycle', () => {
       expect(client1).toBe(client2);
     });
 
-    it('should provide access to database methods', async () => {
+    it('should provide access to database methods', async (): Promise<void> => {
       process.env.MONGO_ATLAS_URI = 'mongodb+srv://user:pass@cluster.mongodb.net/test';
 
       const {
@@ -121,8 +121,8 @@ describe('MongoDB Atlas Configuration - Connection Lifecycle', () => {
     });
   });
 
-  describe('closeAtlasConnection - Disconnect', () => {
-    it('should disconnect successfully', async () => {
+  describe('closeAtlasConnection - Disconnect', (): void => {
+    it('should disconnect successfully', async (): Promise<void> => {
       process.env.MONGO_ATLAS_URI = 'mongodb+srv://user:pass@cluster.mongodb.net/test';
 
       const {
@@ -138,8 +138,8 @@ describe('MongoDB Atlas Configuration - Connection Lifecycle', () => {
     });
   });
 
-  describe('URI validation - Format Variations', () => {
-    it('should accept valid MongoDB Atlas URI format', async () => {
+  describe('URI validation - Format Variations', (): void => {
+    it('should accept valid MongoDB Atlas URI format', async (): Promise<void> => {
       const validURIs = [
         'mongodb+srv://cluster0.abc123.mongodb.net/dbname',
         'mongodb+srv://mycluster.example.mongodb.net/production',
@@ -159,7 +159,7 @@ describe('MongoDB Atlas Configuration - Connection Lifecycle', () => {
       }
     });
 
-    it('should handle URIs with special characters in password', async () => {
+    it('should handle URIs with special characters in password', async (): Promise<void> => {
       process.env.MONGO_ATLAS_URI = 'mongodb+srv://cluster0.example.mongodb.net/db';
 
         const { getDb } = (await import('../../../src/configurations/database-config/mongoAtlas')) as unknown as {
@@ -169,7 +169,7 @@ describe('MongoDB Atlas Configuration - Connection Lifecycle', () => {
       await expect(getDb()).resolves.not.toThrow();
     });
 
-    it('should handle URIs with query parameters', async () => {
+    it('should handle URIs with query parameters', async (): Promise<void> => {
       process.env.MONGO_ATLAS_URI =
         'mongodb+srv://cluster.example.mongodb.net/db?retryWrites=true&w=majority';
 
@@ -181,8 +181,8 @@ describe('MongoDB Atlas Configuration - Connection Lifecycle', () => {
     });
   });
 
-  describe('connection lifecycle - Full Flow', () => {
-    it('should support connect -> use -> disconnect flow', async () => {
+  describe('connection lifecycle - Full Flow', (): void => {
+    it('should support connect -> use -> disconnect flow', async (): Promise<void> => {
       process.env.MONGO_ATLAS_URI = 'mongodb+srv://user:pass@cluster.mongodb.net/test';
 
       const {

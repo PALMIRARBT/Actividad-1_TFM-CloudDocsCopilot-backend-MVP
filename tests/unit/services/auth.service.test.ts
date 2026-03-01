@@ -37,14 +37,14 @@ afterEach(() => {
 });
 
 describe('Auth Service (consolidated)', () => {
-  it('registerUser rejects invalid name or email', async () => {
+  it('registerUser rejects invalid name or email', async (): Promise<void> => {
     const { registerUser } = (await import('../../../src/services/auth.service')) as unknown as typeof import('../../../src/services/auth.service');
     type RegisterDto = { name: string; email: string; password: string };
     const payload = { name: 'bad<>', email: 'a@b', password: 'P@ssw0rd!' } as unknown as RegisterDto;
     await expect(registerUser(payload)).rejects.toThrow();
   });
 
-  it('registerUser creates user in test env and returns sanitized object', async () => {
+  it('registerUser creates user in test env and returns sanitized object', async (): Promise<void> => {
     process.env.NODE_ENV = 'test';
     process.env.SEND_CONFIRMATION_EMAIL = 'false';
     mockBcryptHash.mockResolvedValue('hashed');
@@ -92,7 +92,7 @@ describe('Auth Service (consolidated)', () => {
     );
   });
 
-  it('loginUser returns token and user on success', async () => {
+  it('loginUser returns token and user on success', async (): Promise<void> => {
     mockUserFindOne.mockResolvedValue({
       _id: 'u1',
       email: 'a@b.com',
@@ -109,7 +109,7 @@ describe('Auth Service (consolidated)', () => {
     expect(res.user.email).toBe('a@b.com');
   });
 
-  it('requestPasswordReset and resetPassword flows', async () => {
+  it('requestPasswordReset and resetPassword flows', async (): Promise<void> => {
     process.env.SEND_CONFIRMATION_EMAIL = 'false';
     const saveMock = jest.fn().mockResolvedValue(true);
     mockUserFindOne.mockResolvedValue({
@@ -133,7 +133,7 @@ describe('Auth Service (consolidated)', () => {
     expect(saveMock).toHaveBeenCalled();
   });
 
-  it('confirmUserAccount handles jwt verify paths', async () => {
+  it('confirmUserAccount handles jwt verify paths', async (): Promise<void> => {
     const jwt = jest.requireMock('jsonwebtoken') as unknown as { default: { verify: jest.Mock } };
     jwt.default = { verify: jest.fn(() => ({ userId: 'u1' })) };
     mockUserFindById.mockResolvedValue({ _id: 'u1', name: 'U', active: true });
@@ -142,7 +142,7 @@ describe('Auth Service (consolidated)', () => {
     expect(res.userAlreadyActive).toBe(true);
   });
 
-  it('escapeHtml and hashResetToken utilities work', () => {
+  it('escapeHtml and hashResetToken utilities work', (): void => {
     // Use dynamic import to obtain utilities
     return (async () => {
       const svc = (await import('../../../src/services/auth.service')) as unknown as typeof import('../../../src/services/auth.service');

@@ -6,7 +6,7 @@ const mockGetInstanceFilters = jest.fn();
 
 afterEach(() => jest.clearAllMocks());
 
-describe('search.service - filter branches', () => {
+describe('search.service - filter branches', (): void => {
   it('searchDocuments applies organization, mimeType and date range filters', async () => {
     const hits = { hits: { hits: [], total: { value: 0 } }, took: 2 };
     const client = { search: jest.fn().mockResolvedValue(hits) };

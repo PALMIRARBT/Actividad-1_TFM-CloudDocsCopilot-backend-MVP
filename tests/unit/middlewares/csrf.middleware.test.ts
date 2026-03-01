@@ -12,8 +12,8 @@ afterEach(() => {
   jest.resetModules();
 });
 
-describe('csrf.middleware', () => {
-  it('skips protection for excluded routes', async () => {
+describe('csrf.middleware', (): void => {
+  it('skips protection for excluded routes', async (): Promise<void> => {
     const { csrfProtectionMiddleware } = (await import('../../../src/middlewares/csrf.middleware')) as unknown as typeof import('../../../src/middlewares/csrf.middleware');
     const req: Partial<import('express').Request> = { path: '/api/auth/login' };
     const res: Partial<import('express').Response> = {};
@@ -22,7 +22,7 @@ describe('csrf.middleware', () => {
     expect(next).toHaveBeenCalled();
   });
 
-  it('calls doubleCsrfProtection for non-excluded routes', async () => {
+  it('calls doubleCsrfProtection for non-excluded routes', async (): Promise<void> => {
     const { csrfProtectionMiddleware } = (await import('../../../src/middlewares/csrf.middleware')) as unknown as typeof import('../../../src/middlewares/csrf.middleware');
     const req: Partial<import('express').Request> = { path: '/api/some-protected' };
     const res: Partial<import('express').Response> = {};

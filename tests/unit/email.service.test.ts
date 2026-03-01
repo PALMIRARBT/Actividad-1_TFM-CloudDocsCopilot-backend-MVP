@@ -1,8 +1,8 @@
 jest.resetModules();
 jest.unmock('../../src/mail/emailService');
 
-describe('emailService', () => {
-  it('succeeds when transporter.sendMail resolves', async () => {
+describe('emailService', (): void => {
+  it('succeeds when transporter.sendMail resolves', async (): Promise<void> => {
     jest.mock('nodemailer', () => ({
       createTransport: () => ({ sendMail: jest.fn().mockResolvedValue({ messageId: '1' }) })
     }));
@@ -10,7 +10,7 @@ describe('emailService', () => {
     await expect(svc.sendConfirmationEmail('a@b.com', 'subj', '<p>hi</p>')).resolves.toBeDefined();
   });
 
-  it('throws when transporter.sendMail rejects', async () => {
+  it('throws when transporter.sendMail rejects', async (): Promise<void> => {
     jest.resetModules();
     jest.mock('nodemailer', () => ({
       createTransport: () => ({ sendMail: jest.fn().mockRejectedValue(new Error('fail')) })

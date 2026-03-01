@@ -1,7 +1,7 @@
 // Tests for configuration utilities to improve coverage
 jest.resetModules();
 
-describe('env-config utilities', () => {
+describe('env-config utilities', (): void => {
   let envConfig: {
     getEnv: (k: string, d?: string) => string;
     requireEnv: (k: string) => string;
@@ -13,13 +13,13 @@ describe('env-config utilities', () => {
     envConfig = (await import('../../../src/configurations/env-config')) as unknown as typeof import('../../../src/configurations/env-config');
   });
 
-  it('getEnv returns default when not set and requireEnv throws', () => {
+  it('getEnv returns default when not set and requireEnv throws', (): void => {
     process.env.TEST_FOO = '';
     expect(envConfig.getEnv('NON_EXISTENT_VAR', 'default')).toBe('default');
     expect(() => envConfig.requireEnv('NON_EXISTENT_VAR')).toThrow();
   });
 
-  it('getEnvBool and getEnvNumber parse values', () => {
+  it('getEnvBool and getEnvNumber parse values', (): void => {
     process.env.BOOL_TRUE = 'true';
     process.env.BOOL_ONE = '1';
     process.env.NUM_VAL = '42';
@@ -30,7 +30,7 @@ describe('env-config utilities', () => {
   });
 });
 
-describe('elasticsearch-config', () => {
+describe('elasticsearch-config', (): void => {
   beforeAll(() => {
     // Mock @elastic/elasticsearch Client used by the module
     jest.mock('@elastic/elasticsearch', () => ({
@@ -44,7 +44,7 @@ describe('elasticsearch-config', () => {
     }));
   });
 
-  it('initializes client and can create index', async () => {
+  it('initializes client and can create index', async (): Promise<void> => {
     const esModule = (await import('../../../src/configurations/elasticsearch-config')) as unknown;
     const maybeDefault = (esModule as Record<string, unknown>)['default'] ?? esModule;
     const ES = (maybeDefault as unknown) as {

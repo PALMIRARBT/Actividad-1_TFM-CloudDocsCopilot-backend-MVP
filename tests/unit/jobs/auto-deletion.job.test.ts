@@ -7,35 +7,35 @@ jest.mock('node-cron', () => ({ schedule: jest.fn((expr: string, fn: () => void)
 
 
 
-describe('auto-deletion.job', () => {
+describe('auto-deletion.job', (): void => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  test('runAutoDeletionNow calls deletionService and returns number', async () => {
+  test('runAutoDeletionNow calls deletionService and returns number', async (): Promise<void> => {
     (deletionService.autoDeleteExpiredDocuments as jest.Mock).mockResolvedValue(5);
     const res = await runAutoDeletionNow();
     expect(res).toBe(5);
   });
 
-  test('runAutoDeletionNow throws when service fails', async () => {
+  test('runAutoDeletionNow throws when service fails', async (): Promise<void> => {
     (deletionService.autoDeleteExpiredDocuments as jest.Mock).mockRejectedValue(new Error('fail'));
     await expect(runAutoDeletionNow()).rejects.toThrow('fail');
   });
 
-  test('startAutoDeletionJob schedules cron with default expression', () => {
+  test('startAutoDeletionJob schedules cron with default expression', (): void => {
     process.env.AUTO_DELETE_CRON = '';
     startAutoDeletionJob();
     expect((cron as unknown as { schedule: jest.Mock }).schedule).toHaveBeenCalled();
   });
 
-  test('startAutoDeletionJob schedules cron with env expression', () => {
+  test('startAutoDeletionJob schedules cron with env expression', (): void => {
     process.env.AUTO_DELETE_CRON = '*/5 * * * *';
     startAutoDeletionJob();
     expect((cron as unknown as { schedule: jest.Mock }).schedule).toHaveBeenCalledWith('*/5 * * * *', expect.any(Function));
   });
 
-  test('cron handler calls deletionService', () => {
+  test('cron handler calls deletionService', (): void => {
     (deletionService.autoDeleteExpiredDocuments as jest.Mock).mockResolvedValue(0);
     startAutoDeletionJob();
     expect(deletionService.autoDeleteExpiredDocuments).toHaveBeenCalled();
@@ -64,10 +64,10 @@ const { deletionService } = jest.requireMock('../../../src/services/deletion.ser
 };
 const cron = jest.requireMock('node-cron') as unknown as { schedule: jest.Mock };
 
-describe('auto-deletion job', () => {
+describe('auto-deletion job', (): void => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('runAutoDeletionNow returns deleted count when service resolves', async () => {
+  it('runAutoDeletionNow returns deleted count when service resolves', async (): Promise<void> => {
     (deletionService.autoDeleteExpiredDocuments as jest.Mock).mockResolvedValue(5);
 
     const count = await runAutoDeletionNow();
@@ -75,7 +75,7 @@ describe('auto-deletion job', () => {
     expect(deletionService.autoDeleteExpiredDocuments).toHaveBeenCalled();
   });
 
-  it('runAutoDeletionNow propagates errors from deletionService', async () => {
+  it('runAutoDeletionNow propagates errors from deletionService', async (): Promise<void> => {
     (deletionService.autoDeleteExpiredDocuments as jest.Mock).mockRejectedValue(
       new Error('DB error')
     );
@@ -83,7 +83,7 @@ describe('auto-deletion job', () => {
     await expect(runAutoDeletionNow()).rejects.toThrow('DB error');
   });
 
-  it('startAutoDeletionJob schedules cron with default expression when env not set', () => {
+  it('startAutoDeletionJob schedules cron with default expression when env not set', (): void => {
     delete process.env.AUTO_DELETE_CRON;
     startAutoDeletionJob();
 
@@ -92,14 +92,14 @@ describe('auto-deletion job', () => {
     expect(typeof callArg).toBe('string');
   });
 
-  it('startAutoDeletionJob uses AUTO_DELETE_CRON env when provided', () => {
+  it('startAutoDeletionJob uses AUTO_DELETE_CRON env when provided', (): void => {
     process.env.AUTO_DELETE_CRON = '*/5 * * * *';
     startAutoDeletionJob();
 
     expect(cron.schedule).toHaveBeenCalledWith('*/5 * * * *', expect.any(Function));
   });
 
-  it('startAutoDeletionJob logs scheduling message', () => {
+  it('startAutoDeletionJob logs scheduling message', (): void => {
     const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
     process.env.AUTO_DELETE_CRON = '0 3 * * *';
 

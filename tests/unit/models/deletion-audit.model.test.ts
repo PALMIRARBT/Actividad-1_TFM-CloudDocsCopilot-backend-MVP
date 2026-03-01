@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 import DeletionAuditModel, { DeletionAction, DeletionStatus, IDeletionAudit } from '../../../src/models/deletion-audit.model';
 
-describe('DeletionAudit Model', () => {
-  describe('Schema Validation', () => {
-    it('should create audit record with all required fields', () => {
+describe('DeletionAudit Model', (): void => {
+  describe('Schema Validation', (): void => {
+    it('should create audit record with all required fields', (): void => {
       // Arrange
       const documentId = new mongoose.Types.ObjectId();
       const userId = new mongoose.Types.ObjectId();
@@ -36,7 +36,7 @@ describe('DeletionAudit Model', () => {
       expect(audit.status).toBe(DeletionStatus.COMPLETED);
     });
 
-    it('should set default status to PENDING when not provided', () => {
+    it('should set default status to PENDING when not provided', (): void => {
       // Arrange
       const auditData = {
         document: new mongoose.Types.ObjectId(),
@@ -58,7 +58,7 @@ describe('DeletionAudit Model', () => {
       expect(audit.status).toBe(DeletionStatus.PENDING);
     });
 
-    it('should validate required document field', () => {
+    it('should validate required document field', (): void => {
       // Arrange
       const invalidData = {
         documentSnapshot: {
@@ -81,7 +81,7 @@ describe('DeletionAudit Model', () => {
       expect(validationError?.errors.document).toBeDefined();
     });
 
-    it('should validate required performedBy field', () => {
+    it('should validate required performedBy field', (): void => {
       // Arrange
       const invalidData = {
         document: new mongoose.Types.ObjectId(),
@@ -104,7 +104,7 @@ describe('DeletionAudit Model', () => {
       expect(validationError?.errors.performedBy).toBeDefined();
     });
 
-    it('should validate required action field', () => {
+    it('should validate required action field', (): void => {
       // Arrange
       const invalidData = {
         document: new mongoose.Types.ObjectId(),
@@ -127,7 +127,7 @@ describe('DeletionAudit Model', () => {
       expect(validationError?.errors.action).toBeDefined();
     });
 
-    it('should reject invalid action values', () => {
+    it('should reject invalid action values', (): void => {
       // Arrange
       const invalidData = {
         document: new mongoose.Types.ObjectId(),
@@ -151,7 +151,7 @@ describe('DeletionAudit Model', () => {
       expect(validationError?.errors.action).toBeDefined();
     });
 
-    it('should reject invalid status values', () => {
+    it('should reject invalid status values', (): void => {
       // Arrange
       const invalidData = {
         document: new mongoose.Types.ObjectId(),
@@ -177,8 +177,8 @@ describe('DeletionAudit Model', () => {
     });
   });
 
-  describe('Optional Fields', () => {
-    it('should accept optional organization field', () => {
+  describe('Optional Fields', (): void => {
+    it('should accept optional organization field', (): void => {
       // Arrange
       const orgId = new mongoose.Types.ObjectId();
       const auditData = {
@@ -203,7 +203,7 @@ describe('DeletionAudit Model', () => {
       expect(audit.organization).toEqual(orgId);
     });
 
-    it('should accept optional reason field', () => {
+    it('should accept optional reason field', (): void => {
       // Arrange
       const reason = 'User requested permanent deletion for compliance';
       const auditData = {
@@ -228,7 +228,7 @@ describe('DeletionAudit Model', () => {
       expect(audit.reason).toBe(reason);
     });
 
-    it('should accept ipAddress when provided', () => {
+    it('should accept ipAddress when provided', (): void => {
       // Arrange
       const ipAddress = '192.168.1.100';
       const auditData = {
@@ -253,7 +253,7 @@ describe('DeletionAudit Model', () => {
       expect(audit.ipAddress).toBe(ipAddress);
     });
 
-    it('should accept userAgent when provided', () => {
+    it('should accept userAgent when provided', (): void => {
       // Arrange
       const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
       const auditData = {
@@ -278,7 +278,7 @@ describe('DeletionAudit Model', () => {
       expect(audit.userAgent).toBe(userAgent);
     });
 
-    it('should accept overwrite method and passes for secure deletion', () => {
+    it('should accept overwrite method and passes for secure deletion', (): void => {
       // Arrange
       const auditData = {
         document: new mongoose.Types.ObjectId(),
@@ -304,7 +304,7 @@ describe('DeletionAudit Model', () => {
       expect(audit.overwritePasses).toBe(7);
     });
 
-    it('should accept timestamp fields when provided', () => {
+    it('should accept timestamp fields when provided', (): void => {
       // Arrange
       const confirmedAt = new Date('2026-02-25T10:00:00Z');
       const completedAt = new Date('2026-02-25T10:05:00Z');
@@ -332,7 +332,7 @@ describe('DeletionAudit Model', () => {
       expect(audit.completedAt).toEqual(completedAt);
     });
 
-    it('should accept errorMessage when deletion fails', () => {
+    it('should accept errorMessage when deletion fails', (): void => {
       // Arrange
       const errorMessage = 'File system error: permission denied';
       const auditData = {
@@ -358,8 +358,8 @@ describe('DeletionAudit Model', () => {
     });
   });
 
-  describe('DeletionAction Enum', () => {
-    it('should have correct enum values for all deletion actions', () => {
+  describe('DeletionAction Enum', (): void => {
+    it('should have correct enum values for all deletion actions', (): void => {
       // Assert
       expect(DeletionAction.SOFT_DELETE).toBe('move_to_trash');
       expect(DeletionAction.RESTORE).toBe('restore_from_trash');
@@ -369,8 +369,8 @@ describe('DeletionAudit Model', () => {
     });
   });
 
-  describe('DeletionStatus Enum', () => {
-    it('should have correct enum values for all deletion statuses', () => {
+  describe('DeletionStatus Enum', (): void => {
+    it('should have correct enum values for all deletion statuses', (): void => {
       // Assert
       expect(DeletionStatus.PENDING).toBe('pending');
       expect(DeletionStatus.CONFIRMED).toBe('confirmed');
@@ -380,8 +380,8 @@ describe('DeletionAudit Model', () => {
     });
   });
 
-  describe('Schema Configuration', () => {
-    it('should have timestamps enabled', () => {
+  describe('Schema Configuration', (): void => {
+    it('should have timestamps enabled', (): void => {
       // Arrange
       const auditData = {
         document: new mongoose.Types.ObjectId(),
@@ -405,7 +405,7 @@ describe('DeletionAudit Model', () => {
       expect(DeletionAuditModel.schema.path('updatedAt')).toBeDefined();
     });
 
-    it('should transform JSON output correctly', () => {
+    it('should transform JSON output correctly', (): void => {
       // Arrange
       const auditData = {
         document: new mongoose.Types.ObjectId(),

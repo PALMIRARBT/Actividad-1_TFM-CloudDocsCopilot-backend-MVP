@@ -5,7 +5,7 @@ import DocumentModel from '../../src/models/document.model';
 import DeletionAudit from '../../src/models/deletion-audit.model';
 import { registerAndLogin, uploadTestFile } from '../helpers';
 
-describe('Deletion Routes', () => {
+describe('Deletion Routes', (): void => {
   let authCookies: string[];
   let userId: string;
   let document: Record<string, unknown>;
@@ -39,8 +39,8 @@ describe('Deletion Routes', () => {
     return (res.body as unknown) as Record<string, unknown>;
   }
 
-  describe('POST /api/deletion/:id/trash', () => {
-    it('should move document to trash successfully', async () => {
+  describe('POST /api/deletion/:id/trash', (): void => {
+    it('should move document to trash successfully', async (): Promise<void> => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
       const response = await request(app)
@@ -64,7 +64,7 @@ describe('Deletion Routes', () => {
       expect(auditRecord).not.toBeNull();
     });
 
-    it('should return 404 for non-existent document', async () => {
+    it('should return 404 for non-existent document', async (): Promise<void> => {
       const fakeId = '507f1f77bcf86cd799439011';
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
@@ -75,7 +75,7 @@ describe('Deletion Routes', () => {
         .expect(404);
     });
 
-    it('should return 400 if document already in trash', async () => {
+    it('should return 400 if document already in trash', async (): Promise<void> => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
       // Mover primero a papelera
@@ -94,7 +94,7 @@ describe('Deletion Routes', () => {
     });
   });
 
-  describe('POST /api/deletion/:id/restore', () => {
+  describe('POST /api/deletion/:id/restore', (): void => {
     beforeEach(async () => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
@@ -105,7 +105,7 @@ describe('Deletion Routes', () => {
         .send();
     });
 
-    it('should restore document from trash successfully', async () => {
+    it('should restore document from trash successfully', async (): Promise<void> => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
       const response = await request(app)
@@ -129,7 +129,7 @@ describe('Deletion Routes', () => {
       expect(auditRecord).not.toBeNull();
     });
 
-    it('should return 400 if document is not in trash', async () => {
+    it('should return 400 if document is not in trash', async (): Promise<void> => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
       // Restaurar primero
@@ -148,7 +148,7 @@ describe('Deletion Routes', () => {
     });
   });
 
-  describe('GET /api/deletion/trash', () => {
+  describe('GET /api/deletion/trash', (): void => {
     beforeEach(async () => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
@@ -159,7 +159,7 @@ describe('Deletion Routes', () => {
         .send();
     });
 
-    it('should return documents in trash', async () => {
+    it('should return documents in trash', async (): Promise<void> => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
       const response = await request(app)
@@ -176,7 +176,7 @@ describe('Deletion Routes', () => {
       expect(first['originalname']).toBe('test-deletion.pdf');
     });
 
-    it('should return empty array when trash is empty', async () => {
+    it('should return empty array when trash is empty', async (): Promise<void> => {
       // Restaurar documento
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
@@ -195,7 +195,7 @@ describe('Deletion Routes', () => {
       expect((b['data'] as unknown[])).toHaveLength(0);
     });
 
-    it('should support pagination', async () => {
+    it('should support pagination', async (): Promise<void> => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
       const response = await request(app)
@@ -211,7 +211,7 @@ describe('Deletion Routes', () => {
     });
   });
 
-  describe('DELETE /api/deletion/:id/permanent', () => {
+  describe('DELETE /api/deletion/:id/permanent', (): void => {
     beforeEach(async () => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
@@ -222,7 +222,7 @@ describe('Deletion Routes', () => {
         .send();
     });
 
-    it('should permanently delete document', async () => {
+    it('should permanently delete document', async (): Promise<void> => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
       const response = await request(app)
@@ -247,7 +247,7 @@ describe('Deletion Routes', () => {
       expect(auditRecord).not.toBeNull();
     });
 
-    it('should return 400 if document is not in trash', async () => {
+    it('should return 400 if document is not in trash', async (): Promise<void> => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
       // Restaurar primero
@@ -264,7 +264,7 @@ describe('Deletion Routes', () => {
     });
   });
 
-  describe('DELETE /api/deletion/trash', () => {
+  describe('DELETE /api/deletion/trash', (): void => {
     beforeEach(async () => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
@@ -275,7 +275,7 @@ describe('Deletion Routes', () => {
         .send();
     });
 
-    it('should empty trash successfully', async () => {
+    it('should empty trash successfully', async (): Promise<void> => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
       const response = await request(app)
@@ -297,7 +297,7 @@ describe('Deletion Routes', () => {
       expect(remainingDocs).toHaveLength(0);
     });
 
-    it('should return 0 deleted count when trash is empty', async () => {
+    it('should return 0 deleted count when trash is empty', async (): Promise<void> => {
       const tokenCookie = authCookies.find((cookie: string) => cookie.startsWith('token='));
 
       // Vaciar papelera primero
@@ -319,12 +319,12 @@ describe('Deletion Routes', () => {
     });
   });
 
-  describe('Authorization', () => {
-    it('should return 401 without auth token', async () => {
+  describe('Authorization', (): void => {
+    it('should return 401 without auth token', async (): Promise<void> => {
       await request(app).post(`/api/deletion/${documentId}/trash`).send().expect(401);
     });
 
-    it('should return 403 for unauthorized user', async () => {
+    it('should return 403 for unauthorized user', async (): Promise<void> => {
       // Create another user with different credentials
       const otherAuth = await registerAndLogin({
         name: 'Other User',

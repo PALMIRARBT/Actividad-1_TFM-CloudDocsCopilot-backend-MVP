@@ -18,12 +18,12 @@ describe('membership.service (unit)', () => {
     jest.restoreAllMocks();
   });
 
-  it('hasActiveMembership returns false for invalid userId', async () => {
+  it('hasActiveMembership returns false for invalid userId', async (): Promise<void> => {
     const res = await membershipService.hasActiveMembership('invalid-id', 'orgid');
     expect(res).toBe(false);
   });
 
-  it('hasActiveMembership returns true when membership exists', async () => {
+  it('hasActiveMembership returns true when membership exists', async (): Promise<void> => {
     const Membership = jest.requireMock('../../../src/models/membership.model') as unknown as { findOne: jest.Mock };
     Membership.findOne = jest.fn().mockResolvedValue({ _id: 'abc' });
 
@@ -32,7 +32,7 @@ describe('membership.service (unit)', () => {
     expect(Membership.findOne).toHaveBeenCalled();
   });
 
-  it('getMembership returns null for invalid userId', async () => {
+  it('getMembership returns null for invalid userId', async (): Promise<void> => {
     const res = await membershipService.getMembership('bad', 'org');
     expect(res).toBeNull();
   });

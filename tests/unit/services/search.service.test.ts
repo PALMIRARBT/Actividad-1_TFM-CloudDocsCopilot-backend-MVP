@@ -34,7 +34,7 @@ type DocStub = {
   aiProcessingStatus?: string;
 };
 
-describe('search.service', () => {
+describe('search.service', (): void => {
   const fakeClient = {
     index: jest.fn().mockResolvedValue({}),
     delete: jest.fn().mockResolvedValue({}),
@@ -145,7 +145,7 @@ jest.mock('../../../src/configurations/elasticsearch-config', () => {
 // Use typed alias for imported namespace to satisfy TS rules when calling mocked functions
 const SearchSvcNS = searchService as unknown as typeof import('../../../src/services/search.service');
 
-describe('search.service', () => {
+describe('search.service', (): void => {
   const fakeDoc: DocStub = {
     _id: { toString: () => 'doc1' },
     filename: 'name',
@@ -228,7 +228,7 @@ const _mockGetInstance = jest.fn();
 
 afterEach(() => jest.clearAllMocks());
 
-describe('search.service', () => {
+describe('search.service', (): void => {
   it('indexDocument calls client.index', async (): Promise<void> => {
     const client = { index: jest.fn().mockResolvedValue(true) } as unknown as EsClient;
     // override real module's getInstance to return our client

@@ -16,7 +16,7 @@ import {
 } from '../../helpers/organization.helper';
 import { anOrganization } from '../../builders/organization.builder';
 
-describe('OrganizationService Integration Tests', () => {
+describe('OrganizationService Integration Tests', (): void => {
   let mongoServer: MongoMemoryServer;
   let testSetup: Awaited<ReturnType<typeof createCompleteOrganization>> | undefined;
 
@@ -54,7 +54,7 @@ describe('OrganizationService Integration Tests', () => {
     await cleanupOrganizationData();
   });
 
-  describe('createOrganization', () => {
+  describe('createOrganization', (): void => {
     it('should create organization with filesystem directory', async (): Promise<void> => {
       testSetup = await createCompleteOrganization({
         orgName: 'Test Organization',
@@ -148,7 +148,7 @@ describe('OrganizationService Integration Tests', () => {
     });
   });
 
-  describe('addUserToOrganization', () => {
+  describe('addUserToOrganization', (): void => {
     it('should add user and create their root folder', async (): Promise<void> => {
       testSetup = await createCompleteOrganization({
         orgName: 'Add User Org',
@@ -259,7 +259,7 @@ describe('OrganizationService Integration Tests', () => {
     });
   });
 
-  describe('removeUserFromOrganization', () => {
+  describe('removeUserFromOrganization', (): void => {
     it('should remove user from organization', async (): Promise<void> => {
       testSetup = await createCompleteOrganization({
         orgName: 'Remove User Org',
@@ -312,7 +312,7 @@ describe('OrganizationService Integration Tests', () => {
     });
   });
 
-  describe('getUserOrganizations', () => {
+  describe('getUserOrganizations', (): void => {
     it('should return all organizations where user is a member', async (): Promise<void> => {
       testSetup = await createCompleteOrganization({
         orgName: 'Test Org'
@@ -346,7 +346,7 @@ describe('OrganizationService Integration Tests', () => {
     });
   });
 
-  describe('getOrganizationById', () => {
+  describe('getOrganizationById', (): void => {
     it('should return organization with populated fields', async (): Promise<void> => {
       testSetup = await createCompleteOrganization({
         orgName: 'Get By ID Org'
@@ -369,7 +369,7 @@ describe('OrganizationService Integration Tests', () => {
     });
   });
 
-  describe('updateOrganization', () => {
+  describe('updateOrganization', (): void => {
     it('should update organization name and settings', async (): Promise<void> => {
       testSetup = await createCompleteOrganization({
         orgName: 'Original Name'
@@ -422,7 +422,7 @@ describe('OrganizationService Integration Tests', () => {
     });
   });
 
-  describe('deleteOrganization', () => {
+  describe('deleteOrganization', (): void => {
     it('should soft delete organization', async (): Promise<void> => {
       testSetup = await createCompleteOrganization({
         orgName: 'Delete Org'
@@ -451,7 +451,7 @@ describe('OrganizationService Integration Tests', () => {
     });
   });
 
-  describe('getOrganizationStorageStats', () => {
+  describe('getOrganizationStorageStats', (): void => {
     it('should calculate storage statistics correctly', async (): Promise<void> => {
       testSetup = await createCompleteOrganization({
         orgName: 'Storage Stats Org',

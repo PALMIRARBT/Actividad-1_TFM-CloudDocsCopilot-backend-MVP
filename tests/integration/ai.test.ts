@@ -90,8 +90,8 @@ describeOrSkip('AI Endpoints', () => {
     }
   });
 
-  describe('GET /api/ai/documents/:documentId/extract-text', () => {
-    it('should extract text from a text document', async () => {
+  describe('GET /api/ai/documents/:documentId/extract-text', (): void => {
+    it('should extract text from a text document', async (): Promise<void> => {
       const cookieHeader = getAuthCookie(authCookies);
 
       const res = await request(app)
@@ -113,7 +113,7 @@ describeOrSkip('AI Endpoints', () => {
       expect(data['mimeType']).toBe('text/plain');
     });
 
-    it('should fail with invalid document ID', async () => {
+    it('should fail with invalid document ID', async (): Promise<void> => {
       const cookieHeader = getAuthCookie(authCookies);
 
       const res = await request(app)
@@ -125,12 +125,12 @@ describeOrSkip('AI Endpoints', () => {
       expect(b.success).toBe(false);
     });
 
-    it('should fail without authentication', async () => {
+    it('should fail without authentication', async (): Promise<void> => {
       const res = await request(app).get(`/api/ai/documents/${documentId}/extract-text`);
       expect(res.status).toBe(401);
     });
 
-    it('should fail for non-existent document', async () => {
+    it('should fail for non-existent document', async (): Promise<void> => {
       const cookieHeader = getAuthCookie(authCookies);
       const fakeId = '507f1f77bcf86cd799439011';
 
@@ -144,8 +144,8 @@ describeOrSkip('AI Endpoints', () => {
     });
   });
 
-  describe('POST /api/ai/documents/:documentId/process', () => {
-    it('should process a document with text content', async () => {
+  describe('POST /api/ai/documents/:documentId/process', (): void => {
+    it('should process a document with text content', async (): Promise<void> => {
       const cookieHeader = getAuthCookie(authCookies);
       const textContent =
         'Este es el contenido del documento para procesar. ' +
@@ -168,7 +168,7 @@ describeOrSkip('AI Endpoints', () => {
       expect(data['dimensions']).toBe(1536);
     }, 30000); // Timeout extendido para llamadas a OpenAI
 
-    it('should fail without text content', async () => {
+    it('should fail without text content', async (): Promise<void> => {
       const cookieHeader = getAuthCookie(authCookies);
 
       const res = await request(app)
@@ -181,7 +181,7 @@ describeOrSkip('AI Endpoints', () => {
       expect(b.success).toBe(false);
     });
 
-    it('should fail with empty text', async () => {
+    it('should fail with empty text', async (): Promise<void> => {
       const cookieHeader = getAuthCookie(authCookies);
 
       const res = await request(app)
@@ -194,7 +194,7 @@ describeOrSkip('AI Endpoints', () => {
       expect(b.success).toBe(false);
     });
 
-    it('should fail without authentication', async () => {
+    it('should fail without authentication', async (): Promise<void> => {
       const res = await request(app)
         .post(`/api/ai/documents/${documentId}/process`)
         .send({ text: 'test content' });
@@ -203,7 +203,7 @@ describeOrSkip('AI Endpoints', () => {
     });
   });
 
-  describe('DELETE /api/ai/documents/:documentId/chunks', () => {
+  describe('DELETE /api/ai/documents/:documentId/chunks', (): void => {
     beforeEach(async () => {
       // Primero procesar el documento para tener chunks que eliminar
       const cookieHeader = getAuthCookie(authCookies);
@@ -215,7 +215,7 @@ describeOrSkip('AI Endpoints', () => {
         .send({ text: textContent });
     }, 30000);
 
-    it('should delete document chunks', async () => {
+    it('should delete document chunks', async (): Promise<void> => {
       const cookieHeader = getAuthCookie(authCookies);
 
       const res = await request(app)
@@ -231,7 +231,7 @@ describeOrSkip('AI Endpoints', () => {
       expect(deletedCount).toBeGreaterThanOrEqual(0);
     });
 
-    it('should fail with invalid document ID', async () => {
+    it('should fail with invalid document ID', async (): Promise<void> => {
       const cookieHeader = getAuthCookie(authCookies);
 
       const res = await request(app)
@@ -243,14 +243,14 @@ describeOrSkip('AI Endpoints', () => {
       expect(b.success).toBe(false);
     });
 
-    it('should fail without authentication', async () => {
+    it('should fail without authentication', async (): Promise<void> => {
       const res = await request(app).delete(`/api/ai/documents/${documentId}/chunks`);
 
       expect(res.status).toBe(401);
     });
   });
 
-  describe('POST /api/ai/ask', () => {
+  describe('POST /api/ai/ask', (): void => {
     beforeEach(async () => {
       // Procesar documento primero para tener contenido buscable
       const cookieHeader = getAuthCookie(authCookies);
@@ -263,7 +263,7 @@ describeOrSkip('AI Endpoints', () => {
         .send({ text: textContent });
     }, 30000);
 
-    it('should answer a question using RAG', async () => {
+    it('should answer a question using RAG', async (): Promise<void> => {
       const cookieHeader = getAuthCookie(authCookies);
 
       const res = await request(app).post('/api/ai/ask').set('Cookie', cookieHeader).send({
@@ -284,7 +284,7 @@ describeOrSkip('AI Endpoints', () => {
       expect(Array.isArray(sources)).toBe(true);
     }, 30000);
 
-    it('should fail without question', async () => {
+    it('should fail without question', async (): Promise<void> => {
       const cookieHeader = getAuthCookie(authCookies);
 
       const res = await request(app)
@@ -297,7 +297,7 @@ describeOrSkip('AI Endpoints', () => {
       expect(b.success).toBe(false);
     });
 
-    it('should fail without organizationId', async () => {
+    it('should fail without organizationId', async (): Promise<void> => {
       const cookieHeader = getAuthCookie(authCookies);
 
       const res = await request(app)
@@ -310,7 +310,7 @@ describeOrSkip('AI Endpoints', () => {
       expect(b.success).toBe(false);
     });
 
-    it('should fail without authentication', async () => {
+    it('should fail without authentication', async (): Promise<void> => {
       const res = await request(app).post('/api/ai/ask').send({
         question: 'Test question?',
         organizationId: organizationId
@@ -320,7 +320,7 @@ describeOrSkip('AI Endpoints', () => {
     });
   });
 
-  describe('POST /api/ai/documents/:documentId/ask', () => {
+  describe('POST /api/ai/documents/:documentId/ask', (): void => {
     beforeEach(async () => {
       // Procesar documento primero
       const cookieHeader = getAuthCookie(authCookies);
@@ -333,7 +333,7 @@ describeOrSkip('AI Endpoints', () => {
         .send({ text: textContent });
     }, 30000);
 
-    it('should answer a question about a specific document', async () => {
+    it('should answer a question about a specific document', async (): Promise<void> => {
       const cookieHeader = getAuthCookie(authCookies);
 
       const res = await request(app)
@@ -354,7 +354,7 @@ describeOrSkip('AI Endpoints', () => {
       expect(sources).toContain(documentId);
     }, 30000);
 
-    it('should fail without question', async () => {
+    it('should fail without question', async (): Promise<void> => {
       const cookieHeader = getAuthCookie(authCookies);
 
       const res = await request(app)
@@ -367,7 +367,7 @@ describeOrSkip('AI Endpoints', () => {
       expect(b.success).toBe(false);
     });
 
-    it('should fail with invalid document ID', async () => {
+    it('should fail with invalid document ID', async (): Promise<void> => {
       const cookieHeader = getAuthCookie(authCookies);
 
       const res = await request(app)
@@ -380,7 +380,7 @@ describeOrSkip('AI Endpoints', () => {
       expect(b.success).toBe(false);
     });
 
-    it('should fail without authentication', async () => {
+    it('should fail without authentication', async (): Promise<void> => {
       const res = await request(app)
         .post(`/api/ai/documents/${documentId}/ask`)
         .send({ question: 'Test question?' });

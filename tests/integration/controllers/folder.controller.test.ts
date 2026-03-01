@@ -11,7 +11,7 @@ import Folder from '../../../src/models/folder.model';
 import Document from '../../../src/models/document.model';
 import * as jwtService from '../../../src/services/jwt.service';
 
-describe('FolderController - New Endpoints Integration Tests', () => {
+describe('FolderController - New Endpoints Integration Tests', (): void => {
   let mongoServer: MongoMemoryServer;
   let testUserId: mongoose.Types.ObjectId;
   let testUser2Id: mongoose.Types.ObjectId;
@@ -166,8 +166,8 @@ describe('FolderController - New Endpoints Integration Tests', () => {
     return (res.body as unknown) as ApiBody;
   }
 
-  describe('GET /api/folders/tree', () => {
-    it('should return hierarchical folder tree for user', async () => {
+  describe('GET /api/folders/tree', (): void => {
+    it('should return hierarchical folder tree for user', async (): Promise<void> => {
       const response = await request(app)
         .get('/api/folders/tree')
         .query({ organizationId: testOrgId.toString() })
@@ -198,7 +198,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect((projChildren[0] as Record<string, unknown>)['name']).toBe('web-projects');
     });
 
-    it('should fail without organizationId', async () => {
+    it('should fail without organizationId', async (): Promise<void> => {
       const response = await request(app)
         .get('/api/folders/tree')
         .set('Authorization', `Bearer ${testToken}`);
@@ -208,7 +208,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(b.success).toBe(false);
     });
 
-    it('should fail without authentication', async () => {
+    it('should fail without authentication', async (): Promise<void> => {
       const response = await request(app)
         .get('/api/folders/tree')
         .query({ organizationId: testOrgId.toString() });
@@ -216,7 +216,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    it('should return empty tree if user has no root folder', async () => {
+    it('should return empty tree if user has no root folder', async (): Promise<void> => {
       // user2 no tiene rootFolder asignado
       const response = await request(app)
         .get('/api/folders/tree')
@@ -229,7 +229,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
     });
   });
 
-  describe('GET /api/folders/:id/contents', () => {
+  describe('GET /api/folders/:id/contents', (): void => {
     beforeEach(async () => {
       // Crear documentos en diferentes carpetas
       await Document.create({
@@ -266,7 +266,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       });
     });
 
-    it('should return folder with subfolders and documents', async () => {
+    it('should return folder with subfolders and documents', async (): Promise<void> => {
       const response = await request(app)
         .get(`/api/folders/${rootFolderId}/contents`)
         .set('Authorization', `Bearer ${testToken}`);
@@ -298,7 +298,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(((documents[0] as Record<string, unknown>)['originalname'] as string)).toBe('root-doc.txt');
     });
 
-    it('should return empty documents if folder has no files', async () => {
+    it('should return empty documents if folder has no files', async (): Promise<void> => {
       const response = await request(app)
         .get(`/api/folders/${subFolder2Id}/contents`)
         .set('Authorization', `Bearer ${testToken}`);
@@ -328,14 +328,14 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(((documents2[0] as Record<string, unknown>)['originalname'] as string)).toBe('document-doc.txt');
     });
 
-    it('should fail without authentication', async () => {
+    it('should fail without authentication', async (): Promise<void> => {
       const response = await request(app).get(`/api/folders/${rootFolderId}/contents`);
       expect(response.status).toBe(401);
     });
   });
 
-  describe('POST /api/folders/:id/share', () => {
-    it('should share folder with another user with viewer role', async () => {
+  describe('POST /api/folders/:id/share', (): void => {
+    it('should share folder with another user with viewer role', async (): Promise<void> => {
       const response = await request(app)
         .post(`/api/folders/${subFolder1Id}/share`)
         .set('Authorization', `Bearer ${testToken}`)
@@ -356,7 +356,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(folder?.permissions[0].role).toBe('viewer');
     });
 
-    it('should share folder with editor role', async () => {
+    it('should share folder with editor role', async (): Promise<void> => {
       const response = await request(app)
         .post(`/api/folders/${subFolder1Id}/share`)
         .set('Authorization', `Bearer ${testToken}`)
@@ -371,7 +371,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(folder?.permissions[0].role).toBe('editor');
     });
 
-    it('should update role if folder already shared with user', async () => {
+    it('should update role if folder already shared with user', async (): Promise<void> => {
       // Compartir primero con viewer
       await request(app)
         .post(`/api/folders/${subFolder1Id}/share`)
@@ -397,7 +397,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(folder?.permissions[0].role).toBe('editor');
     });
 
-    it('should fail if user is not the owner', async () => {
+    it('should fail if user is not the owner', async (): Promise<void> => {
       const response = await request(app)
         .post(`/api/folders/${subFolder1Id}/share`)
         .set('Authorization', `Bearer ${testToken2}`)
@@ -409,7 +409,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(response.status).toBe(403);
     });
 
-    it('should fail if userId is missing', async () => {
+    it('should fail if userId is missing', async (): Promise<void> => {
       const response = await request(app)
         .post(`/api/folders/${subFolder1Id}/share`)
         .set('Authorization', `Bearer ${testToken}`)
@@ -418,7 +418,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(response.status).toBe(400);
     });
 
-    it('should fail if role is missing', async () => {
+    it('should fail if role is missing', async (): Promise<void> => {
       const response = await request(app)
         .post(`/api/folders/${subFolder1Id}/share`)
         .set('Authorization', `Bearer ${testToken}`)
@@ -441,7 +441,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(errBody.error).toContain('owner role');
     });
 
-    it('should fail if target user does not exist', async () => {
+    it('should fail if target user does not exist', async (): Promise<void> => {
       const fakeUserId = new mongoose.Types.ObjectId().toString();
       const response = await request(app)
         .post(`/api/folders/${subFolder1Id}/share`)
@@ -454,7 +454,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should fail if folder does not exist', async () => {
+    it('should fail if folder does not exist', async (): Promise<void> => {
       const fakeId = new mongoose.Types.ObjectId().toString();
       const response = await request(app)
         .post(`/api/folders/${fakeId}/share`)
@@ -467,7 +467,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should fail without authentication', async () => {
+    it('should fail without authentication', async (): Promise<void> => {
       const response = await request(app).post(`/api/folders/${subFolder1Id}/share`).send({
         userId: testUser2Id.toString(),
         role: 1
@@ -477,7 +477,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
     });
   });
 
-  describe('Shared folder access validation', () => {
+  describe('Shared folder access validation', (): void => {
     beforeEach(async () => {
       // Compartir subFolder1 con user2 como viewer
       await Folder.findByIdAndUpdate(subFolder1Id, {
@@ -490,7 +490,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       });
     });
 
-    it('should allow user2 to get contents of shared folder', async () => {
+    it('should allow user2 to get contents of shared folder', async (): Promise<void> => {
       const response = await request(app)
         .get(`/api/folders/${subFolder1Id}/contents`)
         .set('Authorization', `Bearer ${testToken2}`);
@@ -519,8 +519,8 @@ describe('FolderController - New Endpoints Integration Tests', () => {
     });
   });
 
-  describe('Integration with folder hierarchy', () => {
-    it('should include nested folders in tree structure', async () => {
+  describe('Integration with folder hierarchy', (): void => {
+    it('should include nested folders in tree structure', async (): Promise<void> => {
       const response = await request(app)
         .get('/api/folders/tree')
         .query({ organizationId: testOrgId.toString() })
@@ -537,7 +537,7 @@ describe('FolderController - New Endpoints Integration Tests', () => {
       expect(((projectsFolder['children'] as unknown[])[0] as Record<string, unknown>)['path']).toBe('/projects/web-projects');
     });
 
-    it('should get contents of deeply nested folder', async () => {
+    it('should get contents of deeply nested folder', async (): Promise<void> => {
       // Obtener el ID de web-projects
       const webProjectsFolder = await Folder.findOne({
         name: 'web-projects',
