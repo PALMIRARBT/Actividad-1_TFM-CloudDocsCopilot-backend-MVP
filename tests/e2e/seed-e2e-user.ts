@@ -84,7 +84,7 @@ async function seedE2EUser() {
 
     console.warn('\n📋 Credenciales para tests E2E:');
     console.warn(`   Email: ${basicUser.email}`);
-    console.warn(`   Password: ${basicUser.password}`);
+    console.warn('   Password: [REDACTED - see basicUser fixture for test password]');
     console.warn(`   User ID: ${user._id}`);
     console.warn(`   Org ID: ${organization._id}`);
 
