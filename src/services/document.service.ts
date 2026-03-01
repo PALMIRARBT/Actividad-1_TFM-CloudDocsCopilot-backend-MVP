@@ -996,10 +996,10 @@ export async function uploadDocument({
     if (extractedContent) {
       doc.extractedContent = extractedContent;
       await doc.save();
-      console.log(`✅ Content extracted for document: ${doc.filename}`);
+      console.warn(`✅ Content extracted for document: ${doc.filename}`);
     }
-  } catch (error: any) {
-    console.error(`⚠️  Failed to extract content from ${doc.filename}:`, error.message);
+  } catch (error: unknown) {
+    console.error(`⚠️  Failed to extract content from ${doc.filename}:`, getErrorMessage(error));
     // No lanzar error, la extracción de contenido no es crítica
   }
 
