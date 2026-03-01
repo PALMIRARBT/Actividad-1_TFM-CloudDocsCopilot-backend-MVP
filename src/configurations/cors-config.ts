@@ -29,7 +29,7 @@ const getAllowedOrigins = (): string[] => {
   if (environment === 'production') {
     // En producción, solo permite orígenes explícitamente definidos
     // Múltiples orígenes pueden separarse con comas en la variable de entorno
-    const origins = process.env.ALLOWED_ORIGINS || '';
+    const origins = process.env.ALLOWED_ORIGINS || 'https://cloud-docs-web-ui.vercel.app/';
 
     if (!origins) {
       console.warn(

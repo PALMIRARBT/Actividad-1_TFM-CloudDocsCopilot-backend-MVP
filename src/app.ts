@@ -121,7 +121,12 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec, { explorer: true }));
 app.get('/api/docs.json', (_req: Request, res: Response) => res.json(openapiSpec));
 
-// Ruta raíz
+// Ruta raíz: redirige a Swagger UI
+app.get('/', (_req: Request, res: Response) => {
+  res.redirect('/api/docs');
+});
+
+// Ruta /api
 app.get('/api', (_req: Request, res: Response) => {
   res.json({ message: 'API running' });
 });
