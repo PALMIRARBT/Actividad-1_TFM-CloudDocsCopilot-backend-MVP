@@ -1,7 +1,9 @@
 import type { IChunkConfig, IChunkWithMetadata } from '../models/types/ai.types';
 
 /**
- * Configuración para el chunking de documentos
+ * Configuración de chunking optimizada para Ollama (llama3.2:3b).
+ * Chunks pequeños para no saturar el context window local (~4K tokens).
+ * También usada como fallback para 'mock' y providers desconocidos.
  */
 export const CHUNK_CONFIG: IChunkConfig = {
   /**
@@ -27,6 +29,43 @@ export const CHUNK_CONFIG: IChunkConfig = {
    */
   PARAGRAPH_SEPARATORS: ['\n\n', '\n', '. ', '! ', '? ']
 };
+
+/**
+ * Configuración de chunking optimizada para OpenAI (gpt-4o-mini).
+ * Chunks 3x más grandes para aprovechar el context window de 128K tokens.
+ * Más contexto por chunk = respuestas RAG más completas y coherentes.
+ */
+const CHUNK_CONFIG_OPENAI: IChunkConfig = {
+  /**
+   * 300 palabras ≈ 1,800-2,000 chars ≈ ~400 tokens por chunk.
+   * Permite capturar unidades semánticas completas (sección, tabla, párrafo).
+   */
+  TARGET_WORDS: 300,
+
+  /**
+   * Mínimo más alto para evitar chunks triviales con OpenAI.
+   */
+  MIN_WORDS: 100,
+
+  /**
+   * Máximo 3x mayor que Ollama — gpt-4o-mini lo procesa sin problema.
+   */
+  MAX_WORDS: 450,
+
+  PARAGRAPH_SEPARATORS: ['\n\n', '\n', '. ', '! ', '? ']
+};
+
+/**
+ * Retorna la configuración de chunking según el proveedor de IA activo.
+ * Lee AI_PROVIDER del entorno en tiempo de ejecución.
+ *
+ * @returns IChunkConfig óptima para el provider configurado
+ */
+export function getChunkConfig(): IChunkConfig {
+  const provider = (process.env.AI_PROVIDER ?? 'ollama').toLowerCase();
+  if (provider === 'openai') return CHUNK_CONFIG_OPENAI;
+  return CHUNK_CONFIG; // ollama, mock y cualquier otro usan config conservadora
+}
 
 /**
  * Cuenta el número de palabras en un texto
@@ -67,8 +106,12 @@ function countWords(text: string): number {
  */
 export function splitIntoChunks(
   text: string,
-  targetWords: number = CHUNK_CONFIG.TARGET_WORDS
+  targetWords?: number
 ): string[] {
+  // Usar config dinámica según el provider activo en tiempo de ejecución
+  const config = getChunkConfig();
+  const resolvedTargetWords = targetWords ?? config.TARGET_WORDS;
+
   // Validar entrada
   if (!text || text.trim().length === 0) {
     return [];
@@ -76,7 +119,7 @@ export function splitIntoChunks(
 
   // Si el texto es suficientemente corto, retornarlo completo
   const totalWords = countWords(text);
-  if (totalWords <= targetWords) {
+  if (totalWords <= resolvedTargetWords) {
     return [text.trim()];
   }
 
@@ -91,9 +134,9 @@ export function splitIntoChunks(
     const paragraphWords = countWords(paragraph);
 
     // Si agregar este párrafo excede el límite, guardar el chunk actual
-    if (currentWordCount > 0 && currentWordCount + paragraphWords > CHUNK_CONFIG.MAX_WORDS) {
+    if (currentWordCount > 0 && currentWordCount + paragraphWords > config.MAX_WORDS) {
       // Guardar chunk actual si tiene contenido significativo
-      if (currentWordCount >= CHUNK_CONFIG.MIN_WORDS) {
+      if (currentWordCount >= config.MIN_WORDS) {
         chunks.push(currentChunk.trim());
         currentChunk = '';
         currentWordCount = 0;
@@ -101,7 +144,7 @@ export function splitIntoChunks(
     }
 
     // Si un solo párrafo es muy grande, dividirlo por oraciones
-    if (paragraphWords > targetWords) {
+    if (paragraphWords > resolvedTargetWords) {
       // Guardar chunk actual primero si hay contenido
       if (currentChunk.trim().length > 0) {
         chunks.push(currentChunk.trim());
@@ -110,7 +153,7 @@ export function splitIntoChunks(
       }
 
       // Dividir el párrafo largo
-      const subChunks = splitLargeParagraph(paragraph, targetWords);
+      const subChunks = splitLargeParagraph(paragraph, resolvedTargetWords, config);
       chunks.push(...subChunks);
     } else {
       // Agregar párrafo al chunk actual
@@ -122,7 +165,7 @@ export function splitIntoChunks(
       currentWordCount += paragraphWords;
 
       // Si alcanzamos el tamaño objetivo, guardar el chunk
-      if (currentWordCount >= targetWords) {
+      if (currentWordCount >= resolvedTargetWords) {
         chunks.push(currentChunk.trim());
         currentChunk = '';
         currentWordCount = 0;
@@ -133,7 +176,7 @@ export function splitIntoChunks(
   // Agregar el último chunk si tiene contenido
   if (currentChunk.trim().length > 0) {
     // Si es muy pequeño y hay chunks anteriores, fusionarlo con el último
-    if (currentWordCount < CHUNK_CONFIG.MIN_WORDS && chunks.length > 0) {
+    if (currentWordCount < config.MIN_WORDS && chunks.length > 0) {
       const lastChunk = chunks.pop()!;
       chunks.push(lastChunk + '\n\n' + currentChunk.trim());
     } else {
@@ -151,7 +194,7 @@ export function splitIntoChunks(
  * @param targetWords - Tamaño objetivo en palabras
  * @returns Array de chunks
  */
-function splitLargeParagraph(paragraph: string, targetWords: number): string[] {
+function splitLargeParagraph(paragraph: string, targetWords: number, config: IChunkConfig): string[] {
   const chunks: string[] = [];
   let currentChunk = '';
   let currentWordCount = 0;
@@ -163,7 +206,7 @@ function splitLargeParagraph(paragraph: string, targetWords: number): string[] {
     const sentenceWords = countWords(sentence);
 
     // Si una sola oración excede el límite, dividirla por palabras
-    if (sentenceWords > CHUNK_CONFIG.MAX_WORDS) {
+    if (sentenceWords > config.MAX_WORDS) {
       // Guardar chunk actual si hay contenido
       if (currentChunk.trim().length > 0) {
         chunks.push(currentChunk.trim());
@@ -190,9 +233,9 @@ function splitLargeParagraph(paragraph: string, targetWords: number): string[] {
       if (wordChunk.trim().length > 0) {
         chunks.push(wordChunk.trim());
       }
-    } else if (currentWordCount + sentenceWords > CHUNK_CONFIG.MAX_WORDS) {
+    } else if (currentWordCount + sentenceWords > config.MAX_WORDS) {
       // Guardar chunk actual y comenzar uno nuevo
-      if (currentWordCount >= CHUNK_CONFIG.MIN_WORDS) {
+      if (currentWordCount >= config.MIN_WORDS) {
         chunks.push(currentChunk.trim());
         currentChunk = sentence;
         currentWordCount = sentenceWords;

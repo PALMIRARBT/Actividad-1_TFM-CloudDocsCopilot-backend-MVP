@@ -51,7 +51,7 @@ Tu tarea es analizar los siguientes fragmentos de documentos y responder la preg
 
 INSTRUCCIONES IMPORTANTES:
 1. Solo utiliza la información presente en los fragmentos de contexto proporcionados
-2. Si la respuesta no está en el contexto, indica claramente que no tienes suficiente información
+2. Responde usando los fragmentos disponibles aunque el término exacto de la pregunta aparezca como parte de un nombre compuesto o en un contexto relacionado (por ejemplo, si se pregunta por "Peridot" y el contexto menciona "Peridot-IT_SoIn", úsalo para responder). Solo indica que no tienes suficiente información si el tema es completamente ajeno al contexto.
 3. No inventes información ni uses conocimiento externo
 4. Cita el número de fragmento cuando sea relevante (ej: "Según el Fragmento 2...")
 5. Sé conciso pero completo en tu respuesta
