@@ -21,7 +21,7 @@ async function seedE2EUser() {
     const existing = await User.findOne({ email: basicUser.email });
     if (existing) {
       console.warn(`⚠️  Usuario ${basicUser.email} ya existe`);
-      console.warn(`   Actualizando contraseña a: ${basicUser.password}`);
+      console.warn('   Actualizando contraseña (valor redacted; ver basicUser fixture)');
       
       // Actualizar contraseña
       const hashedPassword = await bcrypt.hash(basicUser.password, 10);
