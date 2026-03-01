@@ -14,6 +14,16 @@ export async function search(req: AuthRequest, res: Response, next: NextFunction
       return next(new HttpError(400, 'Query parameter "q" is required'));
     }
 
+    console.log(`🔍 [Search Controller] Parámetros recibidos:`, {
+      query: q,
+      organizationId,
+      mimeType,
+      fromDate,
+      toDate,
+      limit,
+      offset
+    });
+
     const searchParams: searchService.SearchParams = {
       query: q,
       userId: req.user!.id,
@@ -51,7 +61,7 @@ export async function autocomplete(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { q, limit } = req.query;
+    const { q, limit, organizationId } = req.query;
 
     if (!q || typeof q !== 'string') {
       return next(new HttpError(400, 'Query parameter "q" is required'));
@@ -60,6 +70,7 @@ export async function autocomplete(
     const suggestions = await searchService.getAutocompleteSuggestions(
       q,
       req.user!.id,
+      organizationId as string | undefined,
       limit ? parseInt(limit as string, 10) : 5
     );
 

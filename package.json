@@ -13,6 +13,7 @@
     "test": "cross-env NODE_ENV=test jest --detectOpenHandles --runInBand",
     "test:unit": "cross-env NODE_ENV=test jest --config jest.unit.config.js --detectOpenHandles --runInBand",
     "test:integration": "cross-env NODE_ENV=test jest --testPathPattern=tests/integration --detectOpenHandles --runInBand",
+    "test:e2e": "cross-env NODE_ENV=development jest --testPathPattern=tests/e2e --runInBand",
     "test:watch": "cross-env NODE_ENV=test jest --watch --runInBand",
     "test:coverage": "cross-env NODE_ENV=test jest --coverage --runInBand",
     "test:coverage:unit": "cross-env NODE_ENV=test jest --config jest.unit.config.js --coverage --runInBand",

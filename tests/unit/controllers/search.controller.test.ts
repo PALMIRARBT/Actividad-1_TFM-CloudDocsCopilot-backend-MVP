@@ -98,7 +98,7 @@ describe('SearchController', (): void => {
 
       await searchController.autocomplete(mockReq as unknown as AuthRequest, mockRes as Response, mockNext);
 
-      expect(searchService.getAutocompleteSuggestions).toHaveBeenCalledWith('test', 'user123', 3);
+      expect(searchService.getAutocompleteSuggestions).toHaveBeenCalledWith('test', 'user123', undefined, 3);
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
         suggestions: ['test1', 'test2']

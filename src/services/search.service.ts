@@ -87,6 +87,7 @@ export async function indexDocument(document: IDocument, extractedText?: string)
         // Campos básicos
         filename: document.filename || '',
         originalname: document.originalname || '',
+        extractedContent: document.extractedContent || '',
         mimeType: document.mimeType,
         size: document.size,
         uploadedBy: String(document.uploadedBy),
@@ -175,30 +176,44 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
     }
 
     if (mimeType) {
-      filters.push({ term: { mimeType } });
+      console.log(`🔍 [Elasticsearch] Filtering by mimeType: ${mimeType}`);
+      
+      // Usar coincidencia exacta para el mimeType específico
+      // Esto asegura que se filtren exactamente los documentos del tipo seleccionado
+      filters.push({ 
+        term: { 
+          "mimeType.keyword": mimeType 
+        } 
+      });
+      
+      console.log(`📋 [Elasticsearch] Added exact mimeType filter: ${mimeType}`);
     }
 
     if (fromDate || toDate) {
       const dateRange: { gte?: string; lte?: string } = {};
       if (fromDate) dateRange.gte = fromDate.toISOString();
       if (toDate) dateRange.lte = toDate.toISOString();
-      filters.push({ range: { uploadedAt: dateRange } });
+      filters.push({ range: { createdAt: dateRange } });
     }
 
-    // Realizar búsqueda
+    // Realizar búsqueda con query_string para mayor flexibilidad
+    // Agregar wildcards automáticamente para búsqueda parcial
+    const searchQuery = `*${query.toLowerCase()}*`;
+    
+    console.log(`🔍 [Elasticsearch] Searching with query: "${searchQuery}"`);
+    console.log(`📊 [Elasticsearch] Filters:`, JSON.stringify(filters, null, 2));
+    
     const result = (await client.search({
       index: 'documents',
       query: {
         bool: {
           must: [
             {
-              multi_match: {
-                query,
-                // 🔍 CORREGIDO (RFE-AI-004): Cambiado 'extractedContent' → 'content'
-                // El campo 'content' ahora se indexa correctamente en indexDocument()
-                fields: ['filename^3', 'originalname^2', 'content'],
-                type: 'best_fields',
-                fuzziness: 'AUTO'
+              query_string: {
+                query: searchQuery,
+                fields: ['filename', 'originalname', 'content'],
+                default_operator: 'AND',
+                analyze_wildcard: true
               }
             }
           ],
@@ -207,14 +222,31 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
       },
       from: offset,
       size: limit,
-      sort: [{ _score: { order: 'desc' } }, { uploadedAt: { order: 'desc' } }]
+      sort: [
+        { _score: { order: 'desc' } },
+        { createdAt: { order: 'desc' } }
+      ]
     })) as SearchResultLike;
 
-    const documents = result.hits.hits.map(hit => ({
-      id: hit._id,
-      score: hit._score,
+    console.log(`✅ [Elasticsearch] Found ${typeof result.hits.total === 'object' ? result.hits.total.value : result.hits.total} documents in ${result.took}ms`);
+
+    const documents = result.hits.hits.map((hit: any) => ({
+      const doc = {
+        id: hit._id,
+        score: hit._score,
       ...(hit._source || {})
-    }));
+      };
+      
+      // Debug: Log cada documento encontrado
+      console.log(`📄 [Elasticsearch] Document found:`, {
+        id: doc.id,
+        filename: doc.filename || doc.originalname,
+        mimeType: doc.mimeType,
+        score: doc.score
+      });
+      
+      return doc;
+    });
 
     return {
       documents,
@@ -234,25 +266,36 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
 export async function getAutocompleteSuggestions(
   query: string,
   userId: string,
+  organizationId?: string,
   limit: number = 5
 ): Promise<string[]> {
   try {
     const client = getEsClient();
 
+    // Construir filtros
+    const filters: any[] = [];
+    if (organizationId) {
+      filters.push({ term: { organization: organizationId } });
+    } else {
+      filters.push({ term: { uploadedBy: userId } });
+    }
+
+    const searchQuery = `*${query.toLowerCase()}*`;
+    
     const result = (await client.search({
       index: 'documents',
       query: {
         bool: {
           must: [
             {
-              multi_match: {
-                query,
+              query_string: {
+                query: searchQuery,
                 fields: ['filename', 'originalname'],
-                type: 'phrase_prefix'
+                analyze_wildcard: true
               }
             }
           ],
-          filter: [{ term: { uploadedBy: userId } }]
+          filter: filters
         }
       },
       size: limit,
