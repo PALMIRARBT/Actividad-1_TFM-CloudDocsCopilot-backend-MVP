@@ -21,9 +21,15 @@ const COLLECTION_NAME = 'document_chunks';
 const VECTOR_SEARCH_INDEX = process.env.MONGO_ATLAS_VECTOR_INDEX || 'default';
 
 /**
- * Número de resultados a retornar en búsqueda vectorial
+ * Retorna el número de chunks a recuperar en búsqueda vectorial según el provider.
+ *
+ * - ollama/mock: 3 chunks — limita el contexto para no saturar el context window local.
+ * - openai: 6 chunks — gpt-4o-mini tiene 128K tokens, más contexto = mejores respuestas.
  */
-const TOP_K_RESULTS = 3;  // Reducido de 5 → menos contexto, más rápido
+function getTopKResults(): number {
+  const provider = (process.env.AI_PROVIDER ?? 'ollama').toLowerCase();
+  return provider === 'openai' ? 6 : 3;
+}
 
 /**
  * Servicio RAG (Retrieval-Augmented Generation)
@@ -44,7 +50,7 @@ export class RAGService {
   private async findRelevantChunks(
     queryEmbedding: number[],
     organizationId: string,
-    topK: number = TOP_K_RESULTS
+    topK: number = getTopKResults()
   ): Promise<ISearchResult[]> {
     // Validar que el embedding sea válido
     if (!queryEmbedding || queryEmbedding.length === 0) {
@@ -178,7 +184,7 @@ export class RAGService {
   async search(
     query: string,
     organizationId: string,
-    topK: number = TOP_K_RESULTS
+    topK: number = getTopKResults()
   ): Promise<ISearchResult[]> {
     // Validar entrada
     if (!query || query.trim().length === 0) {
@@ -255,7 +261,7 @@ export class RAGService {
     query: string,
     organizationId: string,
     documentId: string,
-    topK: number = TOP_K_RESULTS
+    topK: number = getTopKResults()
   ): Promise<ISearchResult[]> {
     // Validar entrada
     if (!query || query.trim().length === 0) {
@@ -379,7 +385,7 @@ export class RAGService {
   async answerQuestion(
     question: string,
     organizationId: string,
-    topK: number = TOP_K_RESULTS
+    topK: number = getTopKResults()
   ): Promise<IRagResponse> {
     // Validar entrada
     if (!question || question.trim().length === 0) {
@@ -471,7 +477,7 @@ export class RAGService {
     question: string,
     organizationId: string,
     documentId: string,
-    topK: number = TOP_K_RESULTS
+    topK: number = getTopKResults()
   ): Promise<IRagResponse> {
     // Validar entrada
     if (!question || question.trim().length === 0) {

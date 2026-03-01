@@ -79,7 +79,9 @@ describe('chunking.util', (): void => {
   });
 
   test('splitIntoChunks splits long text into chunks', (): void => {
-    const words = new Array(CHUNK_CONFIG.TARGET_WORDS * 3).fill('word').join(' ');
+    // Usar 10x el TARGET más alto posible (OpenAI=300) para garantizar
+    // múltiples chunks independientemente del provider activo.
+    const words = new Array(CHUNK_CONFIG.TARGET_WORDS * 10).fill('word').join(' ');
     const chunks = splitIntoChunks(words);
     expect(chunks.length).toBeGreaterThanOrEqual(2);
   });
