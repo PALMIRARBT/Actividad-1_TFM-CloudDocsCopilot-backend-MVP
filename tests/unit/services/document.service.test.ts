@@ -249,8 +249,8 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
     safeRmDir(storageRoot);
   });
 
-  describe('uploadDocument', () => {
-    it('should upload document into storage + create DB record + update user.storageUsed', async () => {
+  describe('uploadDocument', (): void => {
+    it('should upload document into storage + create DB record + update user.storageUsed', async (): Promise<void> => {
       const testFileName = `test-${Date.now()}.txt`;
       const tempFilePath = path.join(uploadsRoot, testFileName);
       fs.writeFileSync(tempFilePath, 'Test content');
@@ -313,7 +313,7 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
       expect(aiJob.processDocumentAI).toHaveBeenCalledWith(doc._id.toString());
     });
 
-    it('should use membership.rootFolder when folderId is not provided', async () => {
+    it('should use membership.rootFolder when folderId is not provided', async (): Promise<void> => {
       const testFileName = `root-${Date.now()}.txt`;
       const tempFilePath = path.join(uploadsRoot, testFileName);
       fs.writeFileSync(tempFilePath, 'Hello root');
@@ -358,7 +358,7 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
       expect(fs.readFileSync(expectedPhysical, 'utf8')).toBe('buf!');
     });
 
-    it('should fail when membership has no rootFolder and folderId is not provided/empty', async () => {
+    it('should fail when membership has no rootFolder and folderId is not provided/empty', async (): Promise<void> => {
       (membershipService.getMembership as jest.Mock).mockResolvedValueOnce({
         rootFolder: undefined
       });
@@ -379,7 +379,7 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
       ).rejects.toThrow('Membership does not have a root folder. Please contact support.');
     });
 
-    it('should fail if folder does not belong to active organization', async () => {
+    it('should fail if folder does not belong to active organization', async (): Promise<void> => {
       const otherOrg = await Organization.create({
         name: 'Other Org',
         owner: testUserId,
@@ -420,7 +420,7 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
       ).rejects.toThrow('Folder does not belong to your active organization');
     });
 
-    it('should fail if user storage quota is exceeded', async () => {
+    it('should fail if user storage quota is exceeded', async (): Promise<void> => {
       const org = await Organization.findById(testOrgId);
       org!.settings.maxStoragePerUser = 10;
       await org!.save();
@@ -473,7 +473,7 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
       ).rejects.toThrow(/Organization storage quota exceeded/i);
     });
 
-    it('should fail if file type is not allowed by organization settings', async () => {
+    it('should fail if file type is not allowed by organization settings', async (): Promise<void> => {
       const org = await Organization.findById(testOrgId);
       org!.settings.allowedFileTypes = ['pdf'];
       await org!.save();
@@ -522,8 +522,8 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
     });
   });
 
-  describe('listDocuments', () => {
-    it('should list documents from active organization', async () => {
+  describe('listDocuments', (): void => {
+    it('should list documents from active organization', async (): Promise<void> => {
       await Document.create({
         filename: 'a.txt',
         originalname: 'a.txt',
@@ -541,7 +541,7 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
       expect(docs[0].organization?.toString()).toBe(testOrgId.toString());
     });
 
-    it('should fail if no active organization', async () => {
+    it('should fail if no active organization', async (): Promise<void> => {
       (membershipService.getActiveOrganization as jest.Mock).mockResolvedValueOnce(null);
 
       await expect(documentService.listDocuments(testUserId.toString())).rejects.toThrow(
@@ -550,14 +550,14 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
     });
   });
 
-  describe('findDocumentById', () => {
-    it('should fail for invalid id', async () => {
+  describe('findDocumentById', (): void => {
+    it('should fail for invalid id', async (): Promise<void> => {
       await expect(documentService.findDocumentById('not-an-id')).rejects.toThrow(
         'Invalid document ID'
       );
     });
 
-    it('should find by id for valid id', async () => {
+    it('should find by id for valid id', async (): Promise<void> => {
       const created = await Document.create({
         filename: 'a.txt',
         originalname: 'a.txt',
@@ -574,8 +574,8 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
     });
   });
 
-  describe('getUserRecentDocuments', () => {
-    it('should return recent documents sorted desc and include accessType/isOwned', async () => {
+  describe('getUserRecentDocuments', (): void => {
+    it('should return recent documents sorted desc and include accessType/isOwned', async (): Promise<void> => {
       await Document.create({
         filename: 'old.txt',
         originalname: 'old.txt',
@@ -619,7 +619,7 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
       expect((recent[1] as unknown as { isOwned: unknown }).isOwned).toBe(true);
     });
 
-    it('should respect limit', async () => {
+    it('should respect limit', async (): Promise<void> => {
       for (let i = 0; i < 5; i++) {
         await Document.create({
           filename: `doc${i}.txt`,
@@ -643,8 +643,8 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
     });
   });
 
-  describe('listSharedDocumentsToUser', () => {
-    it('should list org documents excluding those uploadedBy the user', async () => {
+  describe('listSharedDocumentsToUser', (): void => {
+    it('should list org documents excluding those uploadedBy the user', async (): Promise<void> => {
       await Document.create({
         filename: 'mine.txt',
         originalname: 'mine.txt',
@@ -673,15 +673,15 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
       expect((shared[0] as unknown as { originalname?: unknown }).originalname).toBe('theirs.txt');
     });
 
-    it('should fail if invalid userId', async () => {
+    it('should fail if invalid userId', async (): Promise<void> => {
       await expect(documentService.listSharedDocumentsToUser('bad')).rejects.toThrow(
         'Invalid user ID'
       );
     });
   });
 
-  describe('shareDocument', () => {
-    it('should share org document only to active members and create notifications per recipient', async () => {
+  describe('shareDocument', (): void => {
+    it('should share org document only to active members and create notifications per recipient', async (): Promise<void> => {
       const doc = await Document.create({
         filename: 'orgdoc.txt',
         originalname: 'orgdoc.txt',
@@ -778,8 +778,8 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
     });
   });
 
-  describe('replaceDocumentFile', () => {
-    it('should allow uploadedBy to replace file in org doc and adjust storage delta', async () => {
+  describe('replaceDocumentFile', (): void => {
+    it('should allow uploadedBy to replace file in org doc and adjust storage delta', async (): Promise<void> => {
       const org = await Organization.findById(testOrgId);
       org!.settings.allowedFileTypes = ['txt'];
       org!.settings.maxStoragePerUser = 1000;
@@ -880,7 +880,7 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
       ).resolves.toBeDefined();
     });
 
-    it('should fail if neither org admin nor doc owner', async () => {
+    it('should fail if neither org admin nor doc owner', async (): Promise<void> => {
       (membershipService.hasAnyRole as jest.Mock).mockResolvedValueOnce(false);
 
       const doc = await Document.create({
@@ -911,8 +911,8 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
     });
   });
 
-  describe('deleteDocument', () => {
-    it('should delete org document only if org OWNER/ADMIN', async () => {
+  describe('deleteDocument', (): void => {
+    it('should delete org document only if org OWNER/ADMIN', async (): Promise<void> => {
       const filename = `del-${Date.now()}.txt`;
       const docPath = `/${testOrgSlug}/${testUserId.toString()}/Documents/${filename}`;
       const physical = physicalFromDocPath(docPath);
@@ -952,7 +952,7 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
       expect(notificationService.notifyOrganizationMembers).toHaveBeenCalled();
     });
 
-    it('should delete personal document only if uploadedBy', async () => {
+    it('should delete personal document only if uploadedBy', async (): Promise<void> => {
       const filename = `personal-del-${Date.now()}.txt`;
       const docPath = `/personal/${testUserId.toString()}/${filename}`;
       const physical = physicalFromDocPath(docPath);
@@ -980,8 +980,8 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
     });
   });
 
-  describe('moveDocument', () => {
-    it('should move document for owner and move physical file', async () => {
+  describe('moveDocument', (): void => {
+    it('should move document for owner and move physical file', async (): Promise<void> => {
       const targetFolder = await Folder.create({
         name: 'Archive',
         displayName: 'Archive',
@@ -1027,7 +1027,7 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
       expect(fs.existsSync(newPhysical)).toBe(true);
     });
 
-    it('should fail if user is not owner', async () => {
+    it('should fail if user is not owner', async (): Promise<void> => {
       const doc = await Document.create({
         filename: 'x.txt',
         originalname: 'x.txt',
@@ -1049,7 +1049,7 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
     });
   });
 
-  describe('copyDocument', () => {
+  describe('copyDocument', (): void => {
     it('should copy document (owner) and increase storageUsed', async () => {
       const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1700000000000);
 
@@ -1123,7 +1123,7 @@ describe('DocumentService Integration-ish Tests (mongo + fs, mocked collaborator
       ).rejects.toThrow('You do not have access to this document');
     });
 
-    it('should fail if storage quota exceeded', async () => {
+    it('should fail if storage quota exceeded', async (): Promise<void> => {
       const org = await Organization.findById(testOrgId);
       org!.settings.maxStoragePerUser = 10;
       await org!.save();

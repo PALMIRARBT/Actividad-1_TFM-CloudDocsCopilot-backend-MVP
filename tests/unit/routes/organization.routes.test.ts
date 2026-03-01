@@ -1,7 +1,7 @@
 import express from 'express';
 import organizationRoutes from '../../../src/routes/organization.routes';
 
-describe('Organization Routes', () => {
+describe('Organization Routes', (): void => {
   let router: express.Router;
 
   beforeEach(() => {
@@ -9,8 +9,8 @@ describe('Organization Routes', () => {
     router = organizationRoutes;
   });
 
-  describe('Route Configuration', () => {
-    it('should export an Express router', () => {
+  describe('Route Configuration', (): void => {
+    it('should export an Express router', (): void => {
       // Arrange
       // (router already assigned in beforeEach)
 
@@ -22,7 +22,7 @@ describe('Organization Routes', () => {
       expect(router.stack).toBeDefined();
     });
 
-    it('should have configured POST / route', () => {
+    it('should have configured POST / route', (): void => {
       // Arrange
       const routes = router.stack
         .filter((layer) => layer.route)
@@ -36,7 +36,7 @@ describe('Organization Routes', () => {
       expect(hasRoute).toBe(true);
     });
 
-    it('should have configured GET / route', () => {
+    it('should have configured GET / route', (): void => {
       // Arrange
       const routes = router.stack
         .filter((layer) => layer.route)
@@ -50,7 +50,7 @@ describe('Organization Routes', () => {
       expect(hasRoute).toBe(true);
     });
 
-    it('should have configured GET /:id route', () => {
+    it('should have configured GET /:id route', (): void => {
       // Arrange
       const routes = router.stack
         .filter((layer) => layer.route)
@@ -64,7 +64,7 @@ describe('Organization Routes', () => {
       expect(hasRoute).toBe(true);
     });
 
-    it('should apply middleware to routes', () => {
+    it('should apply middleware to routes', (): void => {
       // Arrange
       const middlewares = router.stack.filter((layer) => !layer.route && layer.handle);
 

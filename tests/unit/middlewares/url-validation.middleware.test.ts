@@ -16,7 +16,7 @@ import {
 import HttpError from '../../../src/models/error.model';
 import { Request, Response, NextFunction } from 'express';
 
-describe('URL Validation Middleware', () => {
+describe('URL Validation Middleware', (): void => {
   let mockNext: jest.MockedFunction<NextFunction>;
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
@@ -71,8 +71,8 @@ describe('URL Validation Middleware', () => {
     });
   });
 
-  describe('validateUrlMiddleware', () => {
-    it('should allow valid URL in specified field', () => {
+  describe('validateUrlMiddleware', (): void => {
+    it('should allow valid URL in specified field', (): void => {
       // Arrange
       const middleware = validateUrlMiddleware({ fields: ['url'] });
       mockRequest.body = { url: 'https://ok.com' };
@@ -85,7 +85,7 @@ describe('URL Validation Middleware', () => {
       expect(mockNext).toHaveBeenCalledTimes(1);
     });
 
-    it('should reject invalid URL in strict mode', () => {
+    it('should reject invalid URL in strict mode', (): void => {
       // Arrange
       const middleware = validateUrlMiddleware({ fields: ['url'], strict: true });
       mockRequest.body = { url: 'http://bad-url' };
@@ -100,7 +100,7 @@ describe('URL Validation Middleware', () => {
       expect(error.statusCode).toBe(400);
     });
 
-    it('should allow invalid URL when strict mode is disabled', () => {
+    it('should allow invalid URL when strict mode is disabled', (): void => {
       // Arrange
       const middleware = validateUrlMiddleware({ fields: ['url'], strict: false });
       mockRequest.body = { url: 'http://bad-url' };
@@ -112,7 +112,7 @@ describe('URL Validation Middleware', () => {
       expect(mockNext).toHaveBeenCalledWith();
     });
 
-    it('should validate array of URLs and reject if any invalid', () => {
+    it('should validate array of URLs and reject if any invalid', (): void => {
       // Arrange
       const middleware = validateUrlMiddleware({ fields: ['urls'] });
       mockRequest.body = { urls: ['https://ok.com', 'http://bad-url'] };
@@ -124,7 +124,7 @@ describe('URL Validation Middleware', () => {
       expect(mockNext).toHaveBeenCalledWith(expect.any(HttpError));
     });
 
-    it('should skip validation when field is not present', () => {
+    it('should skip validation when field is not present', (): void => {
       // Arrange
       const middleware = validateUrlMiddleware({ fields: ['url'] });
       mockRequest.body = {};
@@ -136,7 +136,7 @@ describe('URL Validation Middleware', () => {
       expect(mockNext).toHaveBeenCalledWith();
     });
 
-    it('should validate multiple fields simultaneously', () => {
+    it('should validate multiple fields simultaneously', (): void => {
       // Arrange
       const middleware = validateUrlMiddleware({ fields: ['url1', 'url2'] });
       mockRequest.body = {
@@ -152,8 +152,8 @@ describe('URL Validation Middleware', () => {
     });
   });
 
-  describe('validateWebhookUrl', () => {
-    it('should allow valid webhook URL', () => {
+  describe('validateWebhookUrl', (): void => {
+    it('should allow valid webhook URL', (): void => {
       // Arrange
       mockRequest.body = { webhookUrl: 'https://ok.com' };
 
@@ -164,7 +164,7 @@ describe('URL Validation Middleware', () => {
       expect(mockNext).toHaveBeenCalledWith();
     });
 
-    it('should reject private IP addresses in webhook URLs', () => {
+    it('should reject private IP addresses in webhook URLs', (): void => {
       // Arrange
       mockRequest.body = { webhookUrl: 'http://127.0.0.1/secret' };
 
@@ -175,7 +175,7 @@ describe('URL Validation Middleware', () => {
       expect(mockNext).toHaveBeenCalledWith(expect.any(HttpError));
     });
 
-    it('should reject localhost in webhook URLs', () => {
+    it('should reject localhost in webhook URLs', (): void => {
       // Arrange
       mockRequest.body = { callbackUrl: 'http://localhost:8080/callback' };
 
@@ -187,8 +187,8 @@ describe('URL Validation Middleware', () => {
     });
   });
 
-  describe('validateImageUrl', () => {
-    it('should allow valid image URL from allowed domain', () => {
+  describe('validateImageUrl', (): void => {
+    it('should allow valid image URL from allowed domain', (): void => {
       // Arrange
       const middleware = validateImageUrl();
       mockRequest.body = { imageUrl: 'https://cdn.example.com/image.png' };
@@ -200,7 +200,7 @@ describe('URL Validation Middleware', () => {
       expect(mockNext).toHaveBeenCalledWith();
     });
 
-    it('should validate avatarUrl field', () => {
+    it('should validate avatarUrl field', (): void => {
       // Arrange
       const middleware = validateImageUrl();
       mockRequest.body = { avatarUrl: 'https://cdn.example.com/avatar.jpg' };
@@ -212,7 +212,7 @@ describe('URL Validation Middleware', () => {
       expect(mockNext).toHaveBeenCalledWith();
     });
 
-    it('should reject invalid image URLs', () => {
+    it('should reject invalid image URLs', (): void => {
       // Arrange
       const middleware = validateImageUrl();
       mockRequest.body = { imageUrl: 'http://bad-domain.com/image.png' };
@@ -225,20 +225,20 @@ describe('URL Validation Middleware', () => {
     });
   });
 
-  describe('validateRedirectUrl', () => {
-    it('should throw error when allowedDomains is empty', () => {
+  describe('validateRedirectUrl', (): void => {
+    it('should throw error when allowedDomains is empty', (): void => {
       // Arrange & Act & Assert
       expect(() => validateRedirectUrl([])).toThrow(
         'allowedDomains is required for redirect URL validation'
       );
     });
 
-    it('should throw error when allowedDomains is not provided', () => {
+    it('should throw error when allowedDomains is not provided', (): void => {
       // Arrange & Act & Assert
       expect(() => validateRedirectUrl(undefined as unknown as string[])).toThrow();
     });
 
-    it('should allow redirect URL from allowed domain', () => {
+    it('should allow redirect URL from allowed domain', (): void => {
       // Arrange
       const middleware = validateRedirectUrl(['ok.com']);
       mockRequest.body = { redirectUrl: 'https://ok.com/return' };
@@ -251,8 +251,8 @@ describe('URL Validation Middleware', () => {
     });
   });
 
-  describe('validateQueryUrl', () => {
-    it('should validate URL in query parameters', () => {
+  describe('validateQueryUrl', (): void => {
+    it('should validate URL in query parameters', (): void => {
       // Arrange
       const middleware = validateQueryUrl(['url']);
       mockRequest.query = { url: 'https://ok.com' };
@@ -264,7 +264,7 @@ describe('URL Validation Middleware', () => {
       expect(mockNext).toHaveBeenCalledWith();
     });
 
-    it('should reject unsupported protocol in query URL', () => {
+    it('should reject unsupported protocol in query URL', (): void => {
       // Arrange
       const middleware = validateQueryUrl(['url']);
       mockRequest.query = { url: 'ftp://example.com/path' };
@@ -278,7 +278,7 @@ describe('URL Validation Middleware', () => {
       expect(error.message).toContain('Invalid URL in query parameters');
     });
 
-    it('should handle array values in query parameters', () => {
+    it('should handle array values in query parameters', (): void => {
       // Arrange
       const middleware = validateQueryUrl(['url']);
       mockRequest.query = { url: ['https://ok.com', 'https://trusted.com'] };
@@ -291,8 +291,8 @@ describe('URL Validation Middleware', () => {
     });
   });
 
-  describe('scanForUrls', () => {
-    it('should detect and reject suspicious URLs in body strings', () => {
+  describe('scanForUrls', (): void => {
+    it('should detect and reject suspicious URLs in body strings', (): void => {
       // Arrange
       const middleware = scanForUrls(['trusted.com']);
       mockRequest.body = { text: 'Click here http://evil.com/malware' };
@@ -306,7 +306,7 @@ describe('URL Validation Middleware', () => {
       expect(error.message).toContain('Suspicious URLs detected');
     });
 
-    it('should allow trusted URLs in body strings', () => {
+    it('should allow trusted URLs in body strings', (): void => {
       // Arrange
       const middleware = scanForUrls(['trusted.com']);
       mockRequest.body = { text: 'Visit https://trusted.com for more info' };
@@ -318,7 +318,7 @@ describe('URL Validation Middleware', () => {
       expect(mockNext).toHaveBeenCalledWith();
     });
 
-    it('should recursively scan nested objects for URLs', () => {
+    it('should recursively scan nested objects for URLs', (): void => {
       // Arrange
       const middleware = scanForUrls(['trusted.com']);
       mockRequest.body = {
@@ -336,7 +336,7 @@ describe('URL Validation Middleware', () => {
       expect(mockNext).toHaveBeenCalledWith(expect.any(HttpError));
     });
 
-    it('should scan arrays for URLs', () => {
+    it('should scan arrays for URLs', (): void => {
       // Arrange
       const middleware = scanForUrls(['trusted.com']);
       mockRequest.body = {

@@ -10,10 +10,12 @@ import { MongoClient, Db, MongoClientOptions } from 'mongodb';
  */
 
 /**
- * URI de conexión a MongoDB Atlas
- * Se obtiene de la variable de entorno MONGO_ATLAS_URI
+ * Obtiene la URI de conexión a MongoDB Atlas desde las variables de entorno
+ * Se lee en tiempo de ejecución para que los tests puedan modificar `process.env`
  */
-const MONGO_ATLAS_URI = process.env.MONGO_ATLAS_URI || '';
+function getMongoAtlasUri(): string {
+  return process.env.MONGO_ATLAS_URI || '';
+}
 
 /**
  * Flag para permitir certificados TLS inválidos (SOLO para desarrollo/testing)
@@ -46,20 +48,25 @@ let database: Db | null = null;
  * @throws Error si MONGO_ATLAS_URI no está configurado o la conexión falla
  */
 export async function getDb(): Promise<Db> {
-  // Si ya tenemos una conexión, reutilizarla
+  // Si ya tenemos una conexión, validar que la URI siga presente y reutilizarla
   if (database && client) {
-    console.log('[atlas] ♻️  Reusing existing connection');
+    const currentUri = getMongoAtlasUri();
+    if (!currentUri || currentUri.trim() === '') {
+      throw new Error('MONGO_ATLAS_URI is not configured in environment variables');
+    }
+    console.warn('[atlas] ♻️  Reusing existing connection');
     return database;
   }
 
   // Validar que la URI esté configurada
+  const MONGO_ATLAS_URI = getMongoAtlasUri();
   if (!MONGO_ATLAS_URI || MONGO_ATLAS_URI.trim() === '') {
     throw new Error('MONGO_ATLAS_URI is not configured in environment variables');
   }
 
   try {
     const connStart = Date.now();
-    console.log('[atlas] 🔌 Connecting to MongoDB Atlas...');
+    console.warn('[atlas] 🔌 Connecting to MongoDB Atlas...');
 
     // Crear nuevo cliente con opciones recomendadas
     // Opciones TLS robustas para Windows + Node.js
@@ -94,7 +101,7 @@ export async function getDb(): Promise<Db> {
     // Verificar conexión con ping
     await database.command({ ping: 1 });
 
-    console.log(`[atlas] ✅ MongoDB Atlas connected successfully in ${Date.now() - connStart}ms`);
+    console.warn(`[atlas] ✅ MongoDB Atlas connected successfully in ${Date.now() - connStart}ms`);
 
     return database;
   } catch (error: unknown) {
@@ -105,7 +112,7 @@ export async function getDb(): Promise<Db> {
     client = null;
     database = null;
 
-    throw new Error(`Failed to connect to MongoDB Atlas: ${errorMessage}`);
+    throw error;
   }
 }
 
@@ -117,7 +124,7 @@ export async function closeAtlasConnection(): Promise<void> {
   if (client) {
     try {
       await client.close();
-      console.log('[atlas] MongoDB Atlas connection closed');
+      console.warn('[atlas] MongoDB Atlas connection closed');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('[atlas] Error closing MongoDB Atlas connection:', errorMessage);

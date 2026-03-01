@@ -16,7 +16,7 @@ import { securityUser } from '../fixtures';
  * por lo que los tests de integración verifican que el sistema funcione correctamente.
  * Las utilidades de validación (url-validator, path-sanitizer) se prueban unitariamente.
  */
-describe('Security - URL and Path Validation', () => {
+describe('Security - URL and Path Validation', (): void => {
   // Cookies compartidas para todos los tests de integración
   let globalAuthCookies: string[];
   let folderId: string;
@@ -39,7 +39,7 @@ describe('Security - URL and Path Validation', () => {
     folderId = user?.rootFolder?.toString() || '';
   });
 
-  describe('Path Traversal Protection', () => {
+  describe('Path Traversal Protection', (): void => {
     it('should accept file upload (Multer sanitizes filename with UUID)', async () => {
       // NOTA: Multer automáticamente convierte cualquier nombre de archivo
       // en un UUID seguro, por lo que el path traversal se previene a nivel de Multer
@@ -74,7 +74,7 @@ describe('Security - URL and Path Validation', () => {
       expect([201, 400, 401, 500]).toContain(response.status);
     });
 
-    it('should accept valid filename without traversal', async () => {
+    it('should accept valid filename without traversal', async (): Promise<void> => {
       const testFile = Buffer.from('legitimate content');
 
       const response = await request(app)
@@ -112,7 +112,7 @@ describe('Security - URL and Path Validation', () => {
       expect([201, 400, 401, 500]).toContain(response.status);
     });
 
-    it('should sanitize filename with dangerous characters', async () => {
+    it('should sanitize filename with dangerous characters', async (): Promise<void> => {
       const testFile = Buffer.from('test content');
 
       const response = await request(app)
@@ -121,15 +121,19 @@ describe('Security - URL and Path Validation', () => {
         .attach('file', testFile, 'file<>:|?.txt');
 
       // El nombre debe ser sanitizado automáticamente por Multer (UUID)
-      if (response.status === 201 && response.body.filename) {
-        expect(response.body.filename).not.toMatch(/[<>:"|?*]/);
-        expect(response.body.filename).toMatch(/^[0-9a-f-]+\.txt$/i);
+      if (response.status === 201) {
+        const body = response.body as unknown as Record<string, unknown>;
+        if (body['filename']) {
+          const filename = body['filename'] as string;
+          expect(filename).not.toMatch(/[<>:\"|?*]/);
+          expect(filename).toMatch(/^[0-9a-f-]+\.txt$/i);
+        }
       }
     });
   });
 
-  describe('File Extension Validation', () => {
-    it('should reject executable file extensions', async () => {
+  describe('File Extension Validation', (): void => {
+    it('should reject executable file extensions', async (): Promise<void> => {
       const maliciousFile = Buffer.from('malicious code');
 
       const response = await request(app)
@@ -141,7 +145,7 @@ describe('Security - URL and Path Validation', () => {
       expect([400, 401]).toContain(response.status);
     });
 
-    it('should reject script file extensions', async () => {
+    it('should reject script file extensions', async (): Promise<void> => {
       const scriptFile = Buffer.from('rm -rf /');
 
       const response = await request(app)
@@ -153,7 +157,7 @@ describe('Security - URL and Path Validation', () => {
       expect([400, 401]).toContain(response.status);
     });
 
-    it('should accept allowed file extensions', async () => {
+    it('should accept allowed file extensions', async (): Promise<void> => {
       const validFile = Buffer.from('valid content');
 
       // Solo .txt está permitido por defecto (text/plain en ALLOWED_MIME_TYPES)
@@ -167,7 +171,7 @@ describe('Security - URL and Path Validation', () => {
     });
   });
 
-  describe('Path Length Validation', () => {
+  describe('Path Length Validation', (): void => {
     it('should handle extremely long filenames (Multer uses UUID)', async () => {
       const testFile = Buffer.from('test');
       const longName = 'a'.repeat(300) + '.txt'; // Más de 255 caracteres
@@ -181,7 +185,7 @@ describe('Security - URL and Path Validation', () => {
       expect([201, 400, 401]).toContain(response.status);
     });
 
-    it('should accept reasonable filename lengths', async () => {
+    it('should accept reasonable filename lengths', async (): Promise<void> => {
       const testFile = Buffer.from('test');
       const normalName = 'reasonable-filename.txt';
 
@@ -194,7 +198,7 @@ describe('Security - URL and Path Validation', () => {
     });
   });
 
-  describe('Download Path Validation', () => {
+  describe('Download Path Validation', (): void => {
     let documentId: string;
     let testAuthCookies: string[];
 
@@ -215,11 +219,12 @@ describe('Security - URL and Path Validation', () => {
         .attach('file', testFile, 'download-test.txt');
 
       if (uploadResponse.status === 201) {
-        documentId = uploadResponse.body._id;
+        const b = uploadResponse.body as unknown as Record<string, unknown>;
+        documentId = (b['_id'] as string) || (b['id'] as string) || '';
       }
     });
 
-    it('should prevent path traversal in download endpoint', async () => {
+    it('should prevent path traversal in download endpoint', async (): Promise<void> => {
       // Intentar manipular el ID para acceder a otros archivos
       await request(app)
         .get('/api/documents/download/../../../etc/passwd')
@@ -227,7 +232,7 @@ describe('Security - URL and Path Validation', () => {
         .expect(404); // Debe fallar el routing o la validación
     });
 
-    it('should only allow downloading files within storage directory', async () => {
+    it('should only allow downloading files within storage directory', async (): Promise<void> => {
       if (!documentId) {
         // Skip if no document was uploaded
         return;
@@ -249,7 +254,7 @@ describe('Security - URL and Path Validation', () => {
     // Si tu aplicación no tiene endpoints que reciban URLs externas,
     // estos tests servirán como ejemplos de cómo implementarlos
 
-    it('should validate URL utility rejects private IPs', async () => {
+    it('should validate URL utility rejects private IPs', async (): Promise<void> => {
       const { validateUrl } = await import('../../src/utils/url-validator');
 
       const privateIps = [
@@ -267,7 +272,7 @@ describe('Security - URL and Path Validation', () => {
       }
     });
 
-    it('should validate URL utility accepts public URLs', async () => {
+    it('should validate URL utility accepts public URLs', async (): Promise<void> => {
       const { validateUrl } = await import('../../src/utils/url-validator');
 
       const publicUrls = ['https://example.com', 'https://www.google.com', 'http://api.github.com'];
@@ -279,7 +284,7 @@ describe('Security - URL and Path Validation', () => {
       }
     });
 
-    it('should validate URL utility rejects blocked ports', async () => {
+    it('should validate URL utility rejects blocked ports', async (): Promise<void> => {
       const { validateUrl } = await import('../../src/utils/url-validator');
 
       const blockedPorts = [
@@ -296,7 +301,7 @@ describe('Security - URL and Path Validation', () => {
       }
     });
 
-    it('should validate URL utility enforces whitelist', async () => {
+    it('should validate URL utility enforces whitelist', async (): Promise<void> => {
       const { validateUrl } = await import('../../src/utils/url-validator');
 
       const allowedDomains = ['trusted.com', 'api.trusted.com'];
@@ -311,7 +316,7 @@ describe('Security - URL and Path Validation', () => {
       expect(invalidResult.errors.some(e => e.includes('not in the allowed domains'))).toBe(true);
     });
 
-    it('should validate URL utility rejects invalid protocols', async () => {
+    it('should validate URL utility rejects invalid protocols', async (): Promise<void> => {
       const { validateUrl } = await import('../../src/utils/url-validator');
 
       const invalidProtocols = [
@@ -328,8 +333,8 @@ describe('Security - URL and Path Validation', () => {
     });
   });
 
-  describe('Path Sanitizer Utility', () => {
-    it('should detect path traversal patterns', async () => {
+  describe('Path Sanitizer Utility', (): void => {
+    it('should detect path traversal patterns', async (): Promise<void> => {
       const { sanitizePath } = await import('../../src/utils/path-sanitizer');
 
       const maliciousPaths = [
@@ -346,7 +351,7 @@ describe('Security - URL and Path Validation', () => {
       }
     });
 
-    it('should sanitize dangerous characters in filenames', async () => {
+    it('should sanitize dangerous characters in filenames', async (): Promise<void> => {
       const { sanitizePath } = await import('../../src/utils/path-sanitizer');
 
       const result = sanitizePath('file<>:|?.txt');
@@ -356,7 +361,7 @@ describe('Security - URL and Path Validation', () => {
       }
     });
 
-    it('should validate file is within base directory', async () => {
+    it('should validate file is within base directory', async (): Promise<void> => {
       const { isPathWithinBase } = await import('../../src/utils/path-sanitizer');
 
       const baseDir = path.join(process.cwd(), 'uploads');

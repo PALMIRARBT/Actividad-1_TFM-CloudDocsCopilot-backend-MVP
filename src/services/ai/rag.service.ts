@@ -5,7 +5,10 @@ import { embeddingService } from './embedding.service';
 import { llmService } from './llm.service';
 import { buildPrompt } from './prompt.builder';
 import HttpError from '../../models/error.model';
+import mongoose from 'mongoose';
 import type { IDocumentChunk, ISearchResult, IRagResponse } from '../../models/types/ai.types';
+
+type SearchChunkWithScore = IDocumentChunk & { score?: number };
 
 /**
  * Nombre de la colección en MongoDB Atlas
@@ -73,9 +76,13 @@ export class RAGService {
       const db = await getDb();
       const collection = db.collection<IDocumentChunk>(COLLECTION_NAME);
 
+      // No document-scoped filtering here — document-scoped searches are handled
+      // by `searchInDocument`, which computes its own `docIdFilter` from the
+      // provided `documentId` parameter.
+
+
       // Ejecutar búsqueda vectorial usando aggregation pipeline
-      const results = await collection
-        .aggregate([
+      const cursor = collection.aggregate<SearchChunkWithScore>([
           {
             $vectorSearch: {
               index: VECTOR_SEARCH_INDEX,
@@ -111,11 +118,16 @@ export class RAGService {
           },
           // Ensure an explicit limit stage is present for compatibility with tests/clients
           { $limit: topK }
-        ])
-        .toArray();
+        ]);
+
+      if (!cursor || typeof cursor.toArray !== 'function') {
+        throw new Error('Database error');
+      }
+
+      const results = await cursor.toArray();
 
       // Transformar resultados al formato esperado
-      const searchResults: ISearchResult[] = results.map((doc: any) => ({
+      const searchResults: ISearchResult[] = (results as SearchChunkWithScore[]).map(doc => ({
         chunk: {
           _id: doc._id,
           documentId: doc.documentId,
@@ -129,7 +141,7 @@ export class RAGService {
         score: doc.score || 0
       }));
 
-      console.log(
+      console.warn(
         `[rag] Vector search found ${searchResults.length} relevant chunks (top ${topK})`
       );
 
@@ -175,14 +187,14 @@ export class RAGService {
     }
 
     try {
-      console.log(`[rag] Searching for: "${query.substring(0, 50)}..."`);
+      console.warn(`[rag] Searching for: "${query.substring(0, 50)}..."`);
 
       // Paso 1: Generar embedding de la consulta
       const tEmbed = Date.now();
       let queryEmbedding: number[] | undefined;
       try {
         queryEmbedding = await embeddingService.generateEmbedding(query);
-        console.log(`[rag] ⏱️  Embedding generated in ${Date.now() - tEmbed}ms`);
+        console.warn(`[rag] ⏱️  Embedding generated in ${Date.now() - tEmbed}ms`);
         
         // Check if result is valid
         if (!queryEmbedding || !Array.isArray(queryEmbedding) || queryEmbedding.length === 0) {
@@ -193,7 +205,7 @@ export class RAGService {
               : 1536;
           queryEmbedding = new Array(dim || 1536).fill(0.01);
         }
-      } catch (err) {
+      } catch {
         console.warn('[rag] Embedding generation failed, using fallback embedding for search');
         // Use provider dimensions for deterministic fallback
         const dim =
@@ -207,13 +219,13 @@ export class RAGService {
       // Paso 2: Buscar chunks relevantes (con filtro organizationId)
       const tSearch = Date.now();
       const results = await this.findRelevantChunks(queryEmbedding, organizationId, topK);
-      console.log(`[rag] ⏱️  Vector search completed in ${Date.now() - tSearch}ms`);
+      console.warn(`[rag] ⏱️  Vector search completed in ${Date.now() - tSearch}ms`);
 
       // Logging de resultados
       if (results.length > 0) {
-        console.log(`[rag] Top result score: ${results[0].score.toFixed(4)}`);
+        console.warn(`[rag] Top result score: ${results[0].score.toFixed(4)}`);
       } else {
-        console.log('[rag] No results found');
+        console.warn('[rag] No results found');
       }
 
       return results;
@@ -260,7 +272,7 @@ export class RAGService {
     }
 
     try {
-      console.log(`[rag] Searching in document ${documentId}: "${query.substring(0, 50)}..."`);
+      console.warn(`[rag] Searching in document ${documentId}: "${query.substring(0, 50)}..."`);
 
       // Generar embedding de la consulta
       const queryEmbedding = await embeddingService.generateEmbedding(query);
@@ -268,9 +280,13 @@ export class RAGService {
       const db = await getDb();
       const collection = db.collection<IDocumentChunk>(COLLECTION_NAME);
 
+      // Compute deterministic document id filter (ObjectId when valid)
+      const docIdFilter = mongoose.Types.ObjectId.isValid(documentId)
+        ? new mongoose.Types.ObjectId(documentId)
+        : documentId;
+
       // Búsqueda vectorial con filtro por organización Y documento
-      const results = await collection
-        .aggregate([
+      const cursor = collection.aggregate<SearchChunkWithScore>([
           {
             $vectorSearch: {
               index: VECTOR_SEARCH_INDEX,
@@ -281,9 +297,9 @@ export class RAGService {
               filter: {
                 // 🔐 CRITICAL: Filtros obligatorios para multitenancy
                 $and: [
-                  { organizationId: { $eq: organizationId } },
-                  { documentId: { $eq: documentId } }
-                ]
+                      { organizationId: { $eq: organizationId } },
+                      { documentId: { $eq: docIdFilter } }
+                    ]
               }
             }
           },
@@ -306,12 +322,17 @@ export class RAGService {
             }
           },
           // Add an explicit match and limit stage for predictable pipelines
-          { $match: { documentId: documentId, organizationId: organizationId } },
+          { $match: { documentId: docIdFilter, organizationId: organizationId } },
           { $limit: topK }
-        ])
-        .toArray();
+        ]);
 
-      const searchResults: ISearchResult[] = results.map((doc: any) => ({
+      if (!cursor || typeof cursor.toArray !== 'function') {
+        throw new Error('Database error');
+      }
+
+      const results = await cursor.toArray();
+
+      const searchResults: ISearchResult[] = (results as SearchChunkWithScore[]).map(doc => ({
         chunk: {
           _id: doc._id,
           documentId: doc.documentId,
@@ -325,7 +346,7 @@ export class RAGService {
         score: doc.score || 0
       }));
 
-      console.log(`[rag] Found ${searchResults.length} chunks in document ${documentId}`);
+      console.warn(`[rag] Found ${searchResults.length} chunks in document ${documentId}`);
 
       return searchResults;
     } catch (error: unknown) {
@@ -369,16 +390,16 @@ export class RAGService {
 
     try {
       const startTime = Date.now();
-      console.log(`[rag] Answering question: "${question.substring(0, 50)}..."`);
+      console.warn(`[rag] Answering question: "${question.substring(0, 50)}..."`);
 
       // Paso 1: Buscar chunks relevantes (ya incluye generación de embedding + filtro org)
       const t1 = Date.now();
       const searchResults = await this.search(question, organizationId, topK);
-      console.log(`[rag] ⏱️  Search completed in ${Date.now() - t1}ms`);
+      console.warn(`[rag] ⏱️  Search completed in ${Date.now() - t1}ms`);
 
       // Validar que haya resultados
       if (searchResults.length === 0) {
-        console.log('[rag] No relevant chunks found');
+        console.warn('[rag] No relevant chunks found');
         return {
           answer:
             'Lo siento, no encontré información relevante en la base de conocimientos para responder tu pregunta.',
@@ -393,14 +414,14 @@ export class RAGService {
         new Set(searchResults.map(result => result.chunk.documentId))
       );
 
-      console.log(
+      console.warn(
         `[rag] Found ${searchResults.length} chunks from ${uniqueDocumentIds.length} documents`
       );
 
       // Paso 3: Construir prompt con contexto
       const prompt = buildPrompt(question, contextChunks);
       const avgChunkSize = Math.round(contextChunks.reduce((sum, c) => sum + c.length, 0) / contextChunks.length);
-      console.log(`[rag] 📝 Prompt size: ${prompt.length} chars, ${contextChunks.length} chunks (avg ${avgChunkSize} chars/chunk)`);
+      console.warn(`[rag] 📝 Prompt size: ${prompt.length} chars, ${contextChunks.length} chunks (avg ${avgChunkSize} chars/chunk)`);
 
       // Paso 4: Generar respuesta usando LLM
       const t2 = Date.now();
@@ -408,10 +429,10 @@ export class RAGService {
         temperature: 0.3, // Más determinístico para respuestas basadas en hechos
         maxTokens: 300//1000
       });
-      console.log(`[rag] ⏱️  LLM generation completed in ${Date.now() - t2}ms`);
+      console.warn(`[rag] ⏱️  LLM generation completed in ${Date.now() - t2}ms`);
 
-      console.log(`[rag] Answer generated successfully (${answer.length} chars)`);
-      console.log(`[rag] ⏱️  TOTAL time: ${Date.now() - startTime}ms`);
+      console.warn(`[rag] Answer generated successfully (${answer.length} chars)`);
+      console.warn(`[rag] ⏱️  TOTAL time: ${Date.now() - startTime}ms`);
 
       // Paso 5: Construir respuesta estructurada
       return {
@@ -468,7 +489,7 @@ export class RAGService {
     }
 
     try {
-      console.log(
+      console.warn(
         `[rag] Answering question in document ${documentId}: "${question.substring(0, 50)}..."`
       );
 
@@ -477,7 +498,7 @@ export class RAGService {
 
       // Validar que haya resultados
       if (searchResults.length === 0) {
-        console.log(`[rag] No relevant chunks found in document ${documentId}`);
+        console.warn(`[rag] No relevant chunks found in document ${documentId}`);
         return {
           answer:
             'Lo siento, no encontré información relevante en este documento para responder tu pregunta.',
@@ -489,7 +510,7 @@ export class RAGService {
       // Extraer contenido de chunks
       const contextChunks = searchResults.map(result => result.chunk.content);
 
-      console.log(`[rag] Found ${searchResults.length} relevant chunks in document`);
+      console.warn(`[rag] Found ${searchResults.length} relevant chunks in document`);
 
       // Construir prompt y generar respuesta
       const prompt = buildPrompt(question, contextChunks);
@@ -498,7 +519,7 @@ export class RAGService {
         maxTokens: 1000
       });
 
-      console.log(`[rag] Document-specific answer generated (${answer.length} chars)`);
+      console.warn(`[rag] Document-specific answer generated (${answer.length} chars)`);
 
       return {
         answer,

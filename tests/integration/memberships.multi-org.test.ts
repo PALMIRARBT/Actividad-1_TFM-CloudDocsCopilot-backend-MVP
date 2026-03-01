@@ -9,7 +9,7 @@ import Folder from '../../src/models/folder.model';
  * Prueba que un usuario pueda pertenecer a múltiples organizaciones
  * y que los rootFolders se creen correctamente sin conflictos
  */
-describe('Multi-Organization Membership Flow', () => {
+describe('Multi-Organization Membership Flow', (): void => {
   let userACookies: string[];
   let userAId: string;
   let userBCookies: string[];
@@ -67,7 +67,7 @@ describe('Multi-Organization Membership Flow', () => {
     });
   });
 
-  describe('User can be invited to multiple organizations', () => {
+  describe('User can be invited to multiple organizations', (): void => {
     it('should allow User A (who owns Org1) to be invited to Org2', async () => {
       // User B invita a User A a su organización (Org2)
       const inviteResponse = await request(app)
@@ -76,8 +76,9 @@ describe('Multi-Organization Membership Flow', () => {
         .send({ userId: userAId, role: 'member' })
         .expect(201);
 
-      expect(inviteResponse.body.success).toBe(true);
-      expect(inviteResponse.body.invitation).toBeDefined();
+      const inviteBody = inviteResponse.body as unknown as Record<string, unknown>;
+      expect(inviteBody['success']).toBe(true);
+      expect(inviteBody['invitation']).toBeDefined();
 
       // Verificar que la invitación está en estado PENDING
       const invitation = await Membership.findOne({
@@ -90,7 +91,7 @@ describe('Multi-Organization Membership Flow', () => {
       expect(invitation?.rootFolder).toBeUndefined();
     });
 
-    it('should create unique rootFolders when User A accepts invitation to Org2', async () => {
+    it('should create unique rootFolders when User A accepts invitation to Org2', async (): Promise<void> => {
       // User B invita a User A
       await request(app)
         .post(`/api/memberships/organization/${org2Id}/members`)
@@ -110,8 +111,10 @@ describe('Multi-Organization Membership Flow', () => {
         .set('Cookie', userACookies.join('; '))
         .expect(200);
 
-      expect(acceptResponse.body.success).toBe(true);
-      expect(acceptResponse.body.membership.status).toBe(MembershipStatus.ACTIVE);
+      const acceptBody = acceptResponse.body as unknown as Record<string, unknown>;
+      expect(acceptBody['success']).toBe(true);
+      const membership = acceptBody['membership'] as Record<string, unknown>;
+      expect(membership['status']).toBe(MembershipStatus.ACTIVE);
 
       // Verificar que User A tiene dos rootFolders (uno por organización)
       const rootFolders = await Folder.find({
@@ -144,7 +147,7 @@ describe('Multi-Organization Membership Flow', () => {
       expect(folder2?.path).toContain(org2Slug);
     });
 
-    it('should not allow duplicate invitations to the same organization', async () => {
+    it('should not allow duplicate invitations to the same organization', async (): Promise<void> => {
       // Primera invitación
       await request(app)
         .post(`/api/memberships/organization/${org2Id}/members`)
@@ -159,10 +162,11 @@ describe('Multi-Organization Membership Flow', () => {
         .send({ userId: userAId, role: 'member' })
         .expect(409);
 
-      expect(duplicateResponse.body.success).toBe(false);
+      const duplicateBody = duplicateResponse.body as unknown as Record<string, unknown>;
+      expect(duplicateBody['success']).toBe(false);
     });
 
-    it('should prevent creating rootFolder if already active in organization', async () => {
+    it('should prevent creating rootFolder if already active in organization', async (): Promise<void> => {
       // User B invita a User A
       await request(app)
         .post(`/api/memberships/organization/${org2Id}/members`)
@@ -187,12 +191,13 @@ describe('Multi-Organization Membership Flow', () => {
         .set('Cookie', userACookies.join('; '))
         .expect(400);
 
-      expect(retryResponse.body.success).toBe(false);
+      const retryBody = retryResponse.body as unknown as Record<string, unknown>;
+      expect(retryBody['success']).toBe(false);
     });
   });
 
-  describe('RootFolder naming includes organization slug', () => {
-    it('should create rootFolder with format root_{orgSlug}_{userId}', async () => {
+  describe('RootFolder naming includes organization slug', (): void => {
+    it('should create rootFolder with format root_{orgSlug}_{userId}', async (): Promise<void> => {
       // Verificar rootFolder de User A en Org1
       const rootFolder = await Folder.findOne({
         owner: userAId,
@@ -207,7 +212,7 @@ describe('Multi-Organization Membership Flow', () => {
       expect(rootFolder?.name).toContain(userAId);
     });
 
-    it('should have different rootFolder names for same user in different orgs', async () => {
+    it('should have different rootFolder names for same user in different orgs', async (): Promise<void> => {
       // Invitar a User A a Org2 y aceptar
       await request(app)
         .post(`/api/memberships/organization/${org2Id}/members`)
@@ -252,7 +257,7 @@ describe('Multi-Organization Membership Flow', () => {
     });
   });
 
-  describe('Cross-organization invitation workflow', () => {
+  describe('Cross-organization invitation workflow', (): void => {
     it('should allow bidirectional invitations (A invites B, B invites A)', async () => {
       // User A (owner Org1) invita a User B
       await request(app)
@@ -285,7 +290,7 @@ describe('Multi-Organization Membership Flow', () => {
       expect(invitationAtoOrg2).toBeDefined();
     });
 
-    it('should allow both users to accept and have 2 organizations each', async () => {
+    it('should allow both users to accept and have 2 organizations each', async (): Promise<void> => {
       // Crear invitaciones bidireccionales
       await request(app)
         .post(`/api/memberships/organization/${org1Id}/members`)

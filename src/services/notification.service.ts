@@ -3,13 +3,20 @@ import HttpError from '../models/error.model';
 import NotificationModel, { INotification, NotificationType } from '../models/notification.model';
 import { getActiveOrganization } from './membership.service';
 import Membership, { MembershipStatus } from '../models/membership.model';
+import { FilterQuery } from 'mongoose';
 import { emitToUser } from '../socket/socket';
 
 function isValidObjectId(id: string): boolean {
   return mongoose.Types.ObjectId.isValid(id);
 }
 
-export type NotificationEmitter = (recipientUserId: string, payload: any) => void;
+export type NotificationEmitter = (recipientUserId: string, payload: unknown) => void;
+
+type NotificationMetadata = Record<string, unknown>;
+
+interface MembershipRecipient {
+  user?: mongoose.Types.ObjectId;
+}
 
 export interface CreateOrgNotificationDto {
   actorUserId: string;
@@ -18,7 +25,7 @@ export interface CreateOrgNotificationDto {
   entityKind?: 'document' | 'membership';
   entityId?: string;
   message?: string;
-  metadata?: Record<string, any>;
+  metadata?: NotificationMetadata;
   emitter?: NotificationEmitter; // optional
 }
 
@@ -54,7 +61,7 @@ export interface CreateNotificationDto {
   entityKind: 'document' | 'membership';
   entityId: string;
   message?: string;
-  metadata?: Record<string, any>;
+  metadata?: NotificationMetadata;
   emitter?: NotificationEmitter;
 }
 
@@ -94,7 +101,7 @@ export async function createNotificationForUser({
 
   const emitFn = emitter || defaultEmitter;
   emitFn(recipientUserId, {
-    id: doc._id?.toString?.() || undefined,
+    id: doc._id ? String(doc._id) : undefined,
     organization: doc.organization.toString(),
     recipient: doc.recipient.toString(),
     actor: doc.actor.toString(),
@@ -129,7 +136,7 @@ export async function notifyMembersOfOrganization({
   entityKind: 'document' | 'membership';
   entityId: string;
   message?: string;
-  metadata?: Record<string, any>;
+  metadata?: NotificationMetadata;
   emitter?: NotificationEmitter;
 }): Promise<INotification[]> {
   if (!isValidObjectId(organizationId)) throw new HttpError(400, 'Invalid organization ID');
@@ -148,7 +155,9 @@ export async function notifyMembersOfOrganization({
     { user: 1 }
   ).lean();
 
-  const recipientIds = memberships.map((m: any) => m.user?.toString()).filter(Boolean) as string[];
+  const recipientIds = (memberships as MembershipRecipient[])
+    .map(m => m.user?.toString())
+    .filter((value): value is string => Boolean(value));
   if (recipientIds.length === 0) return [];
 
   const now = new Date();
@@ -170,7 +179,7 @@ export async function notifyMembersOfOrganization({
   const emitFn = emitter || defaultEmitter;
   for (const n of inserted) {
     emitFn(n.recipient.toString(), {
-      id: n._id?.toString?.() || undefined,
+      id: n._id ? String(n._id) : undefined,
       organization: n.organization.toString(),
       recipient: n.recipient.toString(),
       actor: n.actor.toString(),
@@ -183,7 +192,7 @@ export async function notifyMembersOfOrganization({
     });
   }
 
-  return inserted as any;
+  return inserted;
 }
 
 /**
@@ -241,14 +250,21 @@ export async function listNotifications({
   unreadOnly = false,
   limit = 20,
   skip = 0
-}: ListNotificationsDto): Promise<{ notifications: any[]; total: number }> {
+}: ListNotificationsDto): Promise<{ notifications: INotification[]; total: number }> {
   if (!isValidObjectId(userId)) throw new HttpError(400, 'Invalid user ID');
 
   let orgId = organizationId;
   if (!orgId) {
     orgId = await getActiveOrganization(userId);
   }
+  if (!orgId || !isValidObjectId(orgId)) {
+    throw new HttpError(
+      403,
+      'No active organization. Please create or join an organization first.'
+    );
+  }
 
+  // Build base query dynamically below; do not predeclare `query` here.
   /**
    * Behavior:
    * - If the user has an active org (or orgId was provided), return:
@@ -256,7 +272,7 @@ export async function listNotifications({
    * - If the user has NO active org, still allow returning INVITATION_CREATED (global invitations),
    *   instead of throwing 403.
    */
-  const baseQuery: any = {
+  const baseQuery: FilterQuery<INotification> = {
     recipient: new mongoose.Types.ObjectId(userId)
   };
 
@@ -264,7 +280,7 @@ export async function listNotifications({
     baseQuery.readAt = null;
   }
 
-  let query: any;
+  let query: FilterQuery<INotification>;
 
   if (orgId && isValidObjectId(orgId)) {
     query = {
@@ -273,13 +289,13 @@ export async function listNotifications({
         { organization: new mongoose.Types.ObjectId(orgId) },
         { type: 'INVITATION_CREATED' }
       ]
-    };
+    } as FilterQuery<INotification>;
   } else {
     // No org context available -> only show global invitation notifications
     query = {
       ...baseQuery,
       type: 'INVITATION_CREATED'
-    };
+    } as FilterQuery<INotification>;
   }
 
   const [items, total] = await Promise.all([
@@ -287,7 +303,7 @@ export async function listNotifications({
     NotificationModel.countDocuments(query)
   ]);
 
-  return { notifications: items as any, total };
+  return { notifications: items as unknown as INotification[], total };
 }
 
 export async function markNotificationRead(userId: string, notificationId: string): Promise<void> {
@@ -315,7 +331,7 @@ export async function markAllRead(userId: string, organizationId?: string | null
     orgId = await getActiveOrganization(userId);
   }
 
-  const baseQuery: any = {
+  const baseQuery: FilterQuery<INotification> = {
     recipient: new mongoose.Types.ObjectId(userId),
     readAt: null
   };
@@ -325,7 +341,7 @@ export async function markAllRead(userId: string, organizationId?: string | null
    * - If org context exists: mark read for (org notifications) OR (INVITATION_CREATED)
    * - If no org context: mark read only for INVITATION_CREATED
    */
-  let query: any;
+  let query: FilterQuery<INotification>;
 
   if (orgId && isValidObjectId(orgId)) {
     query = {
@@ -334,12 +350,12 @@ export async function markAllRead(userId: string, organizationId?: string | null
         { organization: new mongoose.Types.ObjectId(orgId) },
         { type: 'INVITATION_CREATED' }
       ]
-    };
+    } as FilterQuery<INotification>;
   } else {
     query = {
       ...baseQuery,
       type: 'INVITATION_CREATED'
-    };
+    } as FilterQuery<INotification>;
   }
 
   await NotificationModel.updateMany(query, { $set: { readAt: new Date() } });

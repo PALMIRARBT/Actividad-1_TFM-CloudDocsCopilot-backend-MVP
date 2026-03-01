@@ -6,7 +6,7 @@ import User from '../../../src/models/user.model';
 import * as jwtService from '../../../src/services/jwt.service';
 import bcrypt from 'bcryptjs';
 
-describe('UserController Integration Tests', () => {
+describe('UserController Integration Tests', (): void => {
   let mongoServer: MongoMemoryServer;
   let testUserId: mongoose.Types.ObjectId;
   let testUser2Id: mongoose.Types.ObjectId;
@@ -85,9 +85,9 @@ describe('UserController Integration Tests', () => {
     });
   });
 
-  describe('PATCH /api/users/:id/avatar - Update Avatar', () => {
-    describe('Success Cases', () => {
-      it('should update own avatar successfully', async () => {
+  describe('PATCH /api/users/:id/avatar - Update Avatar', (): void => {
+    describe('Success Cases', (): void => {
+      it('should update own avatar successfully', async (): Promise<void> => {
         const avatarUrl = 'https://example.com/avatar.jpg';
 
         const response = await request(app)
@@ -96,16 +96,18 @@ describe('UserController Integration Tests', () => {
           .send({ avatar: avatarUrl })
           .expect(200);
 
-        expect(response.body).toHaveProperty('message', 'Avatar updated successfully');
-        expect(response.body.user).toHaveProperty('avatar', avatarUrl);
-        expect(response.body.user).toHaveProperty('id', testUserId.toString());
+        const body = response.body as unknown as Record<string, unknown>;
+
+        expect(body).toHaveProperty('message', 'Avatar updated successfully');
+        expect((body.user as Record<string, unknown>)).toHaveProperty('avatar', avatarUrl);
+        expect((body.user as Record<string, unknown>)).toHaveProperty('id', testUserId.toString());
 
         // Verificar en base de datos
         const updatedUser = await User.findById(testUserId);
         expect(updatedUser?.avatar).toBe(avatarUrl);
       });
 
-      it('should NOT allow admin to update other user avatar', async () => {
+      it('should NOT allow admin to update other user avatar', async (): Promise<void> => {
         const avatarUrl = 'https://example.com/admin-updated-avatar.jpg';
 
         await request(app)
@@ -115,7 +117,7 @@ describe('UserController Integration Tests', () => {
           .expect(403);
       });
 
-      it('should accept valid data URLs as avatars', async () => {
+      it('should accept valid data URLs as avatars', async (): Promise<void> => {
         const dataUrl =
           'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
@@ -125,7 +127,8 @@ describe('UserController Integration Tests', () => {
           .send({ avatar: dataUrl })
           .expect(200);
 
-        expect(response.body.user).toHaveProperty('avatar', dataUrl);
+        const body = response.body as unknown as Record<string, unknown>;
+        expect((body.user as Record<string, unknown>)).toHaveProperty('avatar', dataUrl);
       });
 
       it('should update avatar to empty string (remove avatar)', async () => {
@@ -138,10 +141,11 @@ describe('UserController Integration Tests', () => {
           .send({ avatar: '' })
           .expect(200);
 
-        expect(response.body.user).toHaveProperty('avatar', '');
+        const body = response.body as unknown as Record<string, unknown>;
+        expect((body.user as Record<string, unknown>)).toHaveProperty('avatar', '');
       });
 
-      it('should accept relative paths as avatars', async () => {
+      it('should accept relative paths as avatars', async (): Promise<void> => {
         const relativePath = '/uploads/avatars/user123.jpg';
 
         const response = await request(app)
@@ -150,19 +154,21 @@ describe('UserController Integration Tests', () => {
           .send({ avatar: relativePath })
           .expect(200);
 
-        expect(response.body.user).toHaveProperty('avatar', relativePath);
+        const body = response.body as unknown as Record<string, unknown>;
+        expect((body.user as Record<string, unknown>)).toHaveProperty('avatar', relativePath);
       });
     });
 
-    describe('Validation Tests', () => {
-      it('should fail when avatar field is missing', async () => {
+    describe('Validation Tests', (): void => {
+      it('should fail when avatar field is missing', async (): Promise<void> => {
         const response = await request(app)
           .patch(`/api/users/${testUserId}/avatar`)
           .set('Authorization', `Bearer ${testToken}`)
-          .send({})
+          .send({ })
           .expect(400);
 
-        expect(response.body).toHaveProperty('error', 'Avatar file or URL is required');
+        const body = response.body as unknown as Record<string, unknown>;
+        expect(body).toHaveProperty('error', 'Avatar file or URL is required');
       });
 
       it('should fail when avatar exceeds max length (2048 chars)', async () => {
@@ -174,11 +180,12 @@ describe('UserController Integration Tests', () => {
           .send({ avatar: longUrl })
           .expect(400);
 
-        expect(response.body).toHaveProperty('error');
-        expect(response.body.error).toMatch(/cannot exceed 2048 characters/i);
+        const body = response.body as unknown as Record<string, unknown>;
+        expect(body).toHaveProperty('error');
+        expect(String(body.error)).toMatch(/cannot exceed 2048 characters/i);
       });
 
-      it('should fail when user does not exist', async () => {
+      it('should fail when user does not exist', async (): Promise<void> => {
         const nonExistentId = new mongoose.Types.ObjectId();
 
         // Un usuario regular no puede actualizar otro usuario (aunque no exista)
@@ -188,12 +195,13 @@ describe('UserController Integration Tests', () => {
           .send({ avatar: 'https://example.com/avatar.jpg' })
           .expect(403);
 
-        expect(response.body).toHaveProperty('error', 'Forbidden');
+        const body = response.body as unknown as Record<string, unknown>;
+        expect(body).toHaveProperty('error', 'Forbidden');
       });
     });
 
-    describe('Authorization Tests', () => {
-      it('should fail when user is not authenticated', async () => {
+    describe('Authorization Tests', (): void => {
+      it('should fail when user is not authenticated', async (): Promise<void> => {
         await request(app)
           .patch(`/api/users/${testUserId}/avatar`)
           .send({ avatar: 'https://example.com/avatar.jpg' })
@@ -210,7 +218,7 @@ describe('UserController Integration Tests', () => {
         expect(response.body).toHaveProperty('error', 'Forbidden');
       });
 
-      it('should fail with invalid token', async () => {
+      it('should fail with invalid token', async (): Promise<void> => {
         await request(app)
           .patch(`/api/users/${testUserId}/avatar`)
           .set('Authorization', 'Bearer invalid-token-here')
@@ -218,7 +226,7 @@ describe('UserController Integration Tests', () => {
           .expect(401);
       });
 
-      it('should fail with expired token', async () => {
+      it('should fail with expired token', async (): Promise<void> => {
         // Crear un token expirado
         const expiredToken = jwtService.signToken(
           {
@@ -237,18 +245,19 @@ describe('UserController Integration Tests', () => {
       });
     });
 
-    describe('Edge Cases', () => {
-      it('should handle null avatar value', async () => {
+    describe('Edge Cases', (): void => {
+      it('should handle null avatar value', async (): Promise<void> => {
         const response = await request(app)
           .patch(`/api/users/${testUserId}/avatar`)
           .set('Authorization', `Bearer ${testToken}`)
           .send({ avatar: null })
           .expect(400);
 
-        expect(response.body).toHaveProperty('error', 'Avatar URL is required');
+        const body = response.body as unknown as Record<string, unknown>;
+        expect(body).toHaveProperty('error', 'Avatar URL is required');
       });
 
-      it('should trim whitespace from avatar URL', async () => {
+      it('should trim whitespace from avatar URL', async (): Promise<void> => {
         const avatarUrl = '  https://example.com/avatar.jpg  ';
 
         const response = await request(app)
@@ -258,10 +267,11 @@ describe('UserController Integration Tests', () => {
           .expect(200);
 
         // Mongoose trim debe eliminar espacios
-        expect(response.body.user.avatar).toBe('https://example.com/avatar.jpg');
+        const body = response.body as unknown as Record<string, unknown>;
+        expect((body.user as Record<string, unknown>).avatar).toBe('https://example.com/avatar.jpg');
       });
 
-      it('should handle multiple consecutive avatar updates', async () => {
+      it('should handle multiple consecutive avatar updates', async (): Promise<void> => {
         const urls = [
           'https://example.com/avatar1.jpg',
           'https://example.com/avatar2.jpg',
@@ -275,7 +285,8 @@ describe('UserController Integration Tests', () => {
             .send({ avatar: url })
             .expect(200);
 
-          expect(response.body.user.avatar).toBe(url);
+          const body = response.body as unknown as Record<string, unknown>;
+          expect((body.user as Record<string, unknown>).avatar).toBe(url);
         }
 
         // Verificar que el último valor persiste
@@ -283,17 +294,18 @@ describe('UserController Integration Tests', () => {
         expect(user?.avatar).toBe(urls[urls.length - 1]);
       });
 
-      it('should not expose password in response', async () => {
+      it('should not expose password in response', async (): Promise<void> => {
         const response = await request(app)
           .patch(`/api/users/${testUserId}/avatar`)
           .set('Authorization', `Bearer ${testToken}`)
           .send({ avatar: 'https://example.com/avatar.jpg' })
           .expect(200);
 
-        expect(response.body.user).not.toHaveProperty('password');
+        const body = response.body as unknown as Record<string, unknown>;
+        expect((body.user as Record<string, unknown>)).not.toHaveProperty('password');
       });
 
-      it('should preserve other user fields when updating avatar', async () => {
+      it('should preserve other user fields when updating avatar', async (): Promise<void> => {
         const originalUser = await User.findById(testUserId);
 
         await request(app)
@@ -310,8 +322,8 @@ describe('UserController Integration Tests', () => {
       });
     });
 
-    describe('Security Tests', () => {
-      it('should validate against potential XSS in avatar URL', async () => {
+    describe('Security Tests', (): void => {
+      it('should validate against potential XSS in avatar URL', async (): Promise<void> => {
         const xssPayload = '<script>alert("XSS")</script>';
 
         const response = await request(app)
@@ -321,10 +333,11 @@ describe('UserController Integration Tests', () => {
           .expect(200);
 
         // Aunque se guarda, el frontend debe sanitizar al mostrar
-        expect(response.body.user.avatar).toBe(xssPayload);
+        const bodyXss = response.body as unknown as Record<string, unknown>;
+        expect((bodyXss.user as Record<string, unknown>).avatar).toBe(xssPayload);
       });
 
-      it('should not allow SQL injection attempts', async () => {
+      it('should not allow SQL injection attempts', async (): Promise<void> => {
         const sqlInjection = "'; DROP TABLE users; --";
 
         const response = await request(app)
@@ -334,11 +347,12 @@ describe('UserController Integration Tests', () => {
           .expect(200);
 
         // MongoDB no es vulnerable a SQL injection
-        expect(response.body.user.avatar).toBe(sqlInjection);
+        const bodySql = response.body as unknown as Record<string, unknown>;
+        expect((bodySql.user as Record<string, unknown>).avatar).toBe(sqlInjection);
       });
     });
 
-    describe('Data Persistence', () => {
+    describe('Data Persistence', (): void => {
       it('should persist avatar across server restarts (simulated)', async () => {
         const avatarUrl = 'https://example.com/persistent-avatar.jpg';
 
@@ -358,8 +372,8 @@ describe('UserController Integration Tests', () => {
       });
     });
 
-    describe('Concurrent Updates', () => {
-      it('should handle concurrent avatar updates correctly', async () => {
+    describe('Concurrent Updates', (): void => {
+      it('should handle concurrent avatar updates correctly', async (): Promise<void> => {
         const promises = [
           request(app)
             .patch(`/api/users/${testUserId}/avatar`)
@@ -389,19 +403,20 @@ describe('UserController Integration Tests', () => {
     });
   });
 
-  describe('Additional User Controller Tests', () => {
-    describe('GET /api/users - List Users', () => {
-      it('should allow admin to list all users', async () => {
+  describe('Additional User Controller Tests', (): void => {
+    describe('GET /api/users - List Users', (): void => {
+      it('should allow admin to list all users', async (): Promise<void> => {
         const response = await request(app)
           .get('/api/users')
           .set('Authorization', `Bearer ${adminToken}`)
           .expect(200);
 
-        expect(Array.isArray(response.body)).toBe(true);
-        expect(response.body.length).toBeGreaterThanOrEqual(3);
+        const list = response.body as unknown as unknown[];
+        expect(Array.isArray(list)).toBe(true);
+        expect(list.length).toBeGreaterThanOrEqual(3);
       });
 
-      it('should not allow regular users to list users', async () => {
+      it('should not allow regular users to list users', async (): Promise<void> => {
         await request(app)
           .get('/api/users')
           .set('Authorization', `Bearer ${testToken}`)
@@ -409,16 +424,17 @@ describe('UserController Integration Tests', () => {
       });
     });
 
-    describe('PUT /api/users/:id - Update User', () => {
-      it('should allow user to update own profile', async () => {
+    describe('PUT /api/users/:id - Update User', (): void => {
+      it('should allow user to update own profile', async (): Promise<void> => {
         const response = await request(app)
           .put(`/api/users/${testUserId}`)
           .set('Authorization', `Bearer ${testToken}`)
           .send({ name: 'Updated Name', email: 'updated@test.com' })
           .expect(200);
 
-        expect(response.body.user.name).toBe('Updated Name');
-        expect(response.body.user.email).toBe('updated@test.com');
+        const bodyUp = response.body as unknown as Record<string, unknown>;
+        expect((bodyUp.user as Record<string, unknown>).name).toBe('Updated Name');
+        expect((bodyUp.user as Record<string, unknown>).email).toBe('updated@test.com');
       });
 
       it('should allow partial update (only name)', async () => {
@@ -428,9 +444,10 @@ describe('UserController Integration Tests', () => {
           .send({ name: 'Only Name' })
           .expect(200);
 
-        expect(response.body.user.name).toBe('Only Name');
+        const bodyPartial = response.body as unknown as Record<string, unknown>;
+        expect((bodyPartial.user as Record<string, unknown>).name).toBe('Only Name');
         // El email debe permanecer igual
-        expect(response.body.user.email).toBe('user@test.com');
+        expect((bodyPartial.user as Record<string, unknown>).email).toBe('user@test.com');
       });
     });
   });

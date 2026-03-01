@@ -1,7 +1,7 @@
 import express from 'express';
 import membershipRoutes from '../../../src/routes/membership.routes';
 
-describe('Membership Routes', () => {
+describe('Membership Routes', (): void => {
   let router: express.Router;
 
   beforeEach(() => {
@@ -9,8 +9,8 @@ describe('Membership Routes', () => {
     router = membershipRoutes;
   });
 
-  describe('Route Configuration', () => {
-    it('should export an Express router', () => {
+  describe('Route Configuration', (): void => {
+    it('should export an Express router', (): void => {
       // Arrange
       // (router already assigned in beforeEach)
 
@@ -22,7 +22,7 @@ describe('Membership Routes', () => {
       expect(router.stack).toBeDefined();
     });
 
-    it('should have configured GET /pending-invitations route', () => {
+    it('should have configured GET /pending-invitations route', (): void => {
       // Arrange
       const routes = router.stack
         .filter((layer) => layer.route)
@@ -36,7 +36,7 @@ describe('Membership Routes', () => {
       expect(hasRoute).toBe(true);
     });
 
-    it('should have configured POST /invitations/:membershipId/accept route', () => {
+    it('should have configured POST /invitations/:membershipId/accept route', (): void => {
       // Arrange
       const routes = router.stack
         .filter((layer) => layer.route)
@@ -50,7 +50,7 @@ describe('Membership Routes', () => {
       expect(hasRoute).toBe(true);
     });
 
-    it('should have configured GET /my-organizations route', () => {
+    it('should have configured GET /my-organizations route', (): void => {
       // Arrange
       const routes = router.stack
         .filter((layer) => layer.route)
@@ -64,7 +64,7 @@ describe('Membership Routes', () => {
       expect(hasRoute).toBe(true);
     });
 
-    it('should apply middleware to routes', () => {
+    it('should apply middleware to routes', (): void => {
       // Arrange
       const middlewares = router.stack.filter((layer) => !layer.route && layer.handle);
 
