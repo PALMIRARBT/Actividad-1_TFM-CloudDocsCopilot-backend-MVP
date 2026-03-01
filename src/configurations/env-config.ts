@@ -17,9 +17,14 @@ import * as fs from 'fs';
 export function loadEnv(rootDir: string = process.cwd()): void {
   const nodeEnv = process.env.NODE_ENV || 'development';
 
+  // In production, environment variables are injected by the host (e.g. Render).
+  // Loading .env files could overwrite real server variables, so we skip it.
+  if (nodeEnv === 'production') {
+    return;
+  }
+
   // Files to load in order (later overrides earlier)
   const envFiles = [
-    '.env.example', // Defaults (lowest priority)
     '.env', // Base configuration
     '.env.local', // Local overrides
     `.env.${nodeEnv}`, // Environment-specific
@@ -30,7 +35,7 @@ export function loadEnv(rootDir: string = process.cwd()): void {
     const filePath = path.resolve(rootDir, file);
 
     if (fs.existsSync(filePath)) {
-      const result = dotenv.config({ path: filePath, override: true });
+      const result = dotenv.config({ path: filePath, override: false });
 
       if (result.error) {
         console.warn(`⚠️  Warning: Could not load ${file}: ${result.error.message}`);
