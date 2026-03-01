@@ -176,17 +176,13 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
     }
 
     if (mimeType) {
-      console.log(`🔍 [Elasticsearch] Filtering by mimeType: ${mimeType}`);
-      
+      console.warn(`🔍 [Elasticsearch] Filtering by mimeType: ${mimeType}`);
+
       // Usar coincidencia exacta para el mimeType específico
       // Esto asegura que se filtren exactamente los documentos del tipo seleccionado
-      filters.push({ 
-        term: { 
-          "mimeType.keyword": mimeType 
-        } 
-      });
-      
-      console.log(`📋 [Elasticsearch] Added exact mimeType filter: ${mimeType}`);
+      filters.push({ term: { 'mimeType.keyword': mimeType } });
+
+      console.warn(`📋 [Elasticsearch] Added exact mimeType filter: ${mimeType}`);
     }
 
     if (fromDate || toDate) {
@@ -200,8 +196,8 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
     // Agregar wildcards automáticamente para búsqueda parcial
     const searchQuery = `*${query.toLowerCase()}*`;
     
-    console.log(`🔍 [Elasticsearch] Searching with query: "${searchQuery}"`);
-    console.log(`📊 [Elasticsearch] Filters:`, JSON.stringify(filters, null, 2));
+    console.warn(`🔍 [Elasticsearch] Searching with query: "${searchQuery}"`);
+    console.warn(`📊 [Elasticsearch] Filters: ${JSON.stringify(filters, null, 2)}`);
     
     const result = (await client.search({
       index: 'documents',
@@ -228,23 +224,24 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
       ]
     })) as SearchResultLike;
 
-    console.log(`✅ [Elasticsearch] Found ${typeof result.hits.total === 'object' ? result.hits.total.value : result.hits.total} documents in ${result.took}ms`);
+    console.warn(`✅ [Elasticsearch] Found ${typeof result.hits.total === 'object' ? result.hits.total.value : result.hits.total} documents in ${result.took}ms`);
 
-    const documents = result.hits.hits.map((hit: any) => ({
-      const doc = {
+    const documents = result.hits.hits.map((hit: SearchHitLike) => {
+      const source = hit._source ?? {};
+      const doc: Record<string, unknown> = {
         id: hit._id,
         score: hit._score,
-      ...(hit._source || {})
+        ...source
       };
-      
+
       // Debug: Log cada documento encontrado
-      console.log(`📄 [Elasticsearch] Document found:`, {
+      console.warn('📄 [Elasticsearch] Document found:', {
         id: doc.id,
-        filename: doc.filename || doc.originalname,
+        filename: (doc.filename as string) || (doc.originalname as string),
         mimeType: doc.mimeType,
         score: doc.score
       });
-      
+
       return doc;
     });
 
@@ -273,7 +270,7 @@ export async function getAutocompleteSuggestions(
     const client = getEsClient();
 
     // Construir filtros
-    const filters: any[] = [];
+    const filters: Array<Record<string, unknown>> = [];
     if (organizationId) {
       filters.push({ term: { organization: organizationId } });
     } else {
@@ -302,10 +299,10 @@ export async function getAutocompleteSuggestions(
       _source: ['filename', 'originalname']
     })) as SearchResultLike;
 
-    const suggestions = result.hits.hits.map(hit => {
-      const source = hit._source || {};
-      const originalname = source.originalname;
-      const filename = source.filename;
+    const suggestions = result.hits.hits.map((hit: SearchHitLike) => {
+      const source = hit._source ?? {};
+      const originalname = source.originalname as unknown;
+      const filename = source.filename as unknown;
       if (typeof originalname === 'string') return originalname;
       if (typeof filename === 'string') return filename;
       return '';
