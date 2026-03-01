@@ -22,13 +22,18 @@ import { doubleCsrf } from 'csrf-csrf';
  *
  * Ver documentación completa en: CSRF-PROTECTION-EXPLANATION.md
  */
+// En producción el frontend (Vercel) y el backend (Render) son orígenes distintos (cross-site).
+// Se requiere sameSite='none' + secure=true para que el navegador envíe la cookie.
+// En desarrollo se usa 'lax' para no requerir HTTPS.
+const isProduction = process.env.NODE_ENV === 'production';
+
 const csrfProtection = doubleCsrf({
   getSecret: () => process.env.CSRF_SECRET || 'default-csrf-secret-change-in-production',
-  cookieName: '__Host-psifi.x-csrf-token',
+  cookieName: isProduction ? '__Host-psifi.x-csrf-token' : 'psifi.x-csrf-token',
   cookieOptions: {
-    sameSite: 'strict',
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/',
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction,
     httpOnly: true
   },
   size: 64,
