@@ -291,7 +291,7 @@ describe('Auth Controller', (): void => {
         expect.objectContaining({
           httpOnly: true,
           secure: true,
-          sameSite: 'strict'
+          sameSite: 'none'
         })
       );
 
@@ -343,7 +343,7 @@ describe('Auth Controller', (): void => {
         'token',
         expect.objectContaining({
           secure: true,
-          sameSite: 'strict'
+          sameSite: 'none'
         })
       );
 

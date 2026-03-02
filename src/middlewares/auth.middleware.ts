@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../services/jwt.service';
 import HttpError from '../models/error.model';
 import User from '../models/user.model';
+import { getAuthCookieOptions } from '../utils/cookie-options';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -99,15 +100,8 @@ export async function authenticateToken(
 
     // Sliding session: refresh the auth cookie expiration on each valid request
     try {
-      const cookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? ('strict' as const) : ('lax' as const),
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        path: '/'
-      };
       if (token && _res && typeof _res.cookie === 'function') {
-        _res.cookie('token', token, cookieOptions);
+        _res.cookie('token', token, getAuthCookieOptions());
       }
     } catch {
       // Don't block request flow if cookie refresh fails
