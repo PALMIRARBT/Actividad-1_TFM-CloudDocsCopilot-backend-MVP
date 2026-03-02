@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction, CookieOptions } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { RegisterUserDto, LoginUserDto, ResetPasswordDto } from '../services/auth.service';
 import { AuthRequest } from '../middlewares/auth.middleware';
+import { getAuthCookieOptions, getAuthCookieClearOptions } from '../utils/cookie-options';
 import {
   registerUser,
   loginUser,
@@ -64,17 +65,8 @@ export async function login(
     const result = await loginUser(req.body as LoginUserDto);
 
     // Configuración de la cookie
-    const isProd = process.env.NODE_ENV === 'production';
-    const cookieOptions: CookieOptions = {
-      httpOnly: true, // La cookie no es accesible desde JavaScript del cliente
-      secure: isProd, // Solo HTTPS en producción
-      sameSite: isProd ? 'strict' : 'lax', // Protección CSRF
-      maxAge: 24 * 60 * 60 * 1000, // 24 horas en milisegundos
-      path: '/' // Cookie disponible en toda la aplicación
-    };
-
     // Enviar token en cookie HttpOnly
-    res.cookie('token', result.token, cookieOptions);
+    res.cookie('token', result.token, getAuthCookieOptions());
 
     // Devolver solo los datos del usuario, no el token
     res.json({ message: 'Login successful', user: result.user });
@@ -95,12 +87,7 @@ export async function login(
 export function logout(_req: AuthRequest, res: Response, next: NextFunction): void {
   try {
     // Limpiar la cookie del token
-    res.clearCookie('token', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      path: '/'
-    });
+    res.clearCookie('token', getAuthCookieClearOptions());
     res.json({ message: 'Logout successful' });
   } catch (err: unknown) {
     next(err);
@@ -184,13 +171,7 @@ export async function resetPasswordController(
     await resetPassword({ token, newPassword, confirmPassword });
 
     // opcional recomendado: limpiar cookie si existiera
-    const isProdForReset = process.env.NODE_ENV === 'production';
-    res.clearCookie('token', {
-      httpOnly: true,
-      secure: isProdForReset,
-      sameSite: isProdForReset ? 'strict' : 'lax',
-      path: '/'
-    });
+    res.clearCookie('token', getAuthCookieClearOptions());
 
     res.json({ message: 'Password reset successful' });
     return;
