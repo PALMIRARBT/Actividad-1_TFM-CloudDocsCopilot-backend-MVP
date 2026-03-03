@@ -242,7 +242,7 @@ export async function remove(req: AuthRequest, res: Response, next: NextFunction
  */
 export async function move(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { targetFolderId } = req.body;
+    const { targetFolderId } = req.body as { targetFolderId: string };
     
     if (!targetFolderId) {
       return next(new HttpError(400, 'Target folder ID is required'));
