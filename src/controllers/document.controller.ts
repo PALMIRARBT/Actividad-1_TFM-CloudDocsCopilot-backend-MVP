@@ -18,10 +18,12 @@ export async function upload(req: AuthRequest, res: Response, next: NextFunction
     }
 
     // folderId es opcional - si no se proporciona, se usa el rootFolder del usuario
+    const body = req.body as { folderId?: string };
+    const folderId = body.folderId;
     const doc = await documentService.uploadDocument({
       file: req.file,
       userId: req.user!.id,
-      folderId: req.body.folderId || undefined
+      folderId: folderId || undefined
     });
 
     res.status(201).json({
@@ -58,8 +60,8 @@ export async function replaceFile(
       message: 'Document file replaced successfully',
       document: doc
     });
-  } catch (err: any) {
-    if (err.message === 'Document not found') {
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === 'Document not found') {
       return next(new HttpError(404, 'Document not found'));
     }
     next(err);
@@ -165,7 +167,7 @@ export async function getById(req: AuthRequest, res: Response, next: NextFunctio
     } else {
       hasAccess =
         doc.uploadedBy.toString() === req.user!.id ||
-        doc.sharedWith?.some((userId: any) => userId.toString() === req.user!.id);
+        doc.sharedWith?.some((userId: unknown) => String(userId) === req.user!.id);
     }
 
     if (!hasAccess) {
@@ -186,7 +188,8 @@ export async function getById(req: AuthRequest, res: Response, next: NextFunctio
  */
 export async function share(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { userIds } = req.body;
+    const body = req.body as { userIds?: string[] };
+    const { userIds } = body;
 
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
       return next(new HttpError(400, 'User IDs array is required'));
@@ -203,8 +206,8 @@ export async function share(req: AuthRequest, res: Response, next: NextFunction)
       message: 'Document shared successfully',
       document: doc
     });
-  } catch (err: any) {
-    if (err.message === 'Document not found') {
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === 'Document not found') {
       return next(new HttpError(404, 'Document not found'));
     }
     next(err);
@@ -216,7 +219,8 @@ export async function share(req: AuthRequest, res: Response, next: NextFunction)
  */
 export async function move(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { targetFolderId } = req.body;
+    const body = req.body as { targetFolderId?: string };
+    const { targetFolderId } = body;
 
     if (!targetFolderId) {
       return next(new HttpError(400, 'Target folder ID is required'));
@@ -243,7 +247,8 @@ export async function move(req: AuthRequest, res: Response, next: NextFunction):
  */
 export async function rename(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { filename } = req.body;
+    const body = req.body as { filename?: string };
+    const { filename } = body;
     
     if (!filename) {
       return next(new HttpError(400, 'Filename is required'));
@@ -270,7 +275,8 @@ export async function rename(req: AuthRequest, res: Response, next: NextFunction
  */
 export async function copy(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { targetFolderId } = req.body;
+    const body = req.body as { targetFolderId?: string };
+    const { targetFolderId } = body;
 
     if (!targetFolderId) {
       return next(new HttpError(400, 'Target folder ID is required'));
@@ -313,7 +319,7 @@ export async function download(req: AuthRequest, res: Response, next: NextFuncti
     } else {
       hasAccess =
         doc.uploadedBy.toString() === req.user!.id ||
-        doc.sharedWith?.some((userId: any) => userId.toString() === req.user!.id);
+        doc.sharedWith?.some((userId: unknown) => String(userId) === req.user!.id);
     }
 
     if (!hasAccess) {
@@ -349,11 +355,11 @@ export async function download(req: AuthRequest, res: Response, next: NextFuncti
     let filePath: string;
     try {
       filePath = await validateDownloadPath(pathWithSlug, storageBase);
-    } catch (error) {
+    } catch {
       // Fallback: intentar en uploads legacy
       try {
         filePath = await validateDownloadPath(relativePath, uploadsBase);
-      } catch (error2) {
+      } catch {
         return next(new HttpError(404, 'File not found'));
       }
     }
@@ -387,7 +393,7 @@ export async function preview(req: AuthRequest, res: Response, next: NextFunctio
     } else {
       hasAccess =
         doc.uploadedBy.toString() === req.user!.id ||
-        doc.sharedWith?.some((userId: any) => userId.toString() === req.user!.id);
+        doc.sharedWith?.some((userId: unknown) => String(userId) === req.user!.id);
     }
 
     if (!hasAccess) {
@@ -425,16 +431,16 @@ export async function preview(req: AuthRequest, res: Response, next: NextFunctio
     // Intentar primero en storage con path sanitizado
     try {
       fullPath = await validateDownloadPath(pathWithSlug, storageBase);
-    } catch (error) {
+    } catch {
       // Fallback 1: intentar en uploads
       try {
         fullPath = await validateDownloadPath(relativePath, uploadsBase);
-      } catch (error2) {
+      } catch {
         // Fallback 2: intentar con /obs adicional (bug conocido de duplicación)
         try {
           const alternativePath = path.join('obs', relativePath);
           fullPath = await validateDownloadPath(alternativePath, uploadsBase);
-        } catch (error3) {
+        } catch {
           return next(new HttpError(404, 'File not found'));
         }
       }
@@ -450,8 +456,6 @@ export async function preview(req: AuthRequest, res: Response, next: NextFunctio
       doc.mimeType === 'application/msword';
 
     if (isWordDocument) {
-      console.log('[preview] Converting Word document to HTML');
-
       try {
         const result = await mammoth.convertToHtml({ path: fullPath });
         const html = `
@@ -548,8 +552,8 @@ export async function remove(req: AuthRequest, res: Response, next: NextFunction
       success: true,
       message: 'Document deleted successfully'
     });
-  } catch (err: any) {
-    if (err.message === 'Document not found') {
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === 'Document not found') {
       return next(new HttpError(404, 'Document not found'));
     }
     next(err);
