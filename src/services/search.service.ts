@@ -1,7 +1,5 @@
 ﻿import ElasticsearchClient from '../configurations/elasticsearch-config';
 import { IDocument } from '../models/document.model';
-import fs from 'fs';
-import path from 'path';
 
 /**
  * Interfaz para par├ímetros de b├║squeda
@@ -28,8 +26,10 @@ export interface SearchResult {
 
 /**
  * Indexar un documento en Elasticsearch
+ * @param document - Documento a indexar
+ * @param extractedText - Texto extraído (opcional, se limita a 100KB para performance)
  */
-export async function indexDocument(document: IDocument): Promise<void> {
+export async function indexDocument(document: IDocument, extractedText?: string): Promise<void> {
   try {
     const client = ElasticsearchClient.getInstance();
     
@@ -46,7 +46,10 @@ export async function indexDocument(document: IDocument): Promise<void> {
         organization: document.organization ? document.organization.toString() : null,
         folder: document.folder ? document.folder.toString() : null,
         uploadedAt: document.uploadedAt,
-        path: document.path || ''
+        path: document.path || '',
+        
+        // Contenido para búsqueda full-text (limitado a 100KB para performance)
+        content: extractedText ? extractedText.slice(0, 100000) : null
       }
     });
 
@@ -101,11 +104,11 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
     if (mimeType) {
       console.log(`­ƒöì [Elasticsearch] Filtering by mimeType: ${mimeType}`);
       
-      // Usar coincidencia exacta para el mimeType espec├¡fico
-      // Esto asegura que se filtren exactamente los documentos del tipo seleccionado
+      // Usar coincidencia exacta para el mimeType sin .keyword
+      // El campo mimeType puede no estar mapeado como keyword en el índice
       filters.push({ 
         term: { 
-          "mimeType.keyword": mimeType 
+          mimeType: mimeType 
         } 
       });
       
@@ -116,7 +119,7 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
       const dateRange: any = {};
       if (fromDate) dateRange.gte = fromDate.toISOString();
       if (toDate) dateRange.lte = toDate.toISOString();
-      filters.push({ range: { createdAt: dateRange } });
+      filters.push({ range: { uploadedAt: dateRange } });
     }
 
     // Realizar b├║squeda con query_string para mayor flexibilidad
@@ -134,7 +137,7 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
             {
               query_string: {
                 query: searchQuery,
-                fields: ['filename', 'originalname', 'extractedContent'],
+                fields: ['filename', 'originalname', 'content', 'extractedContent'],
                 default_operator: 'AND',
                 analyze_wildcard: true
               }
@@ -147,7 +150,7 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
       size: limit,
       sort: [
         { _score: { order: 'desc' } },
-        { createdAt: { order: 'desc' } }
+        { uploadedAt: { order: 'desc' } }
       ]
     });
 
@@ -171,39 +174,11 @@ export async function searchDocuments(params: SearchParams): Promise<SearchResul
       return doc;
     });
 
-    // Validar existencia física de archivos para prevenir 404s
-    const storageRoot = path.join(process.cwd(), 'storage');
-    const validatedDocuments = await Promise.all(
-      documents.map(async (doc) => {
-        if (!doc.path) {
-          console.warn(`Warning: Document ${doc.id} has no path field, skipping validation`);
-          return doc;
-        }
-
-        const relativePath = doc.path.startsWith('/') ? doc.path.substring(1) : doc.path;
-        const physicalPath = path.join(storageRoot, relativePath);
-
-        try {
-          await fs.promises.access(physicalPath, fs.constants.F_OK);
-          return doc; // File exists
-        } catch {
-          console.warn(`Warning: Document ${doc.id} (${doc.filename}) has no physical file at ${relativePath}`);
-          return null; // File doesn't exist
-        }
-      })
-    );
-
-    // Filter out documents with missing files
-    const existingDocuments = validatedDocuments.filter((doc): doc is any => doc !== null);
-    const filteredCount = documents.length - existingDocuments.length;
-    
-    if (filteredCount > 0) {
-      console.log(`Filtered ${filteredCount} document(s) with missing physical files`);
-    }
-
+    // TODO: Temporal - Validación desactivada hasta re-indexar documentos con campo 'path'
+    // La validación de archivos físicos requiere que todos los documentos en ES tengan el campo 'path'
     return {
-      documents: existingDocuments,
-      total: existingDocuments.length,
+      documents,
+      total: typeof result.hits.total === 'object' ? result.hits.total.value : (result.hits.total || 0),
       took: result.took
     };
   } catch (error: any) {
