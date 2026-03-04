@@ -6,6 +6,7 @@ import { AuthRequest } from '../middlewares/auth.middleware';
 import * as documentService from '../services/document.service';
 import HttpError from '../models/error.model';
 import { validateDownloadPath } from '../utils/path-sanitizer';
+import { hasActiveMembership } from '../services/membership.service';
 
 /**
  * Controlador para subir un nuevo documento
@@ -15,15 +16,16 @@ export async function upload(req: AuthRequest, res: Response, next: NextFunction
     if (!req.file) {
       return next(new HttpError(400, 'File is required'));
     }
-    
 
     // folderId es opcional - si no se proporciona, se usa el rootFolder del usuario
+    const body = req.body as { folderId?: string };
+    const folderId = body.folderId;
     const doc = await documentService.uploadDocument({
       file: req.file,
       userId: req.user!.id,
-      folderId: req.body.folderId || undefined
+      folderId: folderId || undefined
     });
-    
+
     res.status(201).json({
       success: true,
       message: 'Document uploaded successfully',
@@ -35,12 +37,65 @@ export async function upload(req: AuthRequest, res: Response, next: NextFunction
 }
 
 /**
+ * Controlador para reemplazar (sobrescribir) el archivo de un documento existente
+ */
+export async function replaceFile(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    if (!req.file) {
+      return next(new HttpError(400, 'File is required'));
+    }
+
+    const doc = await documentService.replaceDocumentFile({
+      documentId: req.params.id,
+      userId: req.user!.id,
+      file: req.file
+    });
+
+    res.json({
+      success: true,
+      message: 'Document file replaced successfully',
+      document: doc
+    });
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === 'Document not found') {
+      return next(new HttpError(404, 'Document not found'));
+    }
+    next(err);
+  }
+}
+
+/**
  * Controlador para listar documentos del usuario
  */
 export async function list(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const docs = await documentService.listDocuments(req.user!.id);
-    
+
+    res.json({
+      success: true,
+      count: docs.length,
+      documents: docs
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Controlador para listar documentos compartidos al usuario (por otros usuarios)
+ */
+export async function listSharedToMe(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const docs = await documentService.listSharedDocumentsToUser(req.user!.id);
+
     res.json({
       success: true,
       count: docs.length,
@@ -54,11 +109,19 @@ export async function list(req: AuthRequest, res: Response, next: NextFunction):
 /**
  * Controlador para obtener documentos recientes del usuario
  */
-export async function getRecent(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+export async function getRecent(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+    // Validar que el límite no exceda 20 documentos
+    if (limit > 20) {
+      return next(new HttpError(400, 'Limit cannot exceed 20 documents'));
+    }
     const organizationId = req.params.organizationId;
-    
+
     if (!organizationId) {
       return next(new HttpError(400, 'Organization ID is required'));
     }
@@ -66,12 +129,13 @@ export async function getRecent(req: AuthRequest, res: Response, next: NextFunct
     if (typeof organizationId !== 'string' || !mongoose.Types.ObjectId.isValid(organizationId)) {
       return next(new HttpError(400, 'Invalid Organization ID'));
     }
-    
+
     const docs = await documentService.getUserRecentDocuments({
       userId: req.user!.id,
+      organizationId,
       limit
     });
-    
+
     res.json({
       success: true,
       count: docs.length,
@@ -88,20 +152,28 @@ export async function getRecent(req: AuthRequest, res: Response, next: NextFunct
 export async function getById(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const doc = await documentService.findDocumentById(req.params.id as string);
-    
+
     if (!doc) {
       return next(new HttpError(404, 'Document not found'));
     }
-    
-    // Verificar acceso (owner o compartido)
-    const hasAccess = 
-      doc.uploadedBy.toString() === req.user!.id ||
-      doc.sharedWith?.some((userId: any) => userId.toString() === req.user!.id);
-    
+
+    // Verificar acceso:
+    // - Si pertenece a una organización: cualquier miembro ACTIVO de esa organización puede acceder.
+    // - Si es personal (sin organización): solo owner o sharedWith.
+    let hasAccess = false;
+
+    if (doc.organization) {
+      hasAccess = await hasActiveMembership(req.user!.id, doc.organization.toString());
+    } else {
+      hasAccess =
+        doc.uploadedBy.toString() === req.user!.id ||
+        doc.sharedWith?.some((userId: unknown) => String(userId) === req.user!.id);
+    }
+
     if (!hasAccess) {
       return next(new HttpError(403, 'Access denied to this document'));
     }
-    
+
     res.json({
       success: true,
       document: doc
@@ -116,25 +188,26 @@ export async function getById(req: AuthRequest, res: Response, next: NextFunctio
  */
 export async function share(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { userIds } = req.body;
-    
+    const body = req.body as { userIds?: string[] };
+    const { userIds } = body;
+
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
       return next(new HttpError(400, 'User IDs array is required'));
     }
-    
+
     const doc = await documentService.shareDocument({
       id: req.params.id as string,
       userId: req.user!.id,
       userIds
     });
-    
+
     res.json({
       success: true,
       message: 'Document shared successfully',
       document: doc
     });
-  } catch (err: any) {
-    if (err.message === 'Document not found') {
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === 'Document not found') {
       return next(new HttpError(404, 'Document not found'));
     }
     next(err);
@@ -146,21 +219,50 @@ export async function share(req: AuthRequest, res: Response, next: NextFunction)
  */
 export async function move(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { targetFolderId } = req.body;
-    
+    const body = req.body as { targetFolderId?: string };
+    const { targetFolderId } = body;
+
     if (!targetFolderId) {
       return next(new HttpError(400, 'Target folder ID is required'));
     }
-    
+
     const doc = await documentService.moveDocument({
       documentId: req.params.id as string,
       userId: req.user!.id,
       targetFolderId
     });
-    
+
     res.json({
       success: true,
       message: 'Document moved successfully',
+      document: doc
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Controlador para renombrar un documento
+ */
+export async function rename(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const body = req.body as { filename?: string };
+    const { filename } = body;
+    
+    if (!filename) {
+      return next(new HttpError(400, 'Filename is required'));
+    }
+    
+    const doc = await documentService.renameDocument({
+      documentId: req.params.id,
+      userId: req.user!.id,
+      filename
+    });
+    
+    res.json({
+      success: true,
+      message: 'Document renamed successfully',
       document: doc
     });
   } catch (err) {
@@ -173,18 +275,19 @@ export async function move(req: AuthRequest, res: Response, next: NextFunction):
  */
 export async function copy(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { targetFolderId } = req.body;
-    
+    const body = req.body as { targetFolderId?: string };
+    const { targetFolderId } = body;
+
     if (!targetFolderId) {
       return next(new HttpError(400, 'Target folder ID is required'));
     }
-    
+
     const newDoc = await documentService.copyDocument({
       documentId: req.params.id as string,
       userId: req.user!.id,
       targetFolderId
     });
-    
+
     res.status(201).json({
       success: true,
       message: 'Document copied successfully',
@@ -201,37 +304,70 @@ export async function copy(req: AuthRequest, res: Response, next: NextFunction):
 export async function download(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const doc = await documentService.findDocumentById(req.params.id as string);
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> origin/main
     if (!doc) {
       return next(new HttpError(404, 'Document not found'));
     }
-    
-    // Verificar acceso (owner o compartido)
-    const hasAccess = 
-      doc.uploadedBy.toString() === req.user!.id ||
-      doc.sharedWith?.some((userId: any) => userId.toString() === req.user!.id);
-    
+
+    // Verificar acceso:
+    // - Si pertenece a una organización: cualquier miembro ACTIVO de esa organización puede acceder.
+    // - Si es personal (sin organización): solo owner o sharedWith.
+    let hasAccess = false;
+
+    if (doc.organization) {
+      hasAccess = await hasActiveMembership(req.user!.id, doc.organization.toString());
+    } else {
+      hasAccess =
+        doc.uploadedBy.toString() === req.user!.id ||
+        doc.sharedWith?.some((userId: unknown) => String(userId) === req.user!.id);
+    }
+
     if (!hasAccess) {
       return next(new HttpError(403, 'Access denied to this document'));
+    }
+
+    // Get organization to build the correct path with slug
+    const Organization = (await import('../models/organization.model')).default;
+    const org = await Organization.findById(doc.organization);
+    if (!org) {
+      return next(new HttpError(404, 'Organization not found'));
     }
     
     // Validar y sanitizar el path para prevenir Path Traversal
     const uploadsBase = path.join(process.cwd(), 'uploads');
     const storageBase = path.join(process.cwd(), 'storage');
+    const relativePath = doc.path.startsWith('/') ? doc.path.substring(1) : doc.path;
+    
+    // Build path with organization slug
+    const safeSlug = org.slug.replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
+    
+    // Sanitize path components (replace spaces and special chars with dashes)
+    // to match the physical folder structure
+    const pathComponents = relativePath.split('/').filter(p => p).map(component =>
+      component.replace(/[^a-z0-9_.-]/gi, '-')
+    );
+    const sanitizedRelativePath = pathComponents.join('/');
+    
+    // Check if path already includes the slug to avoid double slug
+    const hasSlugPrefix = sanitizedRelativePath.startsWith(safeSlug + '/') || sanitizedRelativePath.startsWith(safeSlug + '\\');
+    const pathWithSlug = hasSlugPrefix ? sanitizedRelativePath : path.join(safeSlug, sanitizedRelativePath);
     
     let filePath: string;
     try {
-      // Intentar primero en uploads
-      filePath = await validateDownloadPath(doc.filename || '', uploadsBase);
-    } catch (error) {
-      // Si no está en uploads, intentar en storage
+      filePath = await validateDownloadPath(pathWithSlug, storageBase);
+    } catch {
+      // Fallback: intentar en uploads legacy
       try {
-        filePath = await validateDownloadPath(doc.filename || '', storageBase);
-      } catch (error2) {
+        filePath = await validateDownloadPath(relativePath, uploadsBase);
+      } catch {
         return next(new HttpError(404, 'File not found'));
       }
     }
-    
+
     res.download(filePath, doc.originalname || 'download');
   } catch (err) {
     next(err);
@@ -246,20 +382,40 @@ export async function download(req: AuthRequest, res: Response, next: NextFuncti
 export async function preview(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const doc = await documentService.findDocumentById(req.params.id as string);
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> origin/main
     if (!doc) {
       return next(new HttpError(404, 'Document not found'));
     }
-    
-    // Verificar acceso (owner o compartido)
-    const hasAccess = 
-      doc.uploadedBy.toString() === req.user!.id ||
-      doc.sharedWith?.some((userId: any) => userId.toString() === req.user!.id);
-    
+
+    // Verificar acceso:
+    // - Si pertenece a una organización: cualquier miembro ACTIVO de esa organización puede acceder.
+    // - Si es personal (sin organización): solo owner o sharedWith.
+    let hasAccess = false;
+
+    if (doc.organization) {
+      hasAccess = await hasActiveMembership(req.user!.id, doc.organization.toString());
+    } else {
+      hasAccess =
+        doc.uploadedBy.toString() === req.user!.id ||
+        doc.sharedWith?.some((userId: unknown) => String(userId) === req.user!.id);
+    }
+
     if (!hasAccess) {
       return next(new HttpError(403, 'Access denied to this document'));
     }
+
+    // Get organization to build the correct path with slug
+    const Organization = (await import('../models/organization.model')).default;
+    const org = await Organization.findById(doc.organization);
+    if (!org) {
+      return next(new HttpError(404, 'Organization not found'));
+    }
     
+<<<<<<< HEAD
     console.log('[preview] Document info:', {
       id: doc._id,
       filename: doc.filename,
@@ -268,16 +424,35 @@ export async function preview(req: AuthRequest, res: Response, next: NextFunctio
       mimeType: doc.mimeType
     });
     
+=======
+>>>>>>> origin/main
     const uploadsBase = path.join(process.cwd(), 'uploads');
     const storageBase = path.join(process.cwd(), 'storage');
     const relativePath = doc.path.startsWith('/') ? doc.path.substring(1) : doc.path;
     
+<<<<<<< HEAD
     console.log('[preview] Uploads base:', uploadsBase);
     console.log('[preview] Storage base:', storageBase);
     console.log('[preview] Relative path:', relativePath);
+=======
+    // Build path with organization slug
+    const safeSlug = org.slug.replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
+>>>>>>> origin/main
     
-    // Intentar validar el path
+    // Sanitize path components (replace spaces and special chars with dashes)
+    // to match the physical folder structure
+    const pathComponents = relativePath.split('/').filter(p => p).map(component =>
+      component.replace(/[^a-z0-9_.-]/gi, '-')
+    );
+    const sanitizedRelativePath = pathComponents.join('/');
+    
+    // Check if path already includes the slug to avoid double slug
+    const hasSlugPrefix = sanitizedRelativePath.startsWith(safeSlug + '/') || sanitizedRelativePath.startsWith(safeSlug + '\\');
+    const pathWithSlug = hasSlugPrefix ? sanitizedRelativePath : path.join(safeSlug, sanitizedRelativePath);
+    
+    // Intentar validar el path con fallbacks
     let fullPath: string | null = null;
+<<<<<<< HEAD
     
     // Intentar primero en uploads
     try {
@@ -298,22 +473,37 @@ export async function preview(req: AuthRequest, res: Response, next: NextFunctio
           console.log('[preview] Alternative path worked in uploads:', fullPath);
         } catch (error3) {
           console.error('[preview] All paths failed');
+=======
+
+    // Intentar primero en storage con path sanitizado
+    try {
+      fullPath = await validateDownloadPath(pathWithSlug, storageBase);
+    } catch {
+      // Fallback 1: intentar en uploads
+      try {
+        fullPath = await validateDownloadPath(relativePath, uploadsBase);
+      } catch {
+        // Fallback 2: intentar con /obs adicional (bug conocido de duplicación)
+        try {
+          const alternativePath = path.join('obs', relativePath);
+          fullPath = await validateDownloadPath(alternativePath, uploadsBase);
+        } catch {
+>>>>>>> origin/main
           return next(new HttpError(404, 'File not found'));
         }
       }
     }
-    
+
     if (!fullPath) {
       return next(new HttpError(404, 'File not found'));
     }
-    
+
     // Detectar si es un documento Word y convertirlo a HTML
-    const isWordDocument = doc.mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-                          doc.mimeType === 'application/msword';
-    
+    const isWordDocument =
+      doc.mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      doc.mimeType === 'application/msword';
+
     if (isWordDocument) {
-      console.log('[preview] Converting Word document to HTML');
-      
       try {
         const result = await mammoth.convertToHtml({ path: fullPath });
         const html = `
@@ -375,7 +565,7 @@ export async function preview(req: AuthRequest, res: Response, next: NextFunctio
 </body>
 </html>
         `;
-        
+
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         res.send(html);
         return;
@@ -384,11 +574,11 @@ export async function preview(req: AuthRequest, res: Response, next: NextFunctio
         // Fallback: servir el archivo original
       }
     }
-    
+
     // Para otros tipos de archivos, servir normalmente
     res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
     res.setHeader('Content-Disposition', `inline; filename="${doc.originalname || 'preview'}"`);
-    
+
     // Enviar archivo
     res.sendFile(fullPath);
   } catch (err) {
@@ -405,17 +595,78 @@ export async function remove(req: AuthRequest, res: Response, next: NextFunction
       id: req.params.id as string,
       userId: req.user!.id
     });
-    
+
     res.json({
       success: true,
       message: 'Document deleted successfully'
     });
-  } catch (err: any) {
-    if (err.message === 'Document not found') {
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === 'Document not found') {
       return next(new HttpError(404, 'Document not found'));
     }
     next(err);
   }
 }
 
-export default { upload, list, getRecent, getById, share, move, copy, download, preview, remove };
+/**
+ * Controlador para obtener el estado de procesamiento AI de un documento
+ * RFE-AI-002: Auto-procesamiento
+ */
+export async function getAIStatus(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const doc = await documentService.findDocumentById(req.params.id);
+
+    if (!doc) {
+      return next(new HttpError(404, 'Document not found'));
+    }
+
+    // Verificar que el usuario tiene acceso al documento
+    if (String(doc.uploadedBy) !== req.user!.id && !doc.isSharedWith(req.user!.id)) {
+      // Si el documento pertenece a una organización, verificar membership
+      if (doc.organization) {
+        const hasMembership = await hasActiveMembership(req.user!.id, doc.organization.toString());
+        if (!hasMembership) {
+          return next(new HttpError(403, 'Access denied'));
+        }
+      } else {
+        return next(new HttpError(403, 'Access denied'));
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        status: doc.aiProcessingStatus || 'none',
+        category: doc.aiCategory || null,
+        confidence: doc.aiConfidence || null,
+        tags: doc.aiTags || [],
+        summary: doc.aiSummary || null,
+        keyPoints: doc.aiKeyPoints || [],
+        processedAt: doc.aiProcessedAt || null,
+        error: doc.aiError || null
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export default {
+  upload,
+  replaceFile,
+  list,
+  listSharedToMe,
+  getRecent,
+  getById,
+  share,
+  move,
+  copy,
+  download,
+  preview,
+  remove,
+  getAIStatus
+};

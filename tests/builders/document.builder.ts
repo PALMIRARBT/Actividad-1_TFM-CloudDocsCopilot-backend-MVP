@@ -1,18 +1,82 @@
+import { writeTestFile, buildDocumentObject } from '../helpers/fixtureBuilder';
+// import type { BuiltDocument } from '../helpers/fixtureBuilder';
+import path from 'path';
+import fs from 'fs';
+
+// Define a local type for the builder payload (replace with actual structure if needed)
+type BuiltDocumentLike = DocumentData & { content?: string | Buffer };
+
+import mongoose from 'mongoose';
+
+interface DocumentData {
+  filename: string;
+  content?: string;
+  mimeType: string;
+  size?: number;
+  organization?: string | null;
+  path?: string;
+  uploadedBy?: mongoose.Types.ObjectId | undefined;
+  folder?: string | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+  [k: string]: unknown;
+}
+
+export async function createDocumentModel(
+  DocumentModel: { create: (doc: unknown) => Promise<unknown> },
+  opts: Partial<DocumentData & { organization?: string }> = {}
+): Promise<unknown> {
+  const file = writeTestFile({
+    organization: opts.organization,
+    filename: opts.filename,
+    content: opts.content ?? 'builder-content'
+  });
+
+  // Type guard to ensure file is TestFileResult
+  function isTestFileResult(obj: unknown): obj is import('../helpers/fixtureBuilder').TestFileResult {
+    return (
+      typeof obj === 'object' &&
+      obj !== null &&
+      'relativePath' in obj &&
+      'filename' in obj &&
+      'size' in obj
+    );
+  }
+  if (!isTestFileResult(file)) {
+    throw new Error('Failed to create test file: unexpected result type');
+  }
+  const fileResult = file;
+
+  // Ensure uploadedBy is correct type
+  const uploadedBy =
+    opts.uploadedBy && opts.uploadedBy instanceof mongoose.Types.ObjectId
+      ? opts.uploadedBy
+      : undefined;
+
+  const doc: BuiltDocumentLike = buildDocumentObject({
+    ...opts,
+    uploadedBy,
+    path: fileResult.relativePath,
+    filename: fileResult.filename,
+    size: fileResult.size
+  });
+
+  return DocumentModel.create(doc as unknown);
+}
+
+export function documentPayload(opts: Partial<DocumentData> = {}): DocumentData {
+  // Ensure organization is never null (only string or undefined)
+  const safeOpts = { ...opts, organization: opts.organization === null ? undefined : opts.organization };
+  const built = buildDocumentObject(
+    safeOpts as Partial<Omit<BuiltDocumentLike, 'organization'>> & { organization?: string }
+  );
+  return built as DocumentData;
+}
+
 /**
  * Document Builder
  * Constructor de documentos de prueba con patrón builder
  */
-
-import path from 'path';
-import fs from 'fs';
-
-interface DocumentData {
-  filename: string;
-  content: string;
-  mimeType: string;
-  size?: number;
-}
-
 export class DocumentBuilder {
   private documentData: DocumentData = {
     filename: 'default-file.txt',
@@ -20,41 +84,26 @@ export class DocumentBuilder {
     mimeType: 'text/plain'
   };
 
-  /**
-   * Establece el nombre del archivo
-   */
   withFilename(filename: string): DocumentBuilder {
     this.documentData.filename = filename;
     return this;
   }
 
-  /**
-   * Establece el contenido del archivo
-   */
   withContent(content: string): DocumentBuilder {
     this.documentData.content = content;
     return this;
   }
 
-  /**
-   * Establece el tipo MIME
-   */
   withMimeType(mimeType: string): DocumentBuilder {
     this.documentData.mimeType = mimeType;
     return this;
   }
 
-  /**
-   * Establece el tamaño del archivo
-   */
   withSize(size: number): DocumentBuilder {
     this.documentData.size = size;
     return this;
   }
 
-  /**
-   * Crea un documento PDF
-   */
   asPdf(): DocumentBuilder {
     this.documentData.filename = 'document.pdf';
     this.documentData.mimeType = 'application/pdf';
@@ -62,9 +111,6 @@ export class DocumentBuilder {
     return this;
   }
 
-  /**
-   * Crea una imagen PNG
-   */
   asPng(): DocumentBuilder {
     this.documentData.filename = 'image.png';
     this.documentData.mimeType = 'image/png';
@@ -72,9 +118,6 @@ export class DocumentBuilder {
     return this;
   }
 
-  /**
-   * Crea una imagen JPEG
-   */
   asJpeg(): DocumentBuilder {
     this.documentData.filename = 'image.jpg';
     this.documentData.mimeType = 'image/jpeg';
@@ -82,77 +125,49 @@ export class DocumentBuilder {
     return this;
   }
 
-  /**
-   * Crea un documento de texto
-   */
   asText(): DocumentBuilder {
     this.documentData.filename = 'document.txt';
     this.documentData.mimeType = 'text/plain';
     return this;
   }
 
-  /**
-   * Crea un archivo con nombre malicioso (path traversal)
-   */
   withMaliciousFilename(): DocumentBuilder {
     this.documentData.filename = '../../etc/passwd.txt';
     return this;
   }
 
-  /**
-   * Crea un archivo con extensión peligrosa
-   */
   withDangerousExtension(): DocumentBuilder {
     this.documentData.filename = 'malware.exe';
     this.documentData.content = 'executable content';
     return this;
   }
 
-  /**
-   * Crea un archivo con nombre muy largo
-   */
-  withLongFilename(length: number = 300): DocumentBuilder {
+  withLongFilename(length = 300): DocumentBuilder {
     this.documentData.filename = 'a'.repeat(length) + '.txt';
     return this;
   }
 
-  /**
-   * Crea un archivo temporal en el sistema de archivos
-   * IMPORTANTE: Debe limpiarse después de usarse
-   */
-  createTempFile(directory: string = __dirname): string {
+  createTempFile(directory = __dirname): string {
     const filePath = path.join(directory, this.documentData.filename);
-    fs.writeFileSync(filePath, this.documentData.content);
+    fs.writeFileSync(filePath, this.documentData.content ?? '');
     return filePath;
   }
 
-  /**
-   * Elimina un archivo temporal del sistema de archivos
-   */
   static deleteTempFile(filePath: string): void {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
   }
 
-  /**
-   * Construye y retorna el objeto documento
-   */
   build(): DocumentData {
     return { ...this.documentData };
   }
 
-  /**
-   * Retorna un Buffer con el contenido del documento
-   */
   buildBuffer(): Buffer {
-    return Buffer.from(this.documentData.content);
+    return Buffer.from(this.documentData.content ?? '');
   }
 
-  /**
-   * Crea múltiples documentos
-   */
-  static buildMany(count: number, prefix: string = 'file'): DocumentData[] {
+  static buildMany(count: number, prefix = 'file'): DocumentData[] {
     const documents: DocumentData[] = [];
     for (let i = 0; i < count; i++) {
       documents.push(
@@ -166,16 +181,13 @@ export class DocumentBuilder {
   }
 }
 
-/**
- * Función helper para crear un documento básico rápidamente
- */
 export const createDocument = (overrides?: Partial<DocumentData>): DocumentData => {
   const builder = new DocumentBuilder();
-  
+
   if (overrides?.filename) builder.withFilename(overrides.filename);
   if (overrides?.content) builder.withContent(overrides.content);
   if (overrides?.mimeType) builder.withMimeType(overrides.mimeType);
   if (overrides?.size) builder.withSize(overrides.size);
-  
+
   return builder.build();
 };

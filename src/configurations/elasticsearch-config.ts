@@ -1,5 +1,12 @@
 import { Client } from '@elastic/elasticsearch';
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
 /**
  * Cliente de Elasticsearch para búsqueda de documentos
  */
@@ -12,21 +19,22 @@ class ElasticsearchClient {
   public static getInstance(): Client {
     if (!ElasticsearchClient.instance) {
       const esNode = process.env.ELASTICSEARCH_NODE || 'http://localhost:9200';
-      
+
       ElasticsearchClient.instance = new Client({
         node: esNode,
-        auth: process.env.ELASTICSEARCH_USERNAME && process.env.ELASTICSEARCH_PASSWORD
-          ? {
-              username: process.env.ELASTICSEARCH_USERNAME,
-              password: process.env.ELASTICSEARCH_PASSWORD
-            }
-          : undefined,
+        auth:
+          process.env.ELASTICSEARCH_USERNAME && process.env.ELASTICSEARCH_PASSWORD
+            ? {
+                username: process.env.ELASTICSEARCH_USERNAME,
+                password: process.env.ELASTICSEARCH_PASSWORD
+              }
+            : undefined,
         maxRetries: 5,
         requestTimeout: 60000,
         sniffOnStart: false
       });
 
-      console.log(`✅ Elasticsearch client initialized: ${esNode}`);
+      console.warn(`✅ Elasticsearch client initialized: ${esNode}`);
     }
 
     return ElasticsearchClient.instance;
@@ -39,10 +47,10 @@ class ElasticsearchClient {
     try {
       const client = ElasticsearchClient.getInstance();
       const health = await client.cluster.health();
-      console.log(`✅ Elasticsearch cluster status: ${health.status}`);
+      console.warn(`✅ Elasticsearch cluster status: ${health.status}`);
       return true;
-    } catch (error: any) {
-      console.error('❌ Elasticsearch connection failed:', error.message);
+    } catch (error: unknown) {
+      console.error('❌ Elasticsearch connection failed:', getErrorMessage(error));
       return false;
     }
   }
@@ -107,17 +115,20 @@ class ElasticsearchClient {
               },
               uploadedAt: {
                 type: 'date'
+              },
+              sharedWith: {
+                type: 'keyword' // Array of user IDs; ES handles arrays natively
               }
             }
           }
         });
 
-        console.log(`✅ Elasticsearch index '${indexName}' created successfully`);
+        console.warn(`✅ Elasticsearch index '${indexName}' created successfully`);
       } else {
-        console.log(`ℹ️  Elasticsearch index '${indexName}' already exists`);
+        console.warn(`ℹ️  Elasticsearch index '${indexName}' already exists`);
       }
-    } catch (error: any) {
-      console.error(`❌ Error creating Elasticsearch index:`, error.message);
+    } catch (error: unknown) {
+      console.error(`❌ Error creating Elasticsearch index:`, getErrorMessage(error));
       throw error;
     }
   }

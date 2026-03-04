@@ -3,7 +3,12 @@ import Organization from '../models/organization.model';
 import User from '../models/user.model';
 import Folder from '../models/folder.model';
 import Document from '../models/document.model';
-import { IOrganization, SubscriptionPlan, CreateOrganizationDto } from '../models/types/organization.types';
+import { IMembership } from '../models/membership.model';
+import {
+  IOrganization,
+  SubscriptionPlan,
+  CreateOrganizationDto
+} from '../models/types/organization.types';
 import HttpError from '../models/error.model';
 import { createMembership } from './membership.service';
 import { MembershipRole } from '../models/membership.model';
@@ -32,9 +37,7 @@ export interface UpdateOrganizationDto {
  * @param data - Datos de la organización a crear
  * @returns La organización creada
  */
-export async function createOrganization(
-  data: CreateOrganizationDto
-): Promise<IOrganization> {
+export async function createOrganization(data: CreateOrganizationDto): Promise<IOrganization> {
   const { name, ownerId, plan = SubscriptionPlan.FREE } = data;
 
   // Verificar que el usuario existe
@@ -57,7 +60,7 @@ export async function createOrganization(
     name,
     owner: ownerId,
     plan,
-    members: [ownerId], // Array legacy
+    members: [ownerId] // Array legacy
   });
 
   try {
@@ -65,7 +68,7 @@ export async function createOrganization(
     await createMembership({
       userId: ownerId,
       organizationId: organization._id.toString(),
-      role: MembershipRole.OWNER,
+      role: MembershipRole.OWNER
     });
 
     return organization;
@@ -103,7 +106,7 @@ export async function addUserToOrganization(
     userId,
     organizationId,
     role: MembershipRole.MEMBER,
-    invitedBy,
+    invitedBy
   });
 }
 
@@ -138,14 +141,12 @@ export async function removeUserFromOrganization(
  * @param userId - ID del usuario
  * @returns Lista de organizaciones del usuario
  */
-export async function getUserOrganizations(
-  userId: string
-): Promise<any[]> {
+export async function getUserOrganizations(userId: string): Promise<IMembership[]> {
   // 🆕 Usar membership service y devolver las membresías completas
   const { getUserMemberships } = await import('./membership.service');
   const memberships = await getUserMemberships(userId);
   // Devolver las memberships con la organización poblada (consistencia con getOrganizationMembers)
-  return memberships as any[];
+  return memberships;
 }
 
 /**
@@ -153,9 +154,7 @@ export async function getUserOrganizations(
  * @param organizationId - ID de la organización
  * @returns La organización encontrada
  */
-export async function getOrganizationById(
-  organizationId: string
-): Promise<IOrganization> {
+export async function getOrganizationById(organizationId: string): Promise<IOrganization> {
   const organization = await Organization.findById(organizationId)
     .populate('owner', 'name email')
     .populate('members', 'name email');
@@ -207,7 +206,7 @@ export async function updateOrganization(
   if (data.settings) {
     organization.settings = {
       ...organization.settings,
-      ...data.settings,
+      ...data.settings
     };
   }
 
@@ -224,10 +223,7 @@ export async function updateOrganization(
  * @param organizationId - ID de la organización
  * @param userId - ID del usuario que elimina (debe ser owner)
  */
-export async function deleteOrganization(
-  organizationId: string,
-  userId: string
-): Promise<void> {
+export async function deleteOrganization(organizationId: string, userId: string): Promise<void> {
   const organization = await Organization.findById(organizationId);
   if (!organization) {
     throw new HttpError(404, 'Organization not found');
@@ -268,31 +264,28 @@ export async function getOrganizationStorageStats(organizationId: string): Promi
   }
 
   // Convertir members a ObjectIds para prevenir inyección NoSQL
-  const memberObjectIds = organization.members.map((id: any) => 
-    new mongoose.Types.ObjectId(id)
-  );
+  const memberObjectIds = organization.members.map(id => new mongoose.Types.ObjectId(id.toString()));
 
   // Obtener usuarios de la organización
   const users = await User.find({
-    _id: { $in: memberObjectIds },
+    _id: { $in: memberObjectIds }
   }).select('name email storageUsed');
 
   // Contar documentos y folders de la organización
   const [totalDocuments, totalFolders] = await Promise.all([
     Document.countDocuments({ organization: organizationId }),
-    Folder.countDocuments({ organization: organizationId }),
+    Folder.countDocuments({ organization: organizationId })
   ]);
 
-  const totalStorageLimit =
-    organization.settings.maxStoragePerUser * organization.members.length;
+  const totalStorageLimit = organization.settings.maxStoragePerUser * organization.members.length;
   const usedStorage = users.reduce((acc, user) => acc + user.storageUsed, 0);
   const availableStorage = totalStorageLimit - usedStorage;
 
-  const storagePerUser = users.map((user) => ({
-    userId: user._id.toString(),
+  const storagePerUser = users.map(user => ({
+    userId: String(user._id),
     userName: user.name,
     storageUsed: user.storageUsed,
-    percentage: (user.storageUsed / organization.settings.maxStoragePerUser) * 100,
+    percentage: (user.storageUsed / organization.settings.maxStoragePerUser) * 100
   }));
 
   return {
@@ -302,7 +295,7 @@ export async function getOrganizationStorageStats(organizationId: string): Promi
     totalFolders,
     usedStorage,
     availableStorage,
-    storagePerUser,
+    storagePerUser
   };
 }
 

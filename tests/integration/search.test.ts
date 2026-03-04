@@ -1,36 +1,68 @@
+<<<<<<< HEAD
 import request from 'supertest';
 import app from '../../src/app';
+=======
+import { request, app } from '../setup';
+>>>>>>> origin/main
 import DocumentModel from '../../src/models/document.model';
 import OrganizationModel from '../../src/models/organization.model';
 import UserModel from '../../src/models/user.model';
 import MembershipModel from '../../src/models/membership.model';
 import FolderModel from '../../src/models/folder.model';
 import * as searchService from '../../src/services/search.service';
+<<<<<<< HEAD
 import jwt from 'jsonwebtoken';
 
 // Desmockear el servicio de búsqueda para este test
 jest.unmock('../../src/services/search.service');
+=======
+import { bodyOf } from '../helpers';
+import type { Response } from 'supertest';
+import { signToken } from '../../src/services/jwt.service';
+
+// Mock the search service with data-driven responses for this test suite
+// The global mock in jest.setup.ts provides default empty responses
+// Here we override with responses that match our test data
+>>>>>>> origin/main
 
 describe('Search API - Elasticsearch Integration', () => {
   let authToken: string;
   let userId: string;
   let organizationId: string;
+<<<<<<< HEAD
   let documentIds: string[] = [];
 
   beforeAll(async () => {
+=======
+  let testDocuments: Array<Record<string, unknown>> = [];
+
+  // Setup test data before each test (setup.ts clears collections after each test)
+  beforeEach(async () => {
+    // Reset testDocuments array
+    testDocuments = [];
+>>>>>>> origin/main
     // Crear usuario de prueba
     const user = await UserModel.create({
       name: 'Search Tester',
       email: 'searchtester@test.com',
       password: 'hashedpassword123',
+<<<<<<< HEAD
       role: 'user'
+=======
+      role: 'user',
+      active: true
+>>>>>>> origin/main
     });
     userId = user._id.toString();
 
     // Crear organización
     const org = await OrganizationModel.create({
       name: 'Search Test Org',
+<<<<<<< HEAD
       ownerId: userId,
+=======
+      owner: user._id,
+>>>>>>> origin/main
       plan: 'enterprise',
       settings: {
         allowedFileTypes: ['application/pdf', 'image/png', 'image/jpeg', 'text/plain']
@@ -40,8 +72,13 @@ describe('Search API - Elasticsearch Integration', () => {
 
     // Crear membership
     await MembershipModel.create({
+<<<<<<< HEAD
       userId: user._id,
       organizationId: org._id,
+=======
+      user: user._id,
+      organization: org._id,
+>>>>>>> origin/main
       role: 'owner',
       status: 'active'
     });
@@ -51,7 +88,12 @@ describe('Search API - Elasticsearch Integration', () => {
       name: 'Root',
       path: '/',
       organization: org._id,
+<<<<<<< HEAD
       uploadedBy: user._id
+=======
+      owner: user._id,
+      type: 'root'
+>>>>>>> origin/main
     });
 
     // Crear documentos de prueba con diferentes nombres
@@ -75,6 +117,7 @@ describe('Search API - Elasticsearch Integration', () => {
         folder: folder._id,
         uploadedAt: new Date()
       });
+<<<<<<< HEAD
       documentIds.push(document._id.toString());
 
       // Indexar en Elasticsearch
@@ -104,6 +147,72 @@ describe('Search API - Elasticsearch Integration', () => {
     await MembershipModel.deleteMany({});
     await OrganizationModel.deleteMany({});
     await UserModel.deleteMany({});
+=======
+      testDocuments.push({
+        id: document._id.toString(),
+        filename: document.filename,
+        originalname: document.originalname,
+        mimeType: document.mimeType,
+        organization: organizationId,
+        score: 1.0
+      });
+    }
+
+    // Generar token JWT
+    authToken = signToken({
+      id: userId,
+      email: user.email,
+      role: user.role,
+      tokenVersion: 0
+    });
+
+    // Configure search service mock to return test documents based on query
+    // searchDocuments receives a SearchParams object: { query, userId, organizationId, mimeType, limit, offset, ... }
+    (searchService.searchDocuments as jest.Mock).mockImplementation(
+      async (params: { query: string; organizationId?: string; mimeType?: string; limit?: number; offset?: number }) => {
+        const q = params.query.toLowerCase();
+        const results = testDocuments.filter((doc) => {
+          const original = String(doc.originalname || '').toLowerCase();
+          const filename = String(doc.filename || '').toLowerCase();
+          return original.includes(q) || filename.includes(q);
+        });
+
+        // Apply mimeType filter if provided
+        let filtered = results;
+        if (params.mimeType) {
+          filtered = filtered.filter(d => String(d.mimeType || '') === params.mimeType);
+        }
+
+        // Apply organization filter
+        if (params.organizationId) {
+          filtered = filtered.filter(d => String(d.organization || '') === params.organizationId);
+        }
+
+        // Apply pagination
+        const offset = params.offset || 0;
+        const limit = params.limit || 10;
+        const paginatedResults = filtered.slice(offset, offset + limit);
+
+        return {
+          documents: paginatedResults,
+          total: filtered.length,
+          took: 5
+        };
+      }
+    );
+
+    // getAutocompleteSuggestions receives: (query, userId, organizationId?, limit?)
+    (searchService.getAutocompleteSuggestions as jest.Mock).mockImplementation(
+      async (query: string, _userId: string, _organizationId?: string, limit: number = 5) => {
+        const q = query.toLowerCase();
+        const suggestions = testDocuments
+          .filter(doc => String(doc.originalname || '').toLowerCase().includes(q))
+          .map(doc => String(doc.originalname || ''))
+          .slice(0, limit);
+        return suggestions;
+      }
+    );
+>>>>>>> origin/main
   });
 
   describe('GET /api/search', () => {
@@ -113,11 +222,19 @@ describe('Search API - Elasticsearch Integration', () => {
         .query({ q: 'zonificacion' })
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Organization-ID', organizationId);
+<<<<<<< HEAD
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data.length).toBeGreaterThan(0);
       expect(response.body.total).toBeGreaterThan(0);
+=======
+      expect(response.status).toBe(200);
+      const body = bodyOf(response as Response) as { success?: boolean; data?: Array<Record<string, unknown>>; total?: number };
+      expect(body.success).toBe(true);
+      expect(body.data?.length).toBeGreaterThan(0);
+      expect(body.total).toBeGreaterThan(0);
+>>>>>>> origin/main
     });
 
     it('debe buscar con búsqueda case-insensitive (PREDIAL)', async () => {
@@ -126,10 +243,17 @@ describe('Search API - Elasticsearch Integration', () => {
         .query({ q: 'PREDIAL' })
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Organization-ID', organizationId);
+<<<<<<< HEAD
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data.length).toBeGreaterThan(0);
+=======
+      expect(response.status).toBe(200);
+      const body = bodyOf(response as Response) as { success?: boolean; data?: Array<Record<string, unknown>> };
+      expect(body.success).toBe(true);
+      expect(body.data?.length).toBeGreaterThan(0);
+>>>>>>> origin/main
     });
 
     it('debe buscar con palabra parcial (constan)', async () => {
@@ -138,10 +262,17 @@ describe('Search API - Elasticsearch Integration', () => {
         .query({ q: 'constan' })
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Organization-ID', organizationId);
+<<<<<<< HEAD
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data.length).toBeGreaterThan(0);
+=======
+      expect(response.status).toBe(200);
+      const body = bodyOf(response as Response) as { success?: boolean; data?: Array<Record<string, unknown>> };
+      expect(body.success).toBe(true);
+      expect(body.data?.length).toBeGreaterThan(0);
+>>>>>>> origin/main
     });
 
     it('debe filtrar por tipo MIME', async () => {
@@ -153,11 +284,19 @@ describe('Search API - Elasticsearch Integration', () => {
         })
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Organization-ID', organizationId);
+<<<<<<< HEAD
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       response.body.data.forEach((doc: any) => {
         expect(doc.mimeType).toBe('application/pdf');
+=======
+      expect(response.status).toBe(200);
+      const body = bodyOf(response as Response) as { success?: boolean; data?: Array<Record<string, unknown>> };
+      expect(body.success).toBe(true);
+      (body.data || []).forEach((doc) => {
+        expect(String(doc.mimeType || '')).toBe('application/pdf');
+>>>>>>> origin/main
       });
     });
 
@@ -171,9 +310,15 @@ describe('Search API - Elasticsearch Integration', () => {
         })
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Organization-ID', organizationId);
+<<<<<<< HEAD
 
       expect(response.status).toBe(200);
       expect(response.body.data.length).toBeLessThanOrEqual(2);
+=======
+      expect(response.status).toBe(200);
+      const body = bodyOf(response as Response) as { data?: Array<Record<string, unknown>> };
+      expect(body.data?.length).toBeLessThanOrEqual(2);
+>>>>>>> origin/main
     });
 
     it('debe retornar 400 si falta el parámetro q', async () => {
@@ -181,7 +326,10 @@ describe('Search API - Elasticsearch Integration', () => {
         .get('/api/search')
         .set('Authorization', `Bearer ${authToken}`)
         .set('X-Organization-ID', organizationId);
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
       expect(response.status).toBe(400);
     });
 
@@ -201,8 +349,14 @@ describe('Search API - Elasticsearch Integration', () => {
         .set('X-Organization-ID', organizationId);
 
       expect(response.status).toBe(200);
+<<<<<<< HEAD
       response.body.data.forEach((doc: any) => {
         expect(doc.organization).toBe(organizationId);
+=======
+      const body = bodyOf(response as Response) as { data?: Array<Record<string, unknown>> };
+      (body.data || []).forEach((doc) => {
+        expect(String(doc.organization || '')).toBe(organizationId);
+>>>>>>> origin/main
       });
     });
   });
@@ -216,8 +370,14 @@ describe('Search API - Elasticsearch Integration', () => {
         .set('X-Organization-ID', organizationId);
 
       expect(response.status).toBe(200);
+<<<<<<< HEAD
       expect(response.body.success).toBe(true);
       expect(Array.isArray(response.body.suggestions)).toBe(true);
+=======
+      const b = bodyOf(response as Response) as Record<string, unknown>;
+      expect(b['success']).toBe(true);
+      expect(Array.isArray(b['suggestions'])).toBe(true);
+>>>>>>> origin/main
     });
 
     it('debe limitar el número de sugerencias', async () => {
@@ -231,7 +391,12 @@ describe('Search API - Elasticsearch Integration', () => {
         .set('X-Organization-ID', organizationId);
 
       expect(response.status).toBe(200);
+<<<<<<< HEAD
       expect(response.body.suggestions.length).toBeLessThanOrEqual(3);
+=======
+      const b2 = bodyOf(response as Response) as Record<string, unknown>;
+      expect((b2['suggestions'] as unknown[]).length).toBeLessThanOrEqual(3);
+>>>>>>> origin/main
     });
 
     it('debe retornar 400 si falta el parámetro q', async () => {

@@ -14,18 +14,20 @@ interface IOrganizationModel extends Model<IOrganization> {
  * @returns Slug en formato URL-safe
  */
 export function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    // Reemplazar caracteres especiales con sus equivalentes
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
-    // Reemplazar espacios y caracteres no permitidos con guiones
-    .replace(/[^a-z0-9]+/g, '-')
-    // Eliminar guiones múltiples
-    .replace(/-+/g, '-')
-    // Eliminar guiones al inicio y final
-    .replace(/^-|-$/g, '');
+  return (
+    name
+      .toLowerCase()
+      .trim()
+      // Reemplazar caracteres especiales con sus equivalentes
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
+      // Reemplazar espacios y caracteres no permitidos con guiones
+      .replace(/[^a-z0-9]+/g, '-')
+      // Eliminar guiones múltiples
+      .replace(/-+/g, '-')
+      // Eliminar guiones al inicio y final
+      .replace(/^-|-$/g, '')
+  );
 }
 
 /**
@@ -38,72 +40,72 @@ const organizationSchema = new Schema<IOrganization>(
       required: [true, 'Organization name is required'],
       trim: true,
       minlength: [2, 'Organization name must be at least 2 characters'],
-      maxlength: [100, 'Organization name cannot exceed 100 characters'],
+      maxlength: [100, 'Organization name cannot exceed 100 characters']
     },
     slug: {
       type: String,
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
+      index: true
     },
     plan: {
       type: String,
       enum: Object.values(SubscriptionPlan),
       default: SubscriptionPlan.FREE,
-      required: true,
+      required: true
     },
     owner: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'Organization owner is required'],
-      index: true,
+      index: true
     },
     members: [
       {
         type: Schema.Types.ObjectId,
-        ref: 'User',
-      },
+        ref: 'User'
+      }
     ],
     settings: {
       maxStoragePerUser: {
         type: Number,
         required: true,
         default: PLAN_LIMITS[SubscriptionPlan.FREE].maxStoragePerUser,
-        min: [0, 'Storage limit cannot be negative'],
+        min: [0, 'Storage limit cannot be negative']
       },
       allowedFileTypes: {
         type: [String],
-        default: PLAN_LIMITS[SubscriptionPlan.FREE].allowedFileTypes,
+        default: PLAN_LIMITS[SubscriptionPlan.FREE].allowedFileTypes
       },
       maxUsers: {
         type: Number,
         required: true,
         default: PLAN_LIMITS[SubscriptionPlan.FREE].maxUsers,
-        min: [1, 'Maximum users must be at least 1'],
+        min: [1, 'Maximum users must be at least 1']
       },
       maxStorageTotal: {
         type: Number,
         required: true,
         default: PLAN_LIMITS[SubscriptionPlan.FREE].maxStorageTotal,
-        min: [0, 'Total storage limit cannot be negative'],
+        min: [0, 'Total storage limit cannot be negative']
       },
       maxFileSize: {
         type: Number,
         required: true,
         default: PLAN_LIMITS[SubscriptionPlan.FREE].maxFileSize,
-        min: [0, 'File size limit cannot be negative'],
-      },
+        min: [0, 'File size limit cannot be negative']
+      }
     },
     active: {
       type: Boolean,
       default: true,
-      index: true,
-    },
+      index: true
+    }
   },
   {
     timestamps: true, // Agrega createdAt y updatedAt automáticamente
-    collection: 'organizations',
+    collection: 'organizations'
   }
 );
 
@@ -122,7 +124,7 @@ organizationSchema.virtual('memberCount').get(function (this: IOrganization) {
 // Middleware pre-save para generar slug automáticamente si no existe
 organizationSchema.pre('save', async function (next) {
   if (!this.slug || this.isModified('name')) {
-    let slug = generateSlug(this.name);
+    const slug = generateSlug(this.name);
     let slugExists = true;
     let counter = 0;
 
@@ -130,7 +132,7 @@ organizationSchema.pre('save', async function (next) {
     while (slugExists) {
       const existingOrg = await model<IOrganization>('Organization').findOne({
         slug: counter > 0 ? `${slug}-${counter}` : slug,
-        _id: { $ne: this._id },
+        _id: { $ne: this._id }
       });
 
       if (!existingOrg) {
@@ -161,21 +163,27 @@ organizationSchema.pre('save', async function (next) {
 });
 
 // Método de instancia para agregar un miembro
-organizationSchema.methods.addMember = function (userId: string) {
-  if (!this.members.includes(userId as any)) {
-    this.members.push(userId as any);
+organizationSchema.methods.addMember = function (
+  this: IOrganization,
+  userId: string | Types.ObjectId
+): void {
+  const objectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+  if (!this.members.some((m: Types.ObjectId) => m.toString() === objectId.toString())) {
+    this.members.push(objectId);
   }
 };
 
 // Método de instancia para remover un miembro
-organizationSchema.methods.removeMember = function (userId: string) {
+organizationSchema.methods.removeMember = function (this: IOrganization, userId: string): void {
   this.members = this.members.filter(
     (memberId: Types.ObjectId) => memberId.toString() !== userId.toString()
   );
 };
 
 // Método estático para buscar por slug
-organizationSchema.statics.findBySlug = function (slug: string) {
+organizationSchema.statics.findBySlug = function (
+  slug: string
+): Promise<IOrganization | null> {
   return this.findOne({ slug, active: true });
 };
 
@@ -186,7 +194,7 @@ organizationSchema.set('toJSON', {
   transform: (_doc, ret) => {
     delete ret._id; // Eliminar _id y usar el virtual 'id'
     return ret;
-  },
+  }
 });
 
 organizationSchema.set('toObject', {
@@ -195,7 +203,7 @@ organizationSchema.set('toObject', {
   transform: (_doc, ret) => {
     delete ret._id; // Eliminar _id y usar el virtual 'id'
     return ret;
-  },
+  }
 });
 
 /**

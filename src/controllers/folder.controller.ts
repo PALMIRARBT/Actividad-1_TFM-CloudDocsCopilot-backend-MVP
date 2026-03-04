@@ -9,20 +9,25 @@ import mongoose from 'mongoose';
  */
 export async function create(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { name, displayName, organizationId, parentId } = req.body;
+    const body = req.body as Record<string, unknown>;
     
-    if (!name) {
+    if (typeof body.name !== 'string' || !body.name) {
       return next(new HttpError(400, 'Folder name is required'));
     }
     
-    if (!organizationId) {
+    if (typeof body.organizationId !== 'string' || !body.organizationId) {
       return next(new HttpError(400, 'Organization ID is required'));
     }
     
-    if (!parentId) {
+    if (typeof body.parentId !== 'string' || !body.parentId) {
       return next(new HttpError(400, 'Parent folder ID is required'));
     }
-    
+
+    const name = body.name;
+    const organizationId = body.organizationId;
+    const parentId = body.parentId;
+    const displayName = typeof body.displayName === 'string' ? body.displayName : undefined;
+
     const folder = await folderService.createFolder({
       name,
       displayName,
@@ -30,13 +35,13 @@ export async function create(req: AuthRequest, res: Response, next: NextFunction
       organizationId,
       parentId
     });
-    
+
     res.status(201).json({
       success: true,
       message: 'Folder created successfully',
       folder
     });
-  } catch (err) {
+  } catch (err: unknown) {
     next(err);
   }
 }
@@ -44,10 +49,14 @@ export async function create(req: AuthRequest, res: Response, next: NextFunction
 /**
  * Controlador para obtener el árbol de carpetas del usuario
  */
-export async function getUserTree(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+export async function getUserTree(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
     const organizationId = req.query.organizationId as string;
-    
+
     if (!organizationId) {
       return next(new HttpError(400, 'Organization ID is required'));
     }
@@ -57,21 +66,21 @@ export async function getUserTree(req: AuthRequest, res: Response, next: NextFun
     }
 
     const normalizedOrganizationId = new mongoose.Types.ObjectId(organizationId).toString();
-    
+
     const tree = await folderService.getUserFolderTree({
       userId: req.user!.id,
       organizationId: normalizedOrganizationId
     });
-    
+
     if (!tree) {
       return next(new HttpError(404, 'User has no root folder in this organization'));
     }
-    
+
     res.json({
       success: true,
       tree
     });
-  } catch (err) {
+  } catch (err: unknown) {
     next(err);
   }
 }
@@ -79,18 +88,22 @@ export async function getUserTree(req: AuthRequest, res: Response, next: NextFun
 /**
  * Controlador para obtener el contenido de una carpeta
  */
-export async function getContents(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+export async function getContents(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
     const contents = await folderService.getFolderContents({
       folderId: req.params.id as string,
       userId: req.user!.id
     });
-    
+
     res.json({
       success: true,
       contents
     });
-  } catch (err) {
+  } catch (err: unknown) {
     next(err);
   }
 }
@@ -100,9 +113,12 @@ export async function getContents(req: AuthRequest, res: Response, next: NextFun
  */
 export async function share(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { userId, targetUserId, role } = req.body;
+    const body = req.body as Record<string, unknown>;
+    const userId = typeof body.userId === 'string' ? body.userId : undefined;
+    const targetUserId = typeof body.targetUserId === 'string' ? body.targetUserId : undefined;
+    const role = body.role; // Keep original type (string or number)
     const userIdToShare = targetUserId || userId; // Aceptar ambos nombres
-    
+
     if (!userIdToShare) {
       return next(new HttpError(400, 'Target user ID is required'));
     }
@@ -112,11 +128,11 @@ export async function share(req: AuthRequest, res: Response, next: NextFunction)
     }
 
     const normalizedTargetUserId = new mongoose.Types.ObjectId(userIdToShare).toString();
-    
+
     if (role === undefined || role === null) {
       return next(new HttpError(400, 'Role is required'));
     }
-    
+
     // Convertir role numérico a string: 1=viewer, 2=editor, 3=owner
     let roleString: string;
     if (typeof role === 'number') {
@@ -132,20 +148,20 @@ export async function share(req: AuthRequest, res: Response, next: NextFunction)
     } else {
       return next(new HttpError(400, 'Role must be a number (1=viewer, 2=editor) or string'));
     }
-    
+
     const folder = await folderService.shareFolder({
       folderId: String(req.params.id),
       userId: req.user!.id,
       targetUserId: normalizedTargetUserId,
       role: roleString as 'viewer' | 'editor'
     });
-    
+
     res.json({
       success: true,
       message: 'Folder shared successfully',
       folder
     });
-  } catch (err) {
+  } catch (err: unknown) {
     next(err);
   }
 }
@@ -156,7 +172,7 @@ export async function share(req: AuthRequest, res: Response, next: NextFunction)
 export async function list(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const folders = await folderService.listFolders(req.user!.id);
-    
+
     res.json({
       success: true,
       count: folders.length,
@@ -172,25 +188,27 @@ export async function list(req: AuthRequest, res: Response, next: NextFunction):
  */
 export async function rename(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { name, displayName } = req.body;
-    
+    const body = req.body as Record<string, unknown>;
+    const name = typeof body.name === 'string' ? body.name : undefined;
+    const displayName = typeof body.displayName === 'string' ? body.displayName : undefined;
+
     if (!name && !displayName) {
       return next(new HttpError(400, 'Name or displayName is required'));
     }
-    
+
     const folder = await folderService.renameFolder({
       id: String(req.params.id),
       userId: req.user!.id,
-      name,
-      displayName
+      ...(name !== undefined && { name }),
+      ...(displayName !== undefined && { displayName })
     });
-    
+
     res.json({
       success: true,
       message: 'Folder renamed successfully',
       folder
     });
-  } catch (err) {
+  } catch (err: unknown) {
     next(err);
   }
 }
@@ -200,15 +218,16 @@ export async function rename(req: AuthRequest, res: Response, next: NextFunction
  */
 export async function remove(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const forceParam = (req.query && req.query.force) || 'false';
-    const force = String(forceParam).toLowerCase() === 'true' || String(forceParam) === '1';
-    
+    const forceValue = req.query?.force;
+    const forceParam = typeof forceValue === 'string' ? forceValue : 'false';
+    const force = forceParam.toLowerCase() === 'true' || forceParam === '1';
+
     const result = await folderService.deleteFolder({
       id: String(req.params.id),
       userId: req.user!.id,
       force
     });
-    
+
     res.json({
       message: 'Folder deleted successfully',
       ...result
@@ -218,4 +237,31 @@ export async function remove(req: AuthRequest, res: Response, next: NextFunction
   }
 }
 
-export default { create, getUserTree, getContents, share, list, rename, remove };
+/**
+ * Controlador para mover una carpeta a otra ubicación (Drag & Drop)
+ */
+export async function move(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { targetFolderId } = req.body as { targetFolderId: string };
+    
+    if (!targetFolderId) {
+      return next(new HttpError(400, 'Target folder ID is required'));
+    }
+    
+    const folder = await folderService.moveFolder({
+      folderId: req.params.id,
+      userId: req.user!.id,
+      targetFolderId
+    });
+    
+    res.json({
+      success: true,
+      message: 'Folder moved successfully',
+      folder
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export default { create, getUserTree, getContents, share, list, rename, remove, move };

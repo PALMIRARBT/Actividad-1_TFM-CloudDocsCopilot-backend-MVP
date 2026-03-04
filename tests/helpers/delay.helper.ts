@@ -28,10 +28,7 @@ export const longDelay = (): Promise<void> => delay(1000);
 /**
  * Ejecuta una función con delay entre ejecuciones
  */
-export async function executeWithDelay<T>(
-  fn: () => Promise<T>,
-  delayMs: number = 500
-): Promise<T> {
+export async function executeWithDelay<T>(fn: () => Promise<T>, delayMs: number = 500): Promise<T> {
   const result = await fn();
   await delay(delayMs);
   return result;
@@ -70,7 +67,7 @@ export async function retryWithBackoff<T>(
     try {
       return await fn();
     } catch (error) {
-      lastError = error as Error;
+      lastError = error instanceof Error ? error : new Error(String(error));
       if (i < maxRetries - 1) {
         await delay(currentDelay);
         currentDelay *= 2; // Exponential backoff
@@ -78,5 +75,5 @@ export async function retryWithBackoff<T>(
     }
   }
 
-  throw lastError;
+  throw lastError ?? new Error('Retry failed');
 }

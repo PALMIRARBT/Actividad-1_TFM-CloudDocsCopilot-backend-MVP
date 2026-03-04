@@ -4,7 +4,11 @@
  */
 
 import * as fs from 'fs/promises';
+<<<<<<< HEAD
 import { PDFParse } from 'pdf-parse';
+=======
+import pdfParse from 'pdf-parse';
+>>>>>>> origin/main
 import mammoth from 'mammoth';
 
 /**
@@ -17,9 +21,14 @@ export async function extractTextFromPDF(filePath: string): Promise<string> {
     // Leer archivo PDF
     const dataBuffer = await fs.readFile(filePath);
     
+<<<<<<< HEAD
     // Usar PDFParse (v2+)
     const parser = new PDFParse({ data: dataBuffer });
     const result = await parser.getText();
+=======
+    // Usar pdf-parse (v1.x)
+    const result = await pdfParse(dataBuffer);
+>>>>>>> origin/main
     
     // Limpiar y normalizar el texto
     let text = result.text
@@ -34,7 +43,11 @@ export async function extractTextFromPDF(filePath: string): Promise<string> {
       console.warn(`⚠️  PDF content truncated to ${MAX_CONTENT_LENGTH} characters: ${filePath}`);
     }
     
+<<<<<<< HEAD
     console.log(`📄 Extracted ${text.length} characters from PDF: ${filePath}`);
+=======
+    console.warn(`📄 Extracted ${text.length} characters from PDF: ${filePath}`);
+>>>>>>> origin/main
     return text;
     
   } catch (error) {
@@ -67,7 +80,11 @@ export async function extractTextFromWord(filePath: string): Promise<string> {
       console.warn(`⚠️  Word content truncated to ${MAX_CONTENT_LENGTH} characters: ${filePath}`);
     }
     
+<<<<<<< HEAD
     console.log(`📝 Extracted ${text.length} characters from Word: ${filePath}`);
+=======
+    console.warn(`📝 Extracted ${text.length} characters from Word: ${filePath}`);
+>>>>>>> origin/main
     return text;
     
   } catch (error) {

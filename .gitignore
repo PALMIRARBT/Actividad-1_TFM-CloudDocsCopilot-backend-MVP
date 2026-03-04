@@ -18,6 +18,12 @@ package-lock.json.bak
 .env.production
 .env.test
 .env.*.local
+
+# -----------------------------------------------------------------------------
+# OCR Language models (tessdata)
+# Large binary files - download via: npm run setup:tessdata
+# -----------------------------------------------------------------------------
+tessdata/
 !.env.example
 !.env.test.example
 
@@ -28,8 +34,27 @@ dist/
 build/
 .tmp/
 .temp/
+
+# -----------------------------------------------------------------------------
+# Test & Development Scripts (Temporary)
+# -----------------------------------------------------------------------------
+test-deletion-manual.ts
+TESTING-*.md
 .cache/
 *.tsbuildinfo
+
+# -----------------------------------------------------------------------------
+# Test Output Files (should never be committed)
+# -----------------------------------------------------------------------------
+*-test-results.txt
+*-test-output.txt
+*-output.txt
+test-results.txt
+test-run-output.txt
+ci-output.txt
+ci-test-results.txt
+doc_test_result.json
+*_test_result.json
 
 # -----------------------------------------------------------------------------
 # Logs

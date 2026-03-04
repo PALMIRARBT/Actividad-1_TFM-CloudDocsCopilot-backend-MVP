@@ -4,18 +4,23 @@
  */
 
 import * as organizationService from '../../src/services/organization.service';
-import User from '../../src/models/user.model';
+import User, { IUser } from '../../src/models/user.model';
 import Organization from '../../src/models/organization.model';
-import Membership, { MembershipRole, MembershipStatus } from '../../src/models/membership.model';
+import Membership, {
+  MembershipRole,
+  MembershipStatus,
+  IMembership
+} from '../../src/models/membership.model';
+import { IOrganization } from '../../src/models/types/organization.types';
 import { anOrganization } from '../builders/organization.builder';
 import { testOrganization } from '../fixtures/organization.fixtures';
 
 export interface OrganizationTestSetup {
-  organization: any;
-  owner: any;
-  ownerMembership: any;
-  additionalUsers?: any[];
-  additionalMemberships?: any[];
+  organization: IOrganization;
+  owner: IUser;
+  ownerMembership: IMembership;
+  additionalUsers?: IUser[];
+  additionalMemberships?: IMembership[];
 }
 
 /**
@@ -25,19 +30,18 @@ export async function createCompleteOrganization(options?: {
   orgName?: string;
   ownerName?: string;
   ownerEmail?: string;
-  additionalMembers?: Array<{name: string, email: string, role?: MembershipRole}>;
+  additionalMembers?: Array<{ name: string; email: string; role?: MembershipRole }>;
 }): Promise<OrganizationTestSetup> {
-  
   // Generar email único para evitar duplicados entre tests
   const timestamp = Date.now();
   const defaultOwnerEmail = `owner-${timestamp}@test.com`;
-  
+
   // 1. Crear usuario owner sin organización
   const owner = await User.create({
     name: options?.ownerName || 'Test Owner',
     email: options?.ownerEmail || defaultOwnerEmail,
     password: 'hashedpassword123',
-    role: 'admin',
+    role: 'admin'
   });
 
   // 2. Crear organización usando el servicio (esto automáticamente crea membership para owner)
@@ -53,7 +57,7 @@ export async function createCompleteOrganization(options?: {
     user: owner._id,
     organization: organization._id,
     role: MembershipRole.OWNER,
-    status: MembershipStatus.ACTIVE,
+    status: MembershipStatus.ACTIVE
   });
 
   if (!ownerMembership) {
@@ -63,25 +67,25 @@ export async function createCompleteOrganization(options?: {
   const result: OrganizationTestSetup = {
     organization,
     owner,
-    ownerMembership,
+    ownerMembership: ownerMembership as IMembership
   };
 
   // 4. Crear usuarios adicionales si se especificaron
   if (options?.additionalMembers?.length) {
-    const additionalUsers = [];
-    const additionalMemberships = [];
+    const additionalUsers: IUser[] = [];
+    const additionalMemberships: IMembership[] = [];
 
     for (let i = 0; i < options.additionalMembers.length; i++) {
       const member = options.additionalMembers[i];
-      
+
       // Crear usuario sin organización con email único
       const user = await User.create({
         name: member.name,
         email: `${member.email.split('@')[0]}-${timestamp}-${i}@test.com`,
         password: 'hashedpassword123',
-        role: 'user',
+        role: 'user'
       });
-      
+
       // Usar addUserToOrganization en lugar de createMembership directamente
       // para asegurar que todos los pasos se ejecuten correctamente
       await organizationService.addUserToOrganization(
@@ -93,15 +97,15 @@ export async function createCompleteOrganization(options?: {
       const membership = await Membership.findOne({
         user: user._id,
         organization: organization._id,
-        status: MembershipStatus.ACTIVE,
+        status: MembershipStatus.ACTIVE
       });
 
       if (!membership) {
         throw new Error(`Membership not found for user ${user.name}`);
       }
 
-      additionalUsers.push(user);
-      additionalMemberships.push(membership);
+      additionalUsers.push(user as IUser);
+      additionalMemberships.push(membership as IMembership);
     }
 
     result.additionalUsers = additionalUsers;
@@ -117,16 +121,16 @@ export async function createCompleteOrganization(options?: {
 export async function createUserWithoutOrganization(options?: {
   name?: string;
   email?: string;
-}): Promise<any> {
+}): Promise<IUser> {
   // Generar email único
   const timestamp = Date.now();
   const defaultEmail = `noorg-${timestamp}@test.com`;
-  
+
   return await User.create({
     name: options?.name || 'User Without Org',
     email: options?.email || defaultEmail,
     password: 'hashedpassword123',
-    role: 'user',
+    role: 'user'
   });
 }
 
@@ -134,7 +138,7 @@ export async function createUserWithoutOrganization(options?: {
  * Verifica que una organización tenga las propiedades esperadas
  */
 export function assertOrganizationProperties(
-  organization: any,
+  organization: IOrganization,
   expectedProps: {
     name?: string;
     slug?: string;
@@ -142,7 +146,7 @@ export function assertOrganizationProperties(
     memberCount?: number;
     active?: boolean;
   }
-) {
+): void {
   if (expectedProps.name) {
     expect(organization.name).toBe(expectedProps.name);
   }
@@ -163,10 +167,7 @@ export function assertOrganizationProperties(
 /**
  * Verifica que un usuario tenga organización y rootFolder configurados
  */
-export function assertUserOrganizationSetup(
-  user: any,
-  expectedOrgId: string
-) {
+export function assertUserOrganizationSetup(user: IUser, expectedOrgId: string): void {
   expect(user.organization?.toString()).toBe(expectedOrgId);
   expect(user.rootFolder).toBeDefined();
 }
@@ -175,7 +176,7 @@ export function assertUserOrganizationSetup(
  * Verifica que una membresía tenga las propiedades esperadas
  */
 export function assertMembershipProperties(
-  membership: any,
+  membership: IMembership,
   expectedProps: {
     userId?: string;
     organizationId?: string;
@@ -183,7 +184,7 @@ export function assertMembershipProperties(
     status?: MembershipStatus;
     hasRootFolder?: boolean;
   }
-) {
+): void {
   if (expectedProps.userId) {
     expect(membership.user.toString()).toBe(expectedProps.userId);
   }
@@ -208,7 +209,7 @@ export function assertMembershipProperties(
 /**
  * Limpia todos los datos relacionados con organizaciones y membresías
  */
-export async function cleanupOrganizationData() {
+export async function cleanupOrganizationData(): Promise<void> {
   await Organization.deleteMany({});
   await Membership.deleteMany({});
   // Eliminar usuarios completamente en lugar de solo actualizar campos

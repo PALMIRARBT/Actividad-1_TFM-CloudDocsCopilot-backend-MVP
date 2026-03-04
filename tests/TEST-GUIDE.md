@@ -4,7 +4,7 @@ Este directorio contiene los tests del proyecto CloudDocs Backend con fixtures, 
 
 ## 📁 Estructura
 
-```
+```text
 tests/
 ├── builders/          # Builders (patrón Builder) para construir objetos de prueba
 │   ├── user.builder.ts
@@ -82,7 +82,7 @@ const user = new UserBuilder()
 // Usuario con email único (timestamp)
 const uniqueUser = new UserBuilder()
   .withName('Unique User')
-  .withUniqueEmail('user')  // genera user-{timestamp}@example.com
+  .withUniqueEmail('user') // genera user-{timestamp}@example.com
   .withStrongPassword()
   .build();
 
@@ -93,12 +93,10 @@ const users = UserBuilder.buildMany(5, 'test-user');
 const loginData = new UserBuilder()
   .withEmail('test@example.com')
   .withPassword('Test@123')
-  .buildLoginData();  // { email, password }
+  .buildLoginData(); // { email, password }
 
 // Usuario admin
-const admin = new UserBuilder()
-  .asAdmin()
-  .build();
+const admin = new UserBuilder().asAdmin().build();
 ```
 
 ### DocumentBuilder
@@ -107,21 +105,13 @@ const admin = new UserBuilder()
 import { DocumentBuilder } from './builders';
 
 // Documento básico
-const doc = new DocumentBuilder()
-  .withFilename('test.txt')
-  .withContent('Test content')
-  .build();
+const doc = new DocumentBuilder().withFilename('test.txt').withContent('Test content').build();
 
 // Documento PDF
-const pdf = new DocumentBuilder()
-  .asPdf()
-  .withContent('PDF content')
-  .build();
+const pdf = new DocumentBuilder().asPdf().withContent('PDF content').build();
 
 // Imagen PNG
-const image = new DocumentBuilder()
-  .asPng()
-  .build();
+const image = new DocumentBuilder().asPng().build();
 
 // Archivo temporal (IMPORTANTE: debe limpiarse)
 const builder = new DocumentBuilder().withFilename('temp.txt');
@@ -131,12 +121,12 @@ DocumentBuilder.deleteTempFile(filePath);
 
 // Documento malicioso para tests de seguridad
 const malicious = new DocumentBuilder()
-  .withMaliciousFilename()  // ../../etc/passwd.txt
+  .withMaliciousFilename() // ../../etc/passwd.txt
   .build();
 
 // Documento con extensión peligrosa
 const dangerous = new DocumentBuilder()
-  .withDangerousExtension()  // malware.exe
+  .withDangerousExtension() // malware.exe
   .build();
 
 // Múltiples documentos
@@ -149,29 +139,22 @@ const docs = DocumentBuilder.buildMany(5, 'file');
 import { FolderBuilder } from './builders';
 
 // Carpeta básica
-const folder = new FolderBuilder()
-  .withName('Mi Carpeta')
-  .build();
+const folder = new FolderBuilder().withName('Mi Carpeta').build();
 
 // Carpeta con nombre único
 const uniqueFolder = new FolderBuilder()
-  .withUniqueName('folder')  // folder-{timestamp}
+  .withUniqueName('folder') // folder-{timestamp}
   .build();
 
 // Carpeta con padre
-const subfolder = new FolderBuilder()
-  .withName('Subcarpeta')
-  .withParent('parent-folder-id')
-  .build();
+const subfolder = new FolderBuilder().withName('Subcarpeta').withParent('parent-folder-id').build();
 
 // Carpeta con caracteres especiales
-const specialFolder = new FolderBuilder()
-  .withSpecialCharacters()
-  .build();
+const specialFolder = new FolderBuilder().withSpecialCharacters().build();
 
 // Carpeta con emoji
 const emojiFolder = new FolderBuilder()
-  .withEmoji()  // 📁 Carpeta Importante
+  .withEmoji() // 📁 Carpeta Importante
   .build();
 
 // Múltiples carpetas
@@ -188,31 +171,18 @@ Los **fixtures** proporcionan datos de prueba predefinidos y listos para usar.
 ### User Fixtures
 
 ```typescript
-import { 
-  basicUser, 
-  authUser, 
-  docUser,
-  weakPasswordUsers,
-  strongPasswordUser 
-} from './fixtures';
+import { basicUser, authUser, docUser, weakPasswordUsers, strongPasswordUser } from './fixtures';
 
 // Usuario predefinido
-const response = await request(app)
-  .post('/api/auth/register')
-  .send(basicUser);
+const response = await request(app).post('/api/auth/register').send(basicUser);
 
 // Usuario para pruebas de documentos
-const response = await request(app)
-  .post('/api/auth/register')
-  .send(docUser);
+const response = await request(app).post('/api/auth/register').send(docUser);
 
 // Iterar sobre contraseñas débiles
 for (const user of weakPasswordUsers) {
-  const response = await request(app)
-    .post('/api/auth/register')
-    .send(user)
-    .expect(400);
-  
+  const response = await request(app).post('/api/auth/register').send(user).expect(400);
+
   expect(response.body.error).toContain(user.expectedError);
 }
 ```
@@ -220,12 +190,7 @@ for (const user of weakPasswordUsers) {
 ### Document Fixtures
 
 ```typescript
-import { 
-  basicTextFile, 
-  maliciousFilenames,
-  dangerousExtensions,
-  longFilenames 
-} from './fixtures';
+import { basicTextFile, maliciousFilenames, dangerousExtensions, longFilenames } from './fixtures';
 
 // Documento básico
 const file = basicTextFile;
@@ -246,13 +211,13 @@ for (const dangerous of dangerousExtensions) {
 ### Security Fixtures
 
 ```typescript
-import { 
-  ssrfUrls, 
+import {
+  ssrfUrls,
   validPublicUrls,
   blockedPortUrls,
   invalidProtocolUrls,
   pathTraversalPatterns,
-  dangerousPathCharacters 
+  dangerousPathCharacters
 } from './fixtures';
 
 // Validar URLs SSRF
@@ -287,14 +252,14 @@ Los **helpers** proporcionan funciones auxiliares comunes para tests.
 ### Auth Helper
 
 ```typescript
-import { 
+import {
   registerUser,
   loginUser,
   registerAndLogin,
   createAuthenticatedUsers,
   getAuthToken,
   getAuthHeaders,
-  verifyToken 
+  verifyToken
 } from './helpers';
 
 // Registrar usuario
@@ -331,7 +296,7 @@ const isValid = await verifyToken(token);
 ### File Helper
 
 ```typescript
-import { 
+import {
   uploadTestFile,
   uploadMultipleFiles,
   createTempFile,
@@ -340,7 +305,7 @@ import {
   fileExists,
   readFileContent,
   cleanupTestFiles,
-  createFileWithSize 
+  createFileWithSize
 } from './helpers';
 
 // Subir archivo de prueba
@@ -373,22 +338,22 @@ cleanupTestFiles('./uploads');
 ### Delay Helper
 
 ```typescript
-import { 
+import {
   delay,
   shortDelay,
   mediumDelay,
   longDelay,
   executeWithDelay,
-  retryWithBackoff 
+  retryWithBackoff
 } from './helpers';
 
 // Delay simple (1000ms)
 await delay(1000);
 
 // Delays predefinidos
-await shortDelay();   // 100ms
-await mediumDelay();  // 500ms (útil para rate limiting)
-await longDelay();    // 1000ms
+await shortDelay(); // 100ms
+await mediumDelay(); // 500ms (útil para rate limiting)
+await longDelay(); // 1000ms
 
 // Ejecutar con delay
 const result = await executeWithDelay(async () => {
@@ -396,9 +361,13 @@ const result = await executeWithDelay(async () => {
 }, 500);
 
 // Retry con backoff exponencial
-const result = await retryWithBackoff(async () => {
-  return await someFlakeyOperation();
-}, 3, 100);  // 3 intentos, delay inicial 100ms
+const result = await retryWithBackoff(
+  async () => {
+    return await someFlakeyOperation();
+  },
+  3,
+  100
+); // 3 intentos, delay inicial 100ms
 ```
 
 ## 📝 Ejemplo Completo de Test
@@ -432,9 +401,7 @@ describe('Document Upload with Security', () => {
 
   it('should reject malicious filenames', async () => {
     // Usar builder para archivo malicioso
-    const malicious = new DocumentBuilder()
-      .withMaliciousFilename()
-      .build();
+    const malicious = new DocumentBuilder().withMaliciousFilename().build();
 
     const response = await uploadTestFile(authToken, {
       filename: malicious.filename,
@@ -450,7 +417,7 @@ describe('Document Upload with Security', () => {
     for (const test of ssrfUrls) {
       const result = validateUrl(test.url);
       expect(result.isValid).toBe(test.shouldBeValid);
-      
+
       // Delay para evitar rate limiting
       await mediumDelay();
     }
@@ -459,12 +426,10 @@ describe('Document Upload with Security', () => {
   it('should create multiple users with unique emails', async () => {
     // Usar builder para múltiples usuarios
     const users = UserBuilder.buildMany(3, 'user');
-    
+
     for (const user of users) {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send(user);
-      
+      const response = await request(app).post('/api/auth/register').send(user);
+
       expect(response.status).toBe(201);
     }
   });
@@ -476,6 +441,7 @@ describe('Document Upload with Security', () => {
 ### Tests de Integración (`integration/`)
 
 Prueban los endpoints completos de la API:
+
 - **auth.test.ts**: Registro, login, validaciones de autenticación
 - **documents.test.ts**: Subida, listado, compartir, eliminar documentos
 - **folders.test.ts**: Crear, listar, renombrar, eliminar carpetas
@@ -485,26 +451,31 @@ Prueban los endpoints completos de la API:
 ### Tests Unitarios (`unit/`)
 
 Prueban funciones y servicios individuales:
+
 - **jwt.service.test.ts**: Generación y verificación de tokens JWT
 
 ## ✅ Buenas Prácticas
 
 1. **Usar Builders** para objetos complejos o con muchas variaciones
+
    ```typescript
    const user = new UserBuilder().withUniqueEmail().withStrongPassword().build();
    ```
 
 2. **Usar Fixtures** para datos simples y predefinidos
+
    ```typescript
    const response = await request(app).post('/register').send(basicUser);
    ```
 
 3. **Usar Helpers** para operaciones comunes repetitivas
+
    ```typescript
    const { token } = await registerAndLogin();
    ```
 
 4. **Limpiar recursos** después de cada test
+
    ```typescript
    afterEach(() => {
      DocumentBuilder.deleteTempFile(filePath);
@@ -512,6 +483,7 @@ Prueban funciones y servicios individuales:
    ```
 
 5. **Usar delays apropiados** para evitar rate limiting
+
    ```typescript
    afterEach(async () => {
      await mediumDelay();
@@ -519,6 +491,7 @@ Prueban funciones y servicios individuales:
    ```
 
 6. **Nombres descriptivos** que expliquen qué se está probando
+
    ```typescript
    it('should reject password without uppercase letter', async () => {
      // ...
@@ -526,6 +499,7 @@ Prueban funciones y servicios individuales:
    ```
 
 7. **Tests independientes** que no dependan del orden de ejecución
+
    ```typescript
    beforeEach(async () => {
      // Reset state before each test

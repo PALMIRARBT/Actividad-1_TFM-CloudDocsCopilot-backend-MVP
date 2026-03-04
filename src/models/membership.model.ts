@@ -52,48 +52,48 @@ const membershipSchema = new Schema<IMembership>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: [true, 'User is required'],
-      index: true,
+      index: true
     },
     organization: {
       type: Schema.Types.ObjectId,
       ref: 'Organization',
       required: [true, 'Organization is required'],
-      index: true,
+      index: true
     },
     role: {
       type: String,
       enum: Object.values(MembershipRole),
       default: MembershipRole.MEMBER,
-      required: true,
+      required: true
     },
     status: {
       type: String,
       enum: Object.values(MembershipStatus),
       default: MembershipStatus.ACTIVE,
-      required: true,
+      required: true
     },
     rootFolder: {
       type: Schema.Types.ObjectId,
-      ref: 'Folder',
+      ref: 'Folder'
     },
     joinedAt: {
       type: Date,
-      default: Date.now,
+      default: Date.now
     },
     invitedBy: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'User'
     },
     expiresAt: {
-      type: Date,
-    },
+      type: Date
+    }
   },
   {
     timestamps: true,
     toJSON: {
       virtuals: true,
       versionKey: false,
-      transform: (_doc, ret) => {
+      transform: (_doc, ret): unknown => {
         delete ret._id;
         return ret;
       }
@@ -101,7 +101,7 @@ const membershipSchema = new Schema<IMembership>(
     toObject: {
       virtuals: true,
       versionKey: false,
-      transform: (_doc, ret) => {
+      transform: (_doc, ret): unknown => {
         delete ret._id;
         return ret;
       }

@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import * as userService from '../services/user.service';
+import { UpdateUserDto, ChangePasswordDto, UpdateAvatarDto } from '../services/user.service';
 import HttpError from '../models/error.model';
 
 /**
@@ -10,7 +11,7 @@ export async function list(_req: AuthRequest, res: Response, next: NextFunction)
   try {
     const users = await userService.getAllUsers();
     res.json(users);
-  } catch (err) {
+  } catch (err: unknown) {
     next(err);
   }
 }
@@ -18,14 +19,18 @@ export async function list(_req: AuthRequest, res: Response, next: NextFunction)
 /**
  * Controlador para obtener el perfil del usuario autenticado
  */
-export async function getProfile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+export async function getProfile(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
     if (!req.user || !req.user.id) {
       return next(new HttpError(401, 'User not authenticated'));
     }
     const user = await userService.getUserById(req.user.id);
     res.json(user);
-  } catch (err) {
+  } catch (err: unknown) {
     next(err);
   }
 }
@@ -37,7 +42,7 @@ export async function activate(req: AuthRequest, res: Response, next: NextFuncti
   try {
     const user = await userService.setUserActive(String(req.params.id), true);
     res.json({ message: 'User activated', user });
-  } catch (err) {
+  } catch (err: unknown) {
     next(err);
   }
 }
@@ -45,14 +50,18 @@ export async function activate(req: AuthRequest, res: Response, next: NextFuncti
 /**
  * Controlador para desactivar un usuario
  */
-export async function deactivate(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+export async function deactivate(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
     if (req.user?.id === req.params.id) {
       return next(new HttpError(400, 'Cannot deactivate self'));
     }
     const user = await userService.setUserActive(String(req.params.id), false);
     res.json({ message: 'User deactivated', user });
-  } catch (err) {
+  } catch (err: unknown) {
     next(err);
   }
 }
@@ -65,15 +74,37 @@ export async function update(req: AuthRequest, res: Response, next: NextFunction
     if (req.user && req.user.id !== req.params.id && req.user.role !== 'admin') {
       return next(new HttpError(403, 'Forbidden'));
     }
-    
+
     // Permitir actualización parcial
-    const { name, email, preferences } = req.body;
+    const updateData: UpdateUserDto = {};
+    const body = req.body as Record<string, unknown>;
     
+<<<<<<< HEAD
     const user = await userService.updateUser(String(req.params.id), { name, email, preferences });
+=======
+    if ('name' in body && body.name !== undefined) {
+      if (typeof body.name !== 'string') {
+        return next(new HttpError(400, 'Name must be a string'));
+      }
+      updateData.name = body.name;
+    }
+    if ('email' in body && body.email !== undefined) {
+      if (typeof body.email !== 'string') {
+        return next(new HttpError(400, 'Email must be a string'));
+      }
+      updateData.email = body.email;
+    }
+    if ('preferences' in body && body.preferences !== undefined) {
+      updateData.preferences = body.preferences as UpdateUserDto['preferences'];
+    }
+
+    const user = await userService.updateUser(String(req.params.id), updateData);
+>>>>>>> origin/main
     res.json({ message: 'User updated successfully', user });
-  } catch (err: any) {
-    const status = err.message === 'User not found' ? 404 : 400;
-    next(new HttpError(status, err.message));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const status = msg === 'User not found' ? 404 : 400;
+    next(new HttpError(status, msg));
   }
 }
 
@@ -81,25 +112,45 @@ export async function update(req: AuthRequest, res: Response, next: NextFunction
  * Controlador para cambiar contraseña de usuario
  * Valida la fortaleza de la nueva contraseña
  */
-export async function changePassword(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+export async function changePassword(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
     if (req.user && req.user.id !== req.params.id && req.user.role !== 'admin') {
       return next(new HttpError(403, 'Forbidden'));
     }
+
+    const body = req.body as Record<string, unknown>;
     
+<<<<<<< HEAD
     const result = await userService.changePassword(String(req.params.id), req.body);
+=======
+    if (typeof body.currentPassword !== 'string' || typeof body.newPassword !== 'string') {
+      return next(new HttpError(400, 'currentPassword and newPassword must be strings'));
+    }
+    
+    const passwordData: ChangePasswordDto = {
+      currentPassword: body.currentPassword,
+      newPassword: body.newPassword
+    };
+
+    const result = await userService.changePassword(String(req.params.id), passwordData);
+>>>>>>> origin/main
     res.json(result);
-  } catch (err: any) {
-    if (err.message === 'User not found') {
-      return next(new HttpError(404, err.message));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg === 'User not found') {
+      return next(new HttpError(404, msg));
     }
-    if (err.message.includes('incorrect')) {
-      return next(new HttpError(401, err.message));
+    if (msg.includes('incorrect')) {
+      return next(new HttpError(401, msg));
     }
-    if (err.message.includes('Password validation failed')) {
-      return next(new HttpError(400, err.message));
+    if (msg.includes('Password validation failed')) {
+      return next(new HttpError(400, msg));
     }
-    next(new HttpError(400, err.message));
+    next(new HttpError(400, msg));
   }
 }
 
@@ -111,10 +162,14 @@ export async function remove(req: AuthRequest, res: Response, next: NextFunction
     if (req.user && req.user.id === req.params.id) {
       return next(new HttpError(400, 'Cannot delete self'));
     }
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> origin/main
     const user = await userService.deleteUser(String(req.params.id));
     res.json({ message: 'User deleted', user });
-  } catch (err) {
+  } catch (err: unknown) {
     next(err);
   }
 }
@@ -122,14 +177,18 @@ export async function remove(req: AuthRequest, res: Response, next: NextFunction
 /**
  * Controlador para que un usuario elimine su propia cuenta
  */
-export async function deleteSelf(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+export async function deleteSelf(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
     // Verificar que el usuario autenticado es el mismo que solicita borrar
     // Nota: La ruta debería ser /me o validar el ID
     const userIdToDelete = req.params.id === 'me' ? req.user?.id : req.params.id;
 
     if (!userIdToDelete) {
-       return next(new HttpError(401, 'Unauthorized'));
+      return next(new HttpError(401, 'Unauthorized'));
     }
 
     if (req.user?.id !== userIdToDelete) {
@@ -138,7 +197,7 @@ export async function deleteSelf(req: AuthRequest, res: Response, next: NextFunc
 
     const user = await userService.deleteUser(userIdToDelete);
     res.json({ message: 'Account deleted successfully', user });
-  } catch(err) {
+  } catch (err: unknown) {
     next(err);
   }
 }
@@ -147,35 +206,48 @@ export async function deleteSelf(req: AuthRequest, res: Response, next: NextFunc
  * Controlador para actualizar el avatar del usuario
  * Soporta URL directa o archivo subido via Multer
  */
-export async function updateAvatar(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+export async function updateAvatar(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
     if (req.user && req.user.id !== req.params.id) {
       return next(new HttpError(403, 'Forbidden'));
     }
-    
+
     let avatarPath: string | undefined;
 
     // Caso 1: Archivo subido (multipart/form-data)
     if (req.file) {
       avatarPath = `/uploads/${req.file.filename}`;
-    } 
+    }
     // Caso 2: URL enviada en el cuerpo (json)
-    else if (req.body.avatar !== undefined) {
-      if (req.body.avatar === null) {
+    else if (req.body && typeof req.body === 'object' && 'avatar' in req.body) {
+      const avatarValue = (req.body as Record<string, unknown>).avatar;
+      if (avatarValue === null) {
         return next(new HttpError(400, 'Avatar URL is required'));
       }
-      avatarPath = req.body.avatar;
+      if (typeof avatarValue === 'string') {
+        avatarPath = avatarValue;
+      }
     }
 
     if (avatarPath === undefined) {
       return next(new HttpError(400, 'Avatar file or URL is required'));
     }
 
+<<<<<<< HEAD
     const user = await userService.updateAvatar(String(req.params.id), { avatar: avatarPath });
+=======
+    const avatarDto: UpdateAvatarDto = { avatar: avatarPath };
+    const user = await userService.updateAvatar(String(req.params.id), avatarDto);
+>>>>>>> origin/main
     res.json({ message: 'Avatar updated successfully', user });
-  } catch (err: any) {
-    const status = err.message === 'User not found' ? 404 : 400;
-    next(new HttpError(status, err.message));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const status = msg === 'User not found' ? 404 : 400;
+    next(new HttpError(status, msg));
   }
 }
 
@@ -206,8 +278,8 @@ export async function search(req: AuthRequest, res: Response, next: NextFunction
     });
 
     // Mapear campos expuestos al frontend
-    const result = users.map(u => ({
-      id: u.id || u._id,
+    const result = users.map((u) => ({
+      id: String(u._id),
       name: u.name,
       email: u.email,
       role: u.role,
@@ -219,9 +291,20 @@ export async function search(req: AuthRequest, res: Response, next: NextFunction
     }));
 
     res.json({ success: true, data: result });
-  } catch (err) {
+  } catch (err: unknown) {
     next(err);
   }
 }
 
-export default { list, getProfile, activate, deactivate, update, changePassword, remove, deleteSelf, updateAvatar, search };
+export default {
+  list,
+  getProfile,
+  activate,
+  deactivate,
+  update,
+  changePassword,
+  remove,
+  deleteSelf,
+  updateAvatar,
+  search
+};

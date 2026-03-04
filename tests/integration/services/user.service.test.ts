@@ -4,7 +4,7 @@ import * as userService from '../../../src/services/user.service';
 import User from '../../../src/models/user.model';
 import bcrypt from 'bcryptjs';
 
-describe('UserService Integration Tests', () => {
+describe('UserService Integration Tests', (): void => {
   let mongoServer: MongoMemoryServer;
   let testUserId: mongoose.Types.ObjectId;
 
@@ -25,7 +25,7 @@ describe('UserService Integration Tests', () => {
       email: 'test@example.com',
       password: await bcrypt.hash('password123', 10),
       role: 'user',
-      active: true,
+      active: true
     });
     testUserId = user1._id;
 
@@ -34,7 +34,7 @@ describe('UserService Integration Tests', () => {
       email: 'another@example.com',
       password: await bcrypt.hash('password456', 10),
       role: 'admin',
-      active: true,
+      active: true
     });
   });
 
@@ -42,8 +42,8 @@ describe('UserService Integration Tests', () => {
     await User.deleteMany({});
   });
 
-  describe('getAllUsers', () => {
-    it('should return all users', async () => {
+  describe('getAllUsers', (): void => {
+    it('should return all users', async (): Promise<void> => {
       const users = await userService.getAllUsers();
 
       expect(users).toHaveLength(2);
@@ -53,7 +53,7 @@ describe('UserService Integration Tests', () => {
       expect(usersJson[1]).not.toHaveProperty('password');
     });
 
-    it('should return empty array when no users exist', async () => {
+    it('should return empty array when no users exist', async (): Promise<void> => {
       await User.deleteMany({});
       const users = await userService.getAllUsers();
 
@@ -61,8 +61,8 @@ describe('UserService Integration Tests', () => {
     });
   });
 
-  describe('setUserActive', () => {
-    it('should activate a user', async () => {
+  describe('setUserActive', (): void => {
+    it('should activate a user', async (): Promise<void> => {
       await User.findByIdAndUpdate(testUserId, { active: false });
 
       const user = await userService.setUserActive(testUserId.toString(), true);
@@ -70,57 +70,57 @@ describe('UserService Integration Tests', () => {
       expect(user.active).toBe(true);
     });
 
-    it('should deactivate a user', async () => {
+    it('should deactivate a user', async (): Promise<void> => {
       const user = await userService.setUserActive(testUserId.toString(), false);
 
       expect(user.active).toBe(false);
     });
 
-    it('should throw error when user not found', async () => {
+    it('should throw error when user not found', async (): Promise<void> => {
       const nonExistentId = new mongoose.Types.ObjectId();
 
-      await expect(
-        userService.setUserActive(nonExistentId.toString(), true)
-      ).rejects.toThrow('User not found');
+      await expect(userService.setUserActive(nonExistentId.toString(), true)).rejects.toThrow(
+        'User not found'
+      );
     });
 
-    it('should return user without changes if active status is the same', async () => {
+    it('should return user without changes if active status is the same', async (): Promise<void> => {
       const user = await userService.setUserActive(testUserId.toString(), true);
 
       expect(user.active).toBe(true);
     });
   });
 
-  describe('updateUser', () => {
-    it('should update user name', async () => {
+  describe('updateUser', (): void => {
+    it('should update user name', async (): Promise<void> => {
       const updatedUser = await userService.updateUser(testUserId.toString(), {
-        name: 'Updated Name',
+        name: 'Updated Name'
       });
 
       expect(updatedUser.name).toBe('Updated Name');
       expect(updatedUser.email).toBe('test@example.com');
     });
 
-    it('should update user email', async () => {
+    it('should update user email', async (): Promise<void> => {
       const updatedUser = await userService.updateUser(testUserId.toString(), {
-        email: 'newemail@example.com',
+        email: 'newemail@example.com'
       });
 
       expect(updatedUser.email).toBe('newemail@example.com');
       expect(updatedUser.name).toBe('Test User');
     });
 
-    it('should update both name and email', async () => {
+    it('should update both name and email', async (): Promise<void> => {
       const updatedUser = await userService.updateUser(testUserId.toString(), {
         name: 'New Name',
-        email: 'new@example.com',
+        email: 'new@example.com'
       });
 
       expect(updatedUser.name).toBe('New Name');
       expect(updatedUser.email).toBe('new@example.com');
     });
 
-    it('should throw error when user not found', async () => {
+    it('should throw error when user not found', async (): Promise<void> => {
       const nonExistentId = new mongoose.Types.ObjectId();
 
       await expect(
@@ -128,12 +128,12 @@ describe('UserService Integration Tests', () => {
       ).rejects.toThrow('User not found');
     });
 
-    it('should not update password field', async () => {
+    it('should not update password field', async (): Promise<void> => {
       const originalUser = await User.findById(testUserId);
       const originalPassword = originalUser?.password;
 
       await userService.updateUser(testUserId.toString(), {
-        name: 'New Name',
+        name: 'New Name'
       });
 
       const updatedUser = await User.findById(testUserId);
@@ -141,11 +141,11 @@ describe('UserService Integration Tests', () => {
     });
   });
 
-  describe('changePassword', () => {
-    it('should change password successfully', async () => {
+  describe('changePassword', (): void => {
+    it('should change password successfully', async (): Promise<void> => {
       const result = await userService.changePassword(testUserId.toString(), {
         currentPassword: 'password123',
-        newPassword: 'NewStrongP@ss123',
+        newPassword: 'NewStrongP@ss123'
       });
 
       expect(result).toHaveProperty('message', 'Password updated successfully');
@@ -156,25 +156,25 @@ describe('UserService Integration Tests', () => {
       expect(isValid).toBe(true);
     });
 
-    it('should increment tokenVersion when password changes', async () => {
+    it('should increment tokenVersion when password changes', async (): Promise<void> => {
       const originalUser = await User.findById(testUserId);
       const originalTokenVersion = originalUser?.tokenVersion || 0;
 
       await userService.changePassword(testUserId.toString(), {
         currentPassword: 'password123',
-        newPassword: 'NewStrongP@ss456',
+        newPassword: 'NewStrongP@ss456'
       });
 
       const updatedUser = await User.findById(testUserId);
       expect(updatedUser?.tokenVersion).toBe(originalTokenVersion + 1);
     });
 
-    it('should update lastPasswordChange timestamp', async () => {
+    it('should update lastPasswordChange timestamp', async (): Promise<void> => {
       const beforeChange = new Date();
 
       await userService.changePassword(testUserId.toString(), {
         currentPassword: 'password123',
-        newPassword: 'NewStrongP@ss789',
+        newPassword: 'NewStrongP@ss789'
       });
 
       const user = await User.findById(testUserId);
@@ -182,56 +182,56 @@ describe('UserService Integration Tests', () => {
       expect(user?.lastPasswordChange!.getTime()).toBeGreaterThanOrEqual(beforeChange.getTime());
     });
 
-    it('should throw error when current password is incorrect', async () => {
+    it('should throw error when current password is incorrect', async (): Promise<void> => {
       await expect(
         userService.changePassword(testUserId.toString(), {
           currentPassword: 'wrongpassword',
-          newPassword: 'NewStrongP@ss123',
+          newPassword: 'NewStrongP@ss123'
         })
       ).rejects.toThrow('Current password is incorrect');
     });
 
-    it('should throw error when user not found', async () => {
+    it('should throw error when user not found', async (): Promise<void> => {
       const nonExistentId = new mongoose.Types.ObjectId();
 
       await expect(
         userService.changePassword(nonExistentId.toString(), {
           currentPassword: 'password123',
-          newPassword: 'NewStrongP@ss123',
+          newPassword: 'NewStrongP@ss123'
         })
       ).rejects.toThrow('User not found');
     });
 
-    it('should reject weak passwords', async () => {
+    it('should reject weak passwords', async (): Promise<void> => {
       await expect(
         userService.changePassword(testUserId.toString(), {
           currentPassword: 'password123',
-          newPassword: 'weak',
+          newPassword: 'weak'
         })
       ).rejects.toThrow();
     });
 
-    it('should reject password without uppercase', async () => {
+    it('should reject password without uppercase', async (): Promise<void> => {
       await expect(
         userService.changePassword(testUserId.toString(), {
           currentPassword: 'password123',
-          newPassword: 'weakpassword123',
+          newPassword: 'weakpassword123'
         })
       ).rejects.toThrow();
     });
 
-    it('should reject password without numbers', async () => {
+    it('should reject password without numbers', async (): Promise<void> => {
       await expect(
         userService.changePassword(testUserId.toString(), {
           currentPassword: 'password123',
-          newPassword: 'WeakPassword',
+          newPassword: 'WeakPassword'
         })
       ).rejects.toThrow();
     });
   });
 
-  describe('deleteUser', () => {
-    it('should delete user successfully', async () => {
+  describe('deleteUser', (): void => {
+    it('should delete user successfully', async (): Promise<void> => {
       const deletedUser = await userService.deleteUser(testUserId.toString());
 
       expect(deletedUser.id).toBe(testUserId.toString());
@@ -240,21 +240,21 @@ describe('UserService Integration Tests', () => {
       expect(userInDb).toBeNull();
     });
 
-    it('should throw error when user not found', async () => {
+    it('should throw error when user not found', async (): Promise<void> => {
       const nonExistentId = new mongoose.Types.ObjectId();
 
-      await expect(
-        userService.deleteUser(nonExistentId.toString())
-      ).rejects.toThrow('User not found');
+      await expect(userService.deleteUser(nonExistentId.toString())).rejects.toThrow(
+        'User not found'
+      );
     });
   });
 
-  describe('updateAvatar', () => {
-    it('should update avatar URL successfully', async () => {
+  describe('updateAvatar', (): void => {
+    it('should update avatar URL successfully', async (): Promise<void> => {
       const avatarUrl = 'https://example.com/avatar.jpg';
 
       const updatedUser = await userService.updateAvatar(testUserId.toString(), {
-        avatar: avatarUrl,
+        avatar: avatarUrl
       });
 
       expect(updatedUser.avatar).toBe(avatarUrl);
@@ -265,63 +265,64 @@ describe('UserService Integration Tests', () => {
       expect(userInDb?.avatar).toBe(avatarUrl);
     });
 
-    it('should update avatar to empty string', async () => {
+    it('should update avatar to empty string', async (): Promise<void> => {
       // Primero establecer un avatar
       await User.findByIdAndUpdate(testUserId, { avatar: 'https://example.com/old.jpg' });
 
       const updatedUser = await userService.updateAvatar(testUserId.toString(), {
-        avatar: '',
+        avatar: ''
       });
 
       expect(updatedUser.avatar).toBe('');
     });
 
-    it('should accept data URLs as avatars', async () => {
-      const dataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    it('should accept data URLs as avatars', async (): Promise<void> => {
+      const dataUrl =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
       const updatedUser = await userService.updateAvatar(testUserId.toString(), {
-        avatar: dataUrl,
+        avatar: dataUrl
       });
 
       expect(updatedUser.avatar).toBe(dataUrl);
     });
 
-    it('should accept relative paths as avatars', async () => {
+    it('should accept relative paths as avatars', async (): Promise<void> => {
       const relativePath = '/uploads/avatars/user123.jpg';
 
       const updatedUser = await userService.updateAvatar(testUserId.toString(), {
-        avatar: relativePath,
+        avatar: relativePath
       });
 
       expect(updatedUser.avatar).toBe(relativePath);
     });
 
-    it('should throw error when user not found', async () => {
+    it('should throw error when user not found', async (): Promise<void> => {
       const nonExistentId = new mongoose.Types.ObjectId();
 
       await expect(
         userService.updateAvatar(nonExistentId.toString(), {
-          avatar: 'https://example.com/avatar.jpg',
+          avatar: 'https://example.com/avatar.jpg'
         })
       ).rejects.toThrow('User not found');
     });
 
-    it('should trim whitespace from avatar URL', async () => {
+    it('should trim whitespace from avatar URL', async (): Promise<void> => {
       const avatarUrl = '  https://example.com/avatar.jpg  ';
 
       const updatedUser = await userService.updateAvatar(testUserId.toString(), {
-        avatar: avatarUrl,
+        avatar: avatarUrl
       });
 
       // Mongoose trim debería eliminar espacios
       expect(updatedUser.avatar).toBe('https://example.com/avatar.jpg');
     });
 
-    it('should not affect other user fields', async () => {
+    it('should not affect other user fields', async (): Promise<void> => {
       const originalUser = await User.findById(testUserId);
 
       await userService.updateAvatar(testUserId.toString(), {
-        avatar: 'https://example.com/avatar.jpg',
+        avatar: 'https://example.com/avatar.jpg'
       });
 
       const updatedUser = await User.findById(testUserId);
@@ -332,7 +333,7 @@ describe('UserService Integration Tests', () => {
       expect(updatedUser?.tokenVersion).toBe(originalUser?.tokenVersion);
     });
 
-    it('should update avatar multiple times', async () => {
+    it('should update avatar multiple times', async (): Promise<void> => {
       const url1 = 'https://example.com/avatar1.jpg';
       const url2 = 'https://example.com/avatar2.jpg';
       const url3 = 'https://example.com/avatar3.jpg';
@@ -350,49 +351,49 @@ describe('UserService Integration Tests', () => {
       expect(user?.avatar).toBe(url3);
     });
 
-    it('should handle very long URLs up to 2048 characters', async () => {
+    it('should handle very long URLs up to 2048 characters', async (): Promise<void> => {
       const longUrl = 'https://example.com/' + 'a'.repeat(2020);
 
       const updatedUser = await userService.updateAvatar(testUserId.toString(), {
-        avatar: longUrl,
+        avatar: longUrl
       });
 
       expect(updatedUser.avatar).toBe(longUrl);
     });
 
-    it('should fail when URL exceeds 2048 characters', async () => {
+    it('should fail when URL exceeds 2048 characters', async (): Promise<void> => {
       const tooLongUrl = 'https://example.com/' + 'a'.repeat(2050);
 
       await expect(
         userService.updateAvatar(testUserId.toString(), {
-          avatar: tooLongUrl,
+          avatar: tooLongUrl
         })
       ).rejects.toThrow();
     });
 
-    it('should not expose password in returned user object', async () => {
+    it('should not expose password in returned user object', async (): Promise<void> => {
       const updatedUser = await userService.updateAvatar(testUserId.toString(), {
-        avatar: 'https://example.com/avatar.jpg',
+        avatar: 'https://example.com/avatar.jpg'
       });
 
       expect(updatedUser.toJSON()).not.toHaveProperty('password');
     });
 
-    it('should work with special characters in URL', async () => {
+    it('should work with special characters in URL', async (): Promise<void> => {
       const specialUrl = 'https://example.com/avatar?user=123&size=large#profile';
 
       const updatedUser = await userService.updateAvatar(testUserId.toString(), {
-        avatar: specialUrl,
+        avatar: specialUrl
       });
 
       expect(updatedUser.avatar).toBe(specialUrl);
     });
 
-    it('should handle concurrent updates correctly', async () => {
+    it('should handle concurrent updates correctly', async (): Promise<void> => {
       const promises = [
         userService.updateAvatar(testUserId.toString(), { avatar: 'https://example.com/1.jpg' }),
         userService.updateAvatar(testUserId.toString(), { avatar: 'https://example.com/2.jpg' }),
-        userService.updateAvatar(testUserId.toString(), { avatar: 'https://example.com/3.jpg' }),
+        userService.updateAvatar(testUserId.toString(), { avatar: 'https://example.com/3.jpg' })
       ];
 
       await Promise.all(promises);

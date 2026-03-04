@@ -27,6 +27,25 @@ router.post(
 );
 
 /**
+ * @route   POST /api/documents/:id/replace
+ * @desc    Reemplaza (sobrescribe) el archivo de un documento existente
+ * @access  Document editor (owner/admin or document owner)
+ */
+router.post(
+  '/:id/replace',
+  uploadRateLimiter,
+  upload.single('file'),
+  documentController.replaceFile
+);
+
+/**
+ * @route   GET /api/documents/shared
+ * @desc    Lista documentos compartidos al usuario (por otros usuarios)
+ * @access  Authenticated users
+ */
+router.get('/shared', documentController.listSharedToMe);
+
+/**
  * @route   GET /api/documents
  * @desc    Lista todos los documentos del usuario
  * @access  Authenticated users
@@ -38,14 +57,11 @@ router.get('/', documentController.list);
  * @desc    Obtiene documentos recientes del usuario en una organización
  * @access  Authenticated users (organization members)
  */
-router.get('/recent/:organizationId', validateOrganizationMembership('params'), documentController.getRecent);
-
-/**
- * @route   GET /api/documents/:id
- * @desc    Obtiene un documento por ID
- * @access  Document owner or shared users
- */
-router.get('/:id', documentController.getById);
+router.get(
+  '/recent/:organizationId',
+  validateOrganizationMembership('params'),
+  documentController.getRecent
+);
 
 /**
  * @route   GET /api/documents/download/:id
@@ -62,6 +78,14 @@ router.get('/download/:id', documentController.download);
 router.get('/preview/:id', documentController.preview);
 
 /**
+ * @route   GET /api/documents/:id
+ * @desc    Obtiene un documento por ID
+ * @access  Document owner or shared users
+ * IMPORTANTE: Esta ruta debe ir DESPUÉS de /download y /preview
+ */
+router.get('/:id', documentController.getById);
+
+/**
  * @route   POST /api/documents/:id/share
  * @desc    Comparte un documento con otros usuarios
  * @access  Document owner
@@ -76,19 +100,30 @@ router.post('/:id/share', documentController.share);
 router.post('/:id/move', documentController.move);
 
 /**
+ * @route   PATCH /api/documents/:id/rename
+ * @desc    Renombra un documento
+ * @access  Document owner
+ */
+router.patch('/:id/rename', documentController.rename);
+
+/**
  * @route   POST /api/documents/:id/copy
  * @desc    Copia un documento a otra carpeta
  * @access  Document owner
  */
 router.post('/:id/copy', documentController.copy);
 
-/**
- * @route   DELETE /api/documents/:id
+/** * @route   GET /api/documents/:id/ai-status
+ * @desc    Obtiene el estado de procesamiento AI de un documento
+ * @access  Document owner or shared users
+ * @note    RFE-AI-002: Auto-procesamiento
+ */
+router.get('/:id/ai-status', documentController.getAIStatus);
+
+/** * @route   DELETE /api/documents/:id
  * @desc    Elimina un documento
  * @access  Document owner
  */
 router.delete('/:id', documentController.remove);
-
-
 
 export default router;

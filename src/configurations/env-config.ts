@@ -4,38 +4,43 @@ import * as fs from 'fs';
 
 /**
  * Load environment variables from .env files
- * 
+ *
  * Priority order (later files override earlier):
  * 1. .env.example (defaults/documentation)
  * 2. .env (base configuration)
  * 3. .env.local (local overrides, not committed)
  * 4. .env.{NODE_ENV} (environment-specific)
  * 5. .env.{NODE_ENV}.local (environment-specific local overrides)
- * 
+ *
  * @param rootDir - Root directory containing .env files (defaults to process.cwd())
  */
 export function loadEnv(rootDir: string = process.cwd()): void {
   const nodeEnv = process.env.NODE_ENV || 'development';
-  
+
+  // In production, environment variables are injected by the host (e.g. Render).
+  // Loading .env files could overwrite real server variables, so we skip it.
+  if (nodeEnv === 'production') {
+    return;
+  }
+
   // Files to load in order (later overrides earlier)
   const envFiles = [
-    '.env.example',      // Defaults (lowest priority)
-    '.env',              // Base configuration
-    '.env.local',        // Local overrides
-    `.env.${nodeEnv}`,   // Environment-specific
-    `.env.${nodeEnv}.local`, // Environment-specific local overrides (highest priority)
+    '.env', // Base configuration
+    '.env.local', // Local overrides
+    `.env.${nodeEnv}`, // Environment-specific
+    `.env.${nodeEnv}.local` // Environment-specific local overrides (highest priority)
   ];
 
   for (const file of envFiles) {
     const filePath = path.resolve(rootDir, file);
-    
+
     if (fs.existsSync(filePath)) {
-      const result = dotenv.config({ path: filePath, override: true });
-      
+      const result = dotenv.config({ path: filePath, override: false });
+
       if (result.error) {
         console.warn(`⚠️  Warning: Could not load ${file}: ${result.error.message}`);
       } else if (process.env.NODE_ENV !== 'test') {
-        console.log(`✅ Loaded environment from ${file}`);
+        console.warn(`✅ Loaded environment from ${file}`);
       }
     }
   }

@@ -11,6 +11,7 @@ Se ha agregado soporte backend para el sistema de preview de documentos, permiti
 Sirve un documento para visualización inline en el navegador.
 
 **Diferencias con `/download/:id`:**
+
 - **Preview**: `Content-Disposition: inline` → Abre en navegador
 - **Download**: `Content-Disposition: attachment` → Fuerza descarga
 
@@ -19,9 +20,11 @@ Sirve un documento para visualización inline en el navegador.
 **Autorización:** Owner o usuario con quien el documento está compartido
 
 **Parámetros:**
+
 - `id` (path) - ID del documento
 
 **Respuesta Exitosa:**
+
 - Status: `200 OK`
 - Headers:
   - `Content-Type`: MIME type del archivo
@@ -29,11 +32,13 @@ Sirve un documento para visualización inline en el navegador.
 - Body: Contenido binario del archivo
 
 **Errores:**
+
 - `401 Unauthorized` - Token JWT inválido o expirado
 - `403 Forbidden` - Usuario sin acceso al documento
 - `404 Not Found` - Documento no existe o archivo no encontrado
 
 **Ejemplo:**
+
 ```bash
 # Preview de PDF
 curl -H "Authorization: Bearer <token>" \
@@ -57,6 +62,7 @@ curl -H "Authorization: Bearer <token>" \
 ### Path Traversal Protection
 
 El controlador utiliza `validateDownloadPath()` para:
+
 - Sanitizar nombres de archivo
 - Prevenir secuencias `../`
 - Validar que el archivo esté en directorio permitido
@@ -75,7 +81,7 @@ try {
 
 ### Flujo de Preview
 
-```
+```text
 Frontend                    Backend
 ┌─────────────┐            ┌──────────────┐
 │  Browser    │────────────▶│   Express    │
@@ -119,14 +125,11 @@ Frontend                    Backend
 **Archivo**: `src/controllers/document.controller.ts`
 
 ```typescript
-export async function preview(
-  req: AuthRequest, 
-  res: Response, 
-  next: NextFunction
-): Promise<void>
+export async function preview(req: AuthRequest, res: Response, next: NextFunction): Promise<void>;
 ```
 
 **Responsabilidades**:
+
 1. Validar autenticación (middleware)
 2. Verificar existencia del documento
 3. Verificar permisos de acceso
@@ -159,8 +162,9 @@ getPreviewUrl(document: PreviewDocument): string {
 ```
 
 **Componentes que consumen**:
+
 - `PDFViewer` - react-pdf carga desde URL
-- `ImageViewer` - `<img src={previewUrl}>` 
+- `ImageViewer` - `<img src={previewUrl}>`
 - `VideoPlayer` - `<video src={previewUrl}>`
 - `TextViewer` - `fetch(previewUrl).then(r => r.text())`
 
@@ -168,15 +172,15 @@ getPreviewUrl(document: PreviewDocument): string {
 
 El backend sirve cualquier tipo de archivo con su MIME type correcto:
 
-| Categoría | MIME Types |
-|-----------|------------|
-| **PDF** | `application/pdf` |
+| Categoría    | MIME Types                                                            |
+| ------------ | --------------------------------------------------------------------- |
+| **PDF**      | `application/pdf`                                                     |
 | **Imágenes** | `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `image/svg+xml` |
-| **Videos** | `video/mp4`, `video/webm`, `video/ogg` |
-| **Audio** | `audio/mpeg`, `audio/wav`, `audio/ogg` |
-| **Texto** | `text/plain`, `text/html`, `text/csv` |
-| **Código** | `text/javascript`, `application/json`, `text/xml` |
-| **Office** | `application/msword`, `application/vnd.openxmlformats-*` |
+| **Videos**   | `video/mp4`, `video/webm`, `video/ogg`                                |
+| **Audio**    | `audio/mpeg`, `audio/wav`, `audio/ogg`                                |
+| **Texto**    | `text/plain`, `text/html`, `text/csv`                                 |
+| **Código**   | `text/javascript`, `application/json`, `text/xml`                     |
+| **Office**   | `application/msword`, `application/vnd.openxmlformats-*`              |
 
 ## 🧪 Testing
 

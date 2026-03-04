@@ -1,4 +1,5 @@
 import { request, app } from '../setup';
+import type { Response } from 'supertest';
 import { UserBuilder } from '../builders';
 import { authUser } from '../fixtures';
 import Organization from '../../src/models/organization.model';
@@ -8,8 +9,14 @@ import mongoose from 'mongoose';
  * Tests de integración para endpoints de autenticación
  * Prueba el registro, login y validaciones de seguridad
  */
-describe('Auth Endpoints', () => {
+describe('Auth Endpoints', (): void => {
   let testOrgId: string;
+
+  type ApiBody = { success?: boolean; user?: unknown; message?: string; error?: string };
+
+  function bodyOf(res: Response): ApiBody {
+    return (res.body as unknown) as ApiBody;
+  }
 
   beforeEach(async () => {
     // Crear una organización de prueba para cada test
@@ -22,37 +29,33 @@ describe('Auth Endpoints', () => {
     testOrgId = org._id.toString();
   });
 
-  describe('POST /api/auth/register', () => {
-    it('should register a new user', async () => {
-      const userData = new UserBuilder()
-        .withUniqueEmail('test')
-        .withStrongPassword()
-        .build();
+  describe('POST /api/auth/register', (): void => {
+    it('should register a new user', async (): Promise<void> => {
+      const userData = new UserBuilder().withUniqueEmail('test').withStrongPassword().build();
 
       const response = await request(app)
         .post('/api/auth/register')
         .send({ ...userData, organizationId: testOrgId })
         .expect(201);
 
-      expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(userData.email);
+      const b = bodyOf(response);
+      expect(b.user).toBeDefined();
+      const userObj = b.user as Record<string, unknown>;
+      expect(userObj['email']).toBe(userData.email);
     });
 
-    it('should fail with incomplete data', async () => {
+    it('should fail with incomplete data', async (): Promise<void> => {
       const userData = {
         email: new UserBuilder().withUniqueEmail('incomplete').build().email
         // Missing name and password
       };
 
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send(userData)
-        .expect(400);
-
-      expect(response.body).toHaveProperty('error');
+      const response = await request(app).post('/api/auth/register').send(userData).expect(400);
+      const b = bodyOf(response);
+      expect(b.error).toBeDefined();
     });
 
-    it('should fail with duplicate email', async () => {
+    it('should fail with duplicate email', async (): Promise<void> => {
       const userData = new UserBuilder()
         .withName('Usuario Test')
         .withEmail('duplicate@example.com')
@@ -70,11 +73,12 @@ describe('Auth Endpoints', () => {
         .send({ ...userData, organizationId: testOrgId })
         .expect(409);
 
-      expect(response.body).toHaveProperty('error');
+      const b = bodyOf(response);
+      expect(b.error).toBeDefined();
     });
   });
 
-  describe('POST /api/auth/login', () => {
+  describe('POST /api/auth/login', (): void => {
     beforeEach(async () => {
       // Register user before each login test
       await request(app)
@@ -82,7 +86,7 @@ describe('Auth Endpoints', () => {
         .send({ ...authUser, organizationId: testOrgId });
     });
 
-    it('should login with correct credentials', async () => {
+    it('should login with correct credentials', async (): Promise<void> => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
@@ -91,11 +95,12 @@ describe('Auth Endpoints', () => {
         })
         .expect(200);
 
+      const b = bodyOf(response);
       // Verificar que NO devuelve token en JSON
-      expect(response.body).not.toHaveProperty('token');
+      expect(b).not.toHaveProperty('token');
       // Verificar que devuelve el usuario
-      expect(response.body).toHaveProperty('user');
-      expect(response.body).toHaveProperty('message');
+      expect(b.user).toBeDefined();
+      expect(b.message).toBeDefined();
       // Verificar que envía la cookie
       expect(response.headers['set-cookie']).toBeDefined();
       const cookies: string[] = response.headers['set-cookie'] as unknown as string[];
@@ -105,7 +110,7 @@ describe('Auth Endpoints', () => {
       expect(tokenCookie).toMatch(/HttpOnly/);
     });
 
-    it('should fail with incorrect credentials', async () => {
+    it('should fail with incorrect credentials', async (): Promise<void> => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
@@ -114,10 +119,11 @@ describe('Auth Endpoints', () => {
         })
         .expect(401);
 
-      expect(response.body).toHaveProperty('error');
+      const b = bodyOf(response);
+      expect(b.error).toBeDefined();
     });
 
-    it('should fail with non-existent email', async () => {
+    it('should fail with non-existent email', async (): Promise<void> => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
@@ -126,11 +132,12 @@ describe('Auth Endpoints', () => {
         })
         .expect(404);
 
-      expect(response.body).toHaveProperty('error');
+      const b = bodyOf(response);
+      expect(b.error).toBeDefined();
     });
   });
 
-  describe('POST /api/auth/logout', () => {
+  describe('POST /api/auth/logout', (): void => {
     beforeEach(async () => {
       // Register user before logout test
       await request(app)
@@ -138,7 +145,7 @@ describe('Auth Endpoints', () => {
         .send({ ...authUser, organizationId: testOrgId });
     });
 
-    it('should logout successfully and clear cookie', async () => {
+    it('should logout successfully and clear cookie', async (): Promise<void> => {
       // Primero hacer login
       const loginResponse = await request(app)
         .post('/api/auth/login')
@@ -157,13 +164,18 @@ describe('Auth Endpoints', () => {
         .set('Cookie', tokenCookie?.split(';')[0] || '')
         .expect(200);
 
-      expect(logoutResponse.body).toHaveProperty('message');
-      expect(logoutResponse.body.message).toBe('Logout successful');
-      
+      const b = bodyOf(logoutResponse);
+      expect(b.message).toBeDefined();
+      expect(b.message).toBe('Logout successful');
+
       // Verificar que la cookie se limpia
-      const clearCookies: string[] | undefined = logoutResponse.headers['set-cookie'] as unknown as string[] | undefined;
+      const clearCookies: string[] | undefined = logoutResponse.headers['set-cookie'] as unknown as
+        | string[]
+        | undefined;
       if (clearCookies) {
-        const clearedTokenCookie = clearCookies.find((cookie: string) => cookie.startsWith('token='));
+        const clearedTokenCookie = clearCookies.find((cookie: string) =>
+          cookie.startsWith('token=')
+        );
         // La cookie debe estar vac\u00eda o con Max-Age=0
         expect(clearedTokenCookie).toBeDefined();
       }
