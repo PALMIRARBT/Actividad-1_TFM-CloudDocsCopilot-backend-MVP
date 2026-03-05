@@ -527,7 +527,7 @@ export async function preview(req: AuthRequest, res: Response, next: NextFunctio
       }
     }
 
-    // Para otros tipos de archivos, servir normalmente
+    // Para otros tipos de archivos (incluyendo PowerPoint), servir normalmente
     res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
     res.setHeader('Content-Disposition', `inline; filename="${doc.originalname || 'preview'}"`);
 
