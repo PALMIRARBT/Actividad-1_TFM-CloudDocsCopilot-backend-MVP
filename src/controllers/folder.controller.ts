@@ -94,9 +94,15 @@ export async function getContents(
   next: NextFunction
 ): Promise<void> {
   try {
+    // Obtener parámetros de paginación de query string
+    const page = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+
     const contents = await folderService.getFolderContents({
       folderId: req.params.id as string,
-      userId: req.user!.id
+      userId: req.user!.id,
+      page,
+      limit
     });
 
     res.json({
