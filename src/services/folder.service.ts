@@ -66,6 +66,8 @@ export interface ShareFolderDto {
 export interface GetFolderContentsDto {
   folderId: string;
   userId: string;
+  page?: number; // Número de página (por defecto 1)
+  limit?: number; // Documentos por página (por defecto 20)
 }
 
 /**
@@ -301,12 +303,18 @@ export async function createFolder({
  * Obtiene el contenido de una carpeta (subcarpetas y documentos)
  *
  * @param GetFolderContentsDto - Parámetros de búsqueda
- * @returns Contenido de la carpeta
+ * @returns Contenido de la carpeta con información de paginación
  */
-export async function getFolderContents({ folderId, userId }: GetFolderContentsDto): Promise<{
+export async function getFolderContents({ folderId, userId, page = 1, limit = 20 }: GetFolderContentsDto): Promise<{
   folder: IFolder;
   subfolders: Array<Record<string, unknown> & { itemCount: number }>;
   documents: IDocument[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }> {
   console.warn('[getFolderContents] folderId:', folderId);
   
@@ -363,7 +371,21 @@ export async function getFolderContents({ folderId, userId }: GetFolderContentsD
     };
   });
   
-  // Obtener documentos de la carpeta (excluir eliminados)
+  // Validar y normalizar parámetros de paginación
+  const normalizedPage = Math.max(1, page);
+  const normalizedLimit = Math.min(Math.max(1, limit), 100); // Máximo 100 documentos por página
+  const skip = (normalizedPage - 1) * normalizedLimit;
+
+  // Contar total de documentos en la carpeta (excluir eliminados)
+  const totalDocuments = await DocumentModel.countDocuments({
+    folder: folderObjectId,
+    $or: [
+      { isDeleted: { $exists: false } },
+      { isDeleted: false }
+    ]
+  });
+
+  // Obtener documentos de la carpeta con paginación (excluir eliminados)
   const documents = await DocumentModel.find({
     folder: folderObjectId,
     $or: [
@@ -372,15 +394,25 @@ export async function getFolderContents({ folderId, userId }: GetFolderContentsD
     ]
   })
   .sort({ createdAt: -1 })
+  .skip(skip)
+  .limit(normalizedLimit)
   .select('-__v');
   
-  console.warn('[getFolderContents] Encontrados', documents.length, 'documentos en carpeta', folderId);
+  const totalPages = Math.ceil(totalDocuments / normalizedLimit);
+  
+  console.warn('[getFolderContents] Encontrados', documents.length, 'documentos en carpeta', folderId, '(página', normalizedPage, 'de', totalPages, ')');
   console.warn('[getFolderContents] Documentos:', documents.map(d => ({ id: d._id, name: d.filename, folder: d.folder })));
   
   return {
     folder,
     subfolders: subfoldersWithCount,
-    documents
+    documents,
+    pagination: {
+      total: totalDocuments,
+      page: normalizedPage,
+      limit: normalizedLimit,
+      totalPages
+    }
   };
 }
 
