@@ -11,6 +11,14 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Set up default test env vars if not already set
+if (!process.env.SENDGRID_API_KEY) {
+  process.env.SENDGRID_API_KEY = 'SG.test-key-for-unit-tests';
+}
+if (!process.env.EMAIL_USER) {
+  process.env.EMAIL_USER = 'noreply@test.example.com';
+}
+
 // Mock pdf-parse to avoid loading native bindings in tests
 jest.mock('pdf-parse', () => ({
   __esModule: true,
@@ -42,6 +50,19 @@ jest.mock('../src/services/search.service', () => ({
   getAutocompleteSuggestions: jest.fn().mockResolvedValue([])
 }));
 
+// Mock sendgrid/mail to avoid real SMTP attempts during tests
+jest.mock('@sendgrid/mail', () => ({
+  __esModule: true,
+  default: {
+    setApiKey: jest.fn(),
+    send: jest.fn().mockResolvedValue([{
+      statusCode: 202,
+      body: {},
+      headers: {}
+    }])
+  }
+}));
+
 // Optional: silence noisy logs from Elasticsearch config during tests
 const originalConsoleErrorUnit = console.error;
 console.error = (...args: unknown[]) => {
@@ -58,13 +79,6 @@ console.error = (...args: unknown[]) => {
   }
   originalConsoleErrorUnit(...args);
 };
-
-// Mock email service to avoid real SMTP attempts during tests
-jest.mock('../src/mail/emailService', () => ({
-  sendConfirmationEmail: jest.fn().mockResolvedValue(undefined),
-  sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
-  sendInvitationEmail: jest.fn().mockResolvedValue(undefined)
-}));
 
 // Mock Elasticsearch configuration/client to avoid network calls and init logs
 jest.mock('../src/configurations/elasticsearch-config', () => {

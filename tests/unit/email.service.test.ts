@@ -1,21 +1,64 @@
-jest.resetModules();
-jest.unmock('../../src/mail/emailService');
+import { jest } from '@jest/globals';
 
 describe('emailService', (): void => {
-  it('succeeds when transporter.sendMail resolves', async (): Promise<void> => {
-    jest.mock('nodemailer', () => ({
-      createTransport: () => ({ sendMail: jest.fn().mockResolvedValue({ messageId: '1' }) })
-    }));
-    const svc = (await import('../../src/mail/emailService')) as unknown as typeof import('../../src/mail/emailService');
-    await expect(svc.sendConfirmationEmail('a@b.com', 'subj', '<p>hi</p>')).resolves.toBeDefined();
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.SENDGRID_API_KEY = 'SG.test-key-123';
+    process.env.EMAIL_USER = 'sender@example.com';
   });
 
-  it('throws when transporter.sendMail rejects', async (): Promise<void> => {
+  it('succeeds when sgMail.send resolves', async (): Promise<void> => {
+    const sgMailModule = require('@sendgrid/mail');
+    sgMailModule.default.send.mockResolvedValueOnce([{ 
+      statusCode: 202, 
+      body: {}, 
+      headers: {} 
+    }]);
+
+    // Reset modules to pick up fresh imports
     jest.resetModules();
-    jest.mock('nodemailer', () => ({
-      createTransport: () => ({ sendMail: jest.fn().mockRejectedValue(new Error('fail')) })
-    }));
-    const svc = (await import('../../src/mail/emailService')) as unknown as typeof import('../../src/mail/emailService');
-    await expect(svc.sendConfirmationEmail('a@b.com', 'subj', '<p>hi</p>')).rejects.toThrow('fail');
+    
+    const { sendConfirmationEmail } = require('../../src/mail/emailService');
+    const result = await sendConfirmationEmail('a@b.com', 'subj', '<p>hi</p>');
+    
+    expect(result).toBeDefined();
+    expect(result.statusCode).toBe(202);
+  });
+
+  it('throws when sgMail.send rejects', async (): Promise<void> => {
+    // Reset to get fresh imports
+    jest.resetModules();
+    
+    const sgMailModule = require('@sendgrid/mail');
+    sgMailModule.default.send.mockRejectedValueOnce(new Error('fail'));
+
+    const { sendConfirmationEmail } = require('../../src/mail/emailService');
+    
+    await expect(
+      sendConfirmationEmail('a@b.com', 'subj', '<p>hi</p>')
+    ).rejects.toThrow('fail');
+  });
+
+  it('throws when SENDGRID_API_KEY is not configured', async (): Promise<void> => {
+    jest.resetModules();
+    delete process.env.SENDGRID_API_KEY;
+
+    const { sendConfirmationEmail } = require('../../src/mail/emailService');
+    
+    await expect(
+      sendConfirmationEmail('a@b.com', 'subj', '<p>hi</p>')
+    ).rejects.toThrow('SENDGRID_API_KEY environment variable is not configured');
+  });
+
+  it('throws when EMAIL_USER is not configured', async (): Promise<void> => {
+    jest.resetModules();
+    delete process.env.EMAIL_USER;
+    delete process.env.SENDGRID_FROM_EMAIL;
+
+    const { sendConfirmationEmail } = require('../../src/mail/emailService');
+    
+    await expect(
+      sendConfirmationEmail('a@b.com', 'subj', '<p>hi</p>')
+    ).rejects.toThrow('EMAIL_USER or SENDGRID_FROM_EMAIL environment variable is required');
   });
 });
