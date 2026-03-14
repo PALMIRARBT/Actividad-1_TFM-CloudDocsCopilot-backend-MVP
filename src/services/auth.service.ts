@@ -9,6 +9,38 @@ import { Types } from 'mongoose';
 const BCRYPT_SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10);
 
 /**
+ * Helper para loguear fallos de envío de email con contexto útil para diagnóstico
+ * No incluye secretos sensibles como `EMAIL_PASS`.
+ */
+function logEmailFailure(action: string, recipient: string, details: Record<string, unknown>, err: unknown) {
+  if (process.env.NODE_ENV === 'test') return;
+  try {
+    const envInfo = {
+      NODE_ENV: process.env.NODE_ENV,
+      SEND_CONFIRMATION_EMAIL: process.env.SEND_CONFIRMATION_EMAIL,
+      EMAIL_HOST: process.env.EMAIL_HOST,
+      EMAIL_PORT: process.env.EMAIL_PORT,
+      EMAIL_USER: process.env.EMAIL_USER,
+      EMAIL_SECURE: process.env.EMAIL_SECURE,
+      CONFIRMATION_URL_BASE: process.env.CONFIRMATION_URL_BASE,
+      CONFIRMATION_FRONTEND_URL: process.env.CONFIRMATION_FRONTEND_URL
+    };
+
+    console.error('[email-send-failed]', {
+      action,
+      recipient,
+      env: envInfo,
+      details,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined
+    });
+  } catch (logErr) {
+    // No bloquear la ejecución si el logger falla
+    console.error('[email-send-failed] error while logging failure', logErr);
+  }
+}
+
+/**
  * DTO para registro de usuario
  */
 export interface RegisterUserDto {
@@ -133,6 +165,8 @@ export async function registerUser({
   // --- Envío de email de confirmación ---
   const sendEmail = String(process.env.SEND_CONFIRMATION_EMAIL).toLowerCase() === 'true';
   if (sendEmail) {
+    let confirmationUrl = '';
+    let templatePath = '';
     try {
       const fs = await import('fs');
       const path = await import('path');
@@ -149,9 +183,9 @@ export async function registerUser({
       // Usar variable de entorno para la URL base de confirmación
       const baseUrl =
         process.env.CONFIRMATION_URL_BASE || `http://localhost:${process.env.PORT || 4000}`;
-      const confirmationUrl = `${baseUrl}/api/auth/confirm/${token}`;
+      confirmationUrl = `${baseUrl}/api/auth/confirm/${token}`;
       // Leer y personalizar el template HTML
-      const templatePath = path.default.join(
+      templatePath = path.default.join(
         process.cwd(),
         'src',
         'mail',
@@ -161,8 +195,8 @@ export async function registerUser({
       const safeName = escapeHtml(name);
       html = html.replace('{{name}}', safeName).replace('{{confirmationUrl}}', confirmationUrl);
       await sendConfirmationEmail(email, 'Confirma tu cuenta en CloudDocs Copilot', html);
-    } catch {
-      // Silent fail - user can still use the account
+    } catch (emailErr) {
+      logEmailFailure('registration_confirmation', String(email), { confirmationUrl, templatePath }, emailErr);
     }
   }
 
@@ -264,8 +298,10 @@ export async function requestPasswordReset(email: string): Promise<string | null
 
   // Si la cuenta no está activa: reenviar confirmación (si está habilitado el envío)
   if (!user.active) {
-    const sendEmail = String(process.env.SEND_CONFIRMATION_EMAIL).toLowerCase() === 'true';
-    if (sendEmail) {
+    const sendEmailFlag = String(process.env.SEND_CONFIRMATION_EMAIL).toLowerCase() === 'true';
+    if (sendEmailFlag) {
+      let confirmationUrl = '';
+      let templatePath = '';
       try {
         const fs = await import('fs');
         const path = await import('path');
@@ -282,9 +318,9 @@ export async function requestPasswordReset(email: string): Promise<string | null
 
         const baseUrl =
           process.env.CONFIRMATION_URL_BASE || `http://localhost:${process.env.PORT || 4000}`;
-        const confirmationUrl = `${baseUrl}/api/auth/confirm/${token}`;
+        confirmationUrl = `${baseUrl}/api/auth/confirm/${token}`;
 
-        const templatePath = path.default.join(
+        templatePath = path.default.join(
           process.cwd(),
           'src',
           'mail',
@@ -296,7 +332,7 @@ export async function requestPasswordReset(email: string): Promise<string | null
 
         await sendConfirmationEmail(user.email, 'Confirma tu cuenta en CloudDocs Copilot', html);
       } catch (emailErr) {
-        console.error('Error reenviando email de confirmación:', emailErr);
+        logEmailFailure('resend_confirmation', String(user.email), { confirmationUrl, templatePath }, emailErr);
       }
     }
     return null;
@@ -312,8 +348,10 @@ export async function requestPasswordReset(email: string): Promise<string | null
   await user.save();
 
   // Enviar email (si está habilitado)
-  const sendEmail = String(process.env.SEND_CONFIRMATION_EMAIL).toLowerCase() === 'true';
-  if (sendEmail) {
+  const sendEmailFlag = String(process.env.SEND_CONFIRMATION_EMAIL).toLowerCase() === 'true';
+  if (sendEmailFlag) {
+    let resetUrl = '';
+    let templatePath = '';
     try {
       const fs = await import('fs');
       const path = await import('path');
@@ -321,9 +359,9 @@ export async function requestPasswordReset(email: string): Promise<string | null
       const frontendBase = (
         process.env.CONFIRMATION_FRONTEND_URL || 'http://localhost:5173'
       ).replace(/\/$/, '');
-      const resetUrl = `${frontendBase}/auth/reset-password?token=${encodeURIComponent(rawToken)}`;
+      resetUrl = `${frontendBase}/auth/reset-password?token=${encodeURIComponent(rawToken)}`;
 
-      const templatePath = path.default.join(
+      templatePath = path.default.join(
         process.cwd(),
         'src',
         'mail',
@@ -339,7 +377,7 @@ export async function requestPasswordReset(email: string): Promise<string | null
         html
       );
     } catch (emailErr) {
-      console.error('Error enviando email de reset:', emailErr);
+      logEmailFailure('password_reset', String(user.email), { resetUrl, templatePath }, emailErr);
     }
   }
 
@@ -402,13 +440,14 @@ export async function resetPassword({
   await user.save();
 
   // Email de confirmación (si está habilitado)
-  const sendEmail = String(process.env.SEND_CONFIRMATION_EMAIL).toLowerCase() === 'true';
-  if (sendEmail) {
+  const sendEmailFlag = String(process.env.SEND_CONFIRMATION_EMAIL).toLowerCase() === 'true';
+  if (sendEmailFlag) {
+    let templatePath = '';
     try {
       const fs = await import('fs');
       const path = await import('path');
 
-      const templatePath = path.default.join(
+      templatePath = path.default.join(
         process.cwd(),
         'src',
         'mail',
@@ -424,7 +463,7 @@ export async function resetPassword({
         html
       );
     } catch (emailErr) {
-      console.error('Error enviando email de confirmación de cambio:', emailErr);
+      logEmailFailure('password_changed', String(user.email), { templatePath }, emailErr);
     }
   }
 }
