@@ -65,13 +65,55 @@ export async function login(
     const result = await loginUser(req.body as LoginUserDto);
 
     // Configuración de la cookie
+    const cookieOptions = getAuthCookieOptions();
+    const tokenLength = result.token.length;
+    
+    // LOG: Diagnostico de inicio de sesión
+    if (process.env.NODE_ENV !== 'test') {
+      console.log('[AUTH-LOGIN-DIAGNOSTIC]', {
+        timestamp: new Date().toISOString(),
+        email: result.user.email,
+        tokenLength,
+        cookieOptions: {
+          httpOnly: cookieOptions.httpOnly,
+          secure: cookieOptions.secure,
+          sameSite: cookieOptions.sameSite,
+          maxAge: cookieOptions.maxAge,
+          path: cookieOptions.path
+        },
+        nodeEnv: process.env.NODE_ENV,
+        requestOrigin: req.get('origin'),
+        status: 'about_to_set_cookie'
+      });
+    }
+
     // Enviar token en cookie HttpOnly
-    res.cookie('token', result.token, getAuthCookieOptions());
+    res.cookie('token', result.token, cookieOptions);
+
+    // LOG: Cookie establecida
+    if (process.env.NODE_ENV !== 'test') {
+      console.log('[AUTH-LOGIN-DIAGNOSTIC]', {
+        timestamp: new Date().toISOString(),
+        email: result.user.email,
+        status: 'cookie_set',
+        setCookieHeader: res.getHeader('set-cookie')
+      });
+    }
 
     // Devolver solo los datos del usuario, no el token
     res.json({ message: 'Login successful', user: result.user });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
+    
+    // LOG: Error en login
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('[AUTH-LOGIN-ERROR]', {
+        timestamp: new Date().toISOString(),
+        error: msg,
+        requestOrigin: req.get('origin')
+      });
+    }
+    
     if (msg === 'User not found') return next(new HttpError(404, 'Invalid credentials'));
     if (msg === 'Invalid password') return next(new HttpError(401, 'Invalid credentials'));
     if (msg === 'User account is not active')
