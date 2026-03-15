@@ -107,6 +107,22 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return;
   }
 
+  // Errores de CSRF (csrf-csrf library)
+  // Cuando el token CSRF es inválido o falta
+  if (getErrorName(err) === 'ForbiddenError' && isRecord(err) && err.code === 'EBADCSRFTOKEN') {
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('[csrf-validation-failed]', {
+        message: 'CSRF token validation failed',
+        details: 'Token missing or does not match cookie'
+      });
+    }
+    res.status(403).json({
+      success: false,
+      error: 'Invalid or missing CSRF token. Fetch a new token from GET /api/csrf-token and include it in the x-csrf-token header.'
+    });
+    return;
+  }
+
   // Errores de token / librería de autenticación
   if (getErrorName(err) === 'TokenExpiredError') {
     if (process.env.NODE_ENV !== 'test') {
