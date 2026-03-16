@@ -130,15 +130,9 @@ const productionCorsOptions: CorsOptions = {
   origin: (origin, callback) => {
     const allowedOrigins = getAllowedOrigins();
 
-    // En producción, rechaza peticiones sin origen para APIs
-    // (puede ajustarse según el caso de uso)
+    // En producción, permitir peticiones sin origen (útil para cURL, webhooks, etc)
     if (!origin) {
-      // Permite comunicación servidor-a-servidor si es necesario
-      const allowNoOrigin = process.env.ALLOW_NO_ORIGIN === 'true';
-      if (allowNoOrigin) {
-        return callback(null, true);
-      }
-      return callback(new Error('Origin header is required'));
+      return callback(null, true);
     }
 
     // Verificación estricta de origen
