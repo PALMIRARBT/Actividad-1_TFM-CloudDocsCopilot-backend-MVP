@@ -28,8 +28,14 @@ import { doubleCsrf } from 'csrf-csrf';
 const isProduction = process.env.NODE_ENV === 'production';
 
 const csrfProtection = doubleCsrf({
-  getSecret: () => process.env.CSRF_SECRET || 'default-csrf-secret-change-in-production',
-  cookieName: isProduction ? '__Host-psifi.x-csrf-token' : 'psifi.x-csrf-token',
+  getSecret: () => {
+    const secret = process.env.CSRF_SECRET || 'default-csrf-secret-change-in-production';
+    if (process.env.NODE_ENV !== 'test') {
+      console.log(`[CSRF] Using secret: ${secret.substring(0, 20)}... (${secret.length} chars)`);
+    }
+    return secret;
+  },
+  cookieName: 'psifi.x-csrf-token', // Simplicidad: sin __Host- prefix para debuggear
   cookieOptions: {
     sameSite: isProduction ? 'none' : 'lax',
     path: '/',
