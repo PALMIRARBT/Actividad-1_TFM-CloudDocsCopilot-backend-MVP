@@ -35,6 +35,7 @@ const getAllowedOrigins = (): string[] => {
       console.warn(
         '⚠️  WARNING: No ALLOWED_ORIGINS defined in production environment. ' +
           'API will reject all cross-origin requests!'
+          
       );
       return [];
     }
