@@ -108,22 +108,50 @@ app.use(generalRateLimiter);
 app.get('/api/csrf-token', (req: Request, res: Response) => {
   const token = generateCsrfToken(req, res);
   
-  if (process.env.NODE_ENV === 'production') {
-    console.error('[CSRF-TOKEN-GENERATED]', {
-      timestamp: new Date().toISOString(),
-      tokenLength: token.length,
-      requestOrigin: req.headers.origin,
-      userAgent: req.headers['user-agent']?.substring(0, 50),
-      cookiesSet: res.getHeaders()['set-cookie'] ? 'YES' : 'NO'
-    });
-  }
+  console.error('[CSRF-TOKEN-DEBUG]', {
+    timestamp: new Date().toISOString(),
+    tokenValue: token,
+    tokenLength: token.length,
+    tokenType: typeof token,
+    requestOrigin: req.headers.origin,
+    nodeEnv: process.env.NODE_ENV,
+    setCookieHeaders: res.getHeaders()['set-cookie']
+  });
   
   res.json({
     token,
-    message: 'Token CSRF generado. Se estableció automáticamente en cookie psifi.x-csrf-token. Envía este token en el header x-csrf-token.'
+    message: 'Token CSRF generado. Se estableció automáticamente en cookie psifi_csrf_token. Envía este token en el header x-csrf-token.'
   });
 });
 
+// Debug endpoint - remove in production
+app.get('/api/csrf-debug', (req: Request, res: Response) => {
+  const token = generateCsrfToken(req, res);
+  
+  res.json({
+    explanation: 'This endpoint shows debugging info about CSRF tokens. Remove in production.',
+    tokenGenerated: {
+      value: token.substring(0, 20) + '...' + token.substring(token.length - 20),
+      length: token.length,
+      type: typeof token,
+      expectedLength: '~86 characters for size:64'
+    },
+    analysis: token.length > 100 ? '⚠️ Token is longer than expected!' : '✅ Token size looks correct',
+    recommendations: [
+      'Token should be exactly 64 bytes, which encodes to ~86 characters in base64url',
+      `Actual length: ${token.length} characters`,
+      token.length > 90 ? 'Token is larger than expected - check csrf-csrf library version' : 'Token length is expected'
+    ]
+  });
+});
+app.get('/api/test-csrf-debug', (req: Request, res: Response) => {
+  res.json({
+    cookieName_psifi: req.cookies['psifi_csrf_token'] ? req.cookies['psifi_csrf_token'].substring(0, 20) + '...' : 'MISSING',
+    cookieName_host: req.cookies['__Host-psifi-csrf-token'] ? req.cookies['__Host-psifi-csrf-token'].substring(0, 20) + '...' : 'MISSING',
+    headerValue: req.headers['x-csrf-token'] ? (req.headers['x-csrf-token'] as string).substring(0, 20) + '...' : 'MISSING',
+    allCookies: req.cookies
+  });
+});
 // Servir archivos estáticos (imágenes de perfil, documentos públicos)
 // Permite acceder a http://localhost:4000/uploads/archivo.jpg
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
