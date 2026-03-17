@@ -3,6 +3,7 @@ import { IDocument } from '../models/document.model';
 import Document from '../models/document.model';
 import HttpError from '../models/error.model';
 import _ from 'lodash';
+import { Types as MongooseTypes } from 'mongoose';
 
 /**
  * Interfaz para par├ímetros de b├║squeda
@@ -80,6 +81,51 @@ interface ESSource {
 }
 
 /**
+ * Valida que una cadena sea un ObjectId de MongoDB válido
+ * @param value - Valor a validar
+ * @returns true si es un ObjectId válido
+ */
+function isValidObjectId(value: unknown): value is string {
+  if (typeof value !== 'string') {
+    return false;
+  }
+  return MongooseTypes.ObjectId.isValid(value);
+}
+
+/**
+ * Valida y sanitiza parámetros de entrada de usuario
+ * @param organizationId - ID de organización potencialmente controlado por el usuario
+ * @param userId - ID de usuario (confiable, viene de JWT)
+ * @throws HttpError si organizationId no es un ObjectId válido
+ */
+function validateAndSanitizeParams(
+  organizationId: unknown,
+  userId: unknown
+): {
+  safeOrganizationId?: string;
+  safeUserId: string;
+} {
+  // Validar userId (viene de JWT, más confiable)
+  if (!userId || !isValidObjectId(userId)) {
+    throw new HttpError(400, 'Invalid userId');
+  }
+
+  // Validar organizationId solo si se proporciona
+  let safeOrganizationId: string | undefined;
+  if (organizationId !== undefined) {
+    if (!isValidObjectId(organizationId)) {
+      throw new HttpError(400, 'Invalid organizationId parameter');
+    }
+    safeOrganizationId = organizationId;
+  }
+
+  return {
+    safeOrganizationId,
+    safeUserId: userId
+  };
+}
+
+/**
  * Indexar un documento en Elasticsearch
  * @param document - Documento a indexar
  * @param extractedText - Texto extraído (opcional, se limita a 100KB para performance)
@@ -151,9 +197,10 @@ async function searchDocumentsInMongoDB(params: SearchParams): Promise<SearchRes
   const startTime = Date.now();
   const { query, userId, organizationId, mimeType, fromDate, toDate, limit = 20, offset = 0 } = params;
 
-  // Normalizar y validar parámetros potencialmente controlados por el usuario
-  const safeOrganizationId =
-    typeof organizationId === 'string' && organizationId.trim() !== '' ? organizationId.trim() : undefined;
+  // Validar y sanitizar parámetros controlados por el usuario
+  const { safeOrganizationId, safeUserId } = validateAndSanitizeParams(organizationId, userId);
+  
+  // Validar mimeType si se proporciona
   const safeMimeType =
     typeof mimeType === 'string' && mimeType.trim() !== '' ? mimeType.trim() : undefined;
 
@@ -163,19 +210,13 @@ async function searchDocumentsInMongoDB(params: SearchParams): Promise<SearchRes
   };
 
   // Filtrar por organización si se proporciona, sino por usuario
-  if (organizationId !== undefined && typeof organizationId !== 'string') {
-    throw new HttpError(400, 'Invalid organizationId parameter');
-  }
   if (safeOrganizationId) {
     filters.organization = safeOrganizationId;
   } else {
-    filters.uploadedBy = userId;
+    filters.uploadedBy = safeUserId;
   }
 
   // Filtro por tipo MIME
-  if (mimeType !== undefined && typeof mimeType !== 'string') {
-    throw new HttpError(400, 'Invalid mimeType parameter');
-  }
   if (safeMimeType) {
     filters.mimeType = safeMimeType;
   }
@@ -252,14 +293,17 @@ async function getAutocompleteSuggestionsFromMongoDB(
   organizationId?: string,
   limit: number = 5
 ): Promise<string[]> {
+  // Validar y sanitizar parámetros controlados por el usuario
+  const { safeOrganizationId, safeUserId } = validateAndSanitizeParams(organizationId, userId);
+
   const filters: Record<string, unknown> = {
     isDeleted: false
   };
 
-  if (organizationId) {
-    filters.organization = organizationId;
+  if (safeOrganizationId) {
+    filters.organization = safeOrganizationId;
   } else {
-    filters.uploadedBy = userId;
+    filters.uploadedBy = safeUserId;
   }
 
   // Búsqueda por regex en nombre del archivo (escapando la entrada del usuario)

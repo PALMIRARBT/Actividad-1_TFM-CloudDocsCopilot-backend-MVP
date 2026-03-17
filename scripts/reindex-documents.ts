@@ -1,25 +1,18 @@
 /**
  * Script para re-indexar documentos existentes en Elasticsearch
- *
+ * 
  * Este script toma todos los documentos de MongoDB y los indexa en Elasticsearch.
  * Útil cuando se habilita Elasticsearch después de tener documentos existentes.
  */
 
 import mongoose from 'mongoose';
-import path from 'path';
-import fs from 'fs';
-import DocumentModel from '../src/models/document.model';
-import { indexDocument } from '../src/services/search.service';
+import DocumentModel from './src/models/document.model';
+import { indexDocument } from './src/services/search.service';
 import dotenv from 'dotenv';
 
-// Cargar variables de entorno (.env.example → .env → .env.local)
-const envFiles = ['.env.example', '.env', '.env.local'];
-for (const file of envFiles) {
-  const filePath = path.resolve(__dirname, '..', file);
-  if (fs.existsSync(filePath)) {
-    dotenv.config({ path: filePath, override: true });
-  }
-}
+// Cargar variables de entorno
+dotenv.config({ path: '.env.example' });
+dotenv.config({ path: '.env', override: true });
 
 async function reindexAllDocuments() {
   try {
@@ -43,13 +36,10 @@ async function reindexAllDocuments() {
       try {
         await indexDocument(doc);
         indexed++;
-        console.log(
-          `✅ [${indexed}/${documents.length}] Indexado: ${doc.filename || doc.originalname}`
-        );
-      } catch (error: unknown) {
+        console.log(`✅ [${indexed}/${documents.length}] Indexado: ${doc.filename || doc.originalname}`);
+      } catch (error: any) {
         errors++;
-        const msg = error instanceof Error ? error.message : String(error);
-        console.error(`❌ Error indexando ${doc.filename}: ${msg}`);
+        console.error(`❌ Error indexando ${doc.filename}: ${error.message}`);
       }
     }
 
@@ -61,9 +51,8 @@ async function reindexAllDocuments() {
     await mongoose.connection.close();
     console.log('\n✅ Proceso completado');
     process.exit(0);
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error('❌ Error fatal:', msg);
+  } catch (error: any) {
+    console.error('❌ Error fatal:', error.message);
     process.exit(1);
   }
 }
