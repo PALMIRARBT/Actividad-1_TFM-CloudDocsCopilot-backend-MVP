@@ -43,6 +43,7 @@ jest.mock('mammoth', () => ({
 }));
 
 // Mock the search service so tests don't require a running Elasticsearch instance
+// NOTE: Individual tests can override this by using jest.mock() themselves
 jest.mock('../src/services/search.service', () => ({
   indexDocument: jest.fn().mockResolvedValue(undefined),
   removeDocumentFromIndex: jest.fn().mockResolvedValue(undefined),

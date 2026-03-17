@@ -153,11 +153,17 @@ Todos los endpoints de IA requieren autenticación y están bajo `/api/ai`:
 | [Testing Guide](docs/ENDPOINTS-TESTING-GUIDE.md)      | Cómo probar endpoints de API |
 | [Contributing](CONTRIBUTING.md)                       | Configuración y lineamientos de desarrollo |
 
+### 🔒 Security & CSRF
+
+| Document                                               | Description                         |
+| ------------------------------------------------------ | ----------------------------------- |
+| [CSRF Implementation Guide](docs/CSRF-IMPLEMENTATION.md) | Guía completa de implementación CSRF (Backend + Frontend) |
+| [CSRF Protection RFC](docs/rfc/CSRF-PROTECTION.md)    | Detalles técnicos de la protección CSRF |
+
 ### RFCs (documentos de diseño técnico)
 
 | Document                                               | Description                         |
 | ------------------------------------------------------ | ----------------------------------- |
-| [CSRF Protection](docs/rfc/CSRF-PROTECTION.md)         | Detalles de implementación de seguridad |
 | [Multi-tenancy](docs/rfc/MULTITENANCY-MIGRATION.md)    | Explicación del modelo de organización |
 | [Password Validation](docs/rfc/PASSWORD-VALIDATION.md) | Requisitos de fortaleza de contraseña |
 | [Security Fixes](docs/rfc/SECURITY-FIXES.md)           | Documentación de mejoras de seguridad |
