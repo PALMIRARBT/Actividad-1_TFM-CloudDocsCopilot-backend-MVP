@@ -50,7 +50,8 @@
     "pdf-parse": "^1.1.1",
     "socket.io": "^4.8.3",
     "swagger-ui-express": "^5.0.1",
-    "tesseract.js": "^2.1.5"
+    "tesseract.js": "^2.1.5",
+    "lodash": "^4.17.23"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

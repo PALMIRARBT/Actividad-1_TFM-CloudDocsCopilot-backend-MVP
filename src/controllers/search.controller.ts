@@ -14,6 +14,16 @@ export async function search(req: AuthRequest, res: Response, next: NextFunction
       return next(new HttpError(400, 'Query parameter "q" is required'));
     }
 
+    // Validar organizationId si se proporciona
+    if (organizationId !== undefined && typeof organizationId !== 'string') {
+      return next(new HttpError(400, 'Query parameter "organizationId" must be a string'));
+    }
+
+    // Validar mimeType si se proporciona
+    if (mimeType !== undefined && typeof mimeType !== 'string') {
+      return next(new HttpError(400, 'Query parameter "mimeType" must be a string'));
+    }
+
     console.warn(`🔍 [Search Controller] Parámetros recibidos:`, {
       query: q,
       organizationId,
@@ -60,6 +70,18 @@ export async function autocomplete(req: AuthRequest, res: Response, next: NextFu
 
     if (!q || typeof q !== 'string') {
       return next(new HttpError(400, 'Query parameter "q" is required'));
+    }
+
+    // Validar organizationId si se proporciona
+    if (organizationId !== undefined) {
+      if (typeof organizationId !== 'string') {
+        return next(new HttpError(400, 'Query parameter "organizationId" must be a string'));
+      }
+      // Validación básica de formato para evitar valores maliciosos
+      const trimmedOrgId = organizationId.trim();
+      if (!trimmedOrgId || trimmedOrgId.includes('$')) {
+        return next(new HttpError(400, 'Query parameter "organizationId" has an invalid format'));
+      }
     }
 
     const suggestions = await searchService.getAutocompleteSuggestions(

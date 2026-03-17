@@ -2,6 +2,7 @@
 import { IDocument } from '../models/document.model';
 import Document from '../models/document.model';
 import HttpError from '../models/error.model';
+import _ from 'lodash';
 
 /**
  * Interfaz para par├ímetros de b├║squeda
@@ -15,6 +16,14 @@ export interface SearchParams {
   toDate?: Date;
   limit?: number;
   offset?: number;
+}
+
+/**
+ * Escapa caracteres especiales de expresiones regulares en una cadena de entrada.
+ * Esto asegura que el texto del usuario se trate como literal en la expresión regular.
+ */
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
@@ -149,21 +158,33 @@ async function searchDocumentsInMongoDB(params: SearchParams): Promise<SearchRes
   const startTime = Date.now();
   const { query, userId, organizationId, mimeType, fromDate, toDate, limit = 20, offset = 0 } = params;
 
+  // Normalizar y validar parámetros potencialmente controlados por el usuario
+  const safeOrganizationId =
+    typeof organizationId === 'string' && organizationId.trim() !== '' ? organizationId.trim() : undefined;
+  const safeMimeType =
+    typeof mimeType === 'string' && mimeType.trim() !== '' ? mimeType.trim() : undefined;
+
   // Construir filtros MongoDB
   const filters: Record<string, unknown> = {
     isDeleted: false // Excluir documentos eliminados
   };
 
   // Filtrar por organización si se proporciona, sino por usuario
-  if (organizationId) {
-    filters.organization = organizationId;
+  if (organizationId !== undefined && typeof organizationId !== 'string') {
+    throw new HttpError(400, 'Invalid organizationId parameter');
+  }
+  if (safeOrganizationId) {
+    filters.organization = safeOrganizationId;
   } else {
     filters.uploadedBy = userId;
   }
 
   // Filtro por tipo MIME
-  if (mimeType) {
-    filters.mimeType = mimeType;
+  if (mimeType !== undefined && typeof mimeType !== 'string') {
+    throw new HttpError(400, 'Invalid mimeType parameter');
+  }
+  if (safeMimeType) {
+    filters.mimeType = safeMimeType;
   }
 
   // Filtro por rango de fechas
@@ -178,7 +199,8 @@ async function searchDocumentsInMongoDB(params: SearchParams): Promise<SearchRes
   }
 
   // Búsqueda por texto usando regex (case-insensitive, búsqueda parcial)
-  const regex = new RegExp(query, 'i');
+  const safeQuery = escapeRegExp(query);
+  const regex = new RegExp(safeQuery, 'i');
   filters.$or = [
     { filename: regex },
     { originalname: regex },
@@ -246,8 +268,9 @@ async function getAutocompleteSuggestionsFromMongoDB(
     filters.uploadedBy = userId;
   }
 
-  // Búsqueda por regex en nombre del archivo
-  const regex = new RegExp(query, 'i');
+  // Búsqueda por regex en nombre del archivo (escapando la entrada del usuario)
+  const safeQuery = _.escapeRegExp(query);
+  const regex = new RegExp(safeQuery, 'i');
   filters.$or = [
     { filename: regex },
     { originalname: regex }
