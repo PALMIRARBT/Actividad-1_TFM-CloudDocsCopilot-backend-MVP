@@ -18,6 +18,14 @@ export interface SearchParams {
 }
 
 /**
+ * Escapa caracteres especiales de expresiones regulares en una cadena de entrada.
+ * Esto asegura que el texto del usuario se trate como literal en la expresión regular.
+ */
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Interfaz para documento de b├║squeda
  */
 interface SearchDocument {
@@ -178,7 +186,8 @@ async function searchDocumentsInMongoDB(params: SearchParams): Promise<SearchRes
   }
 
   // Búsqueda por texto usando regex (case-insensitive, búsqueda parcial)
-  const regex = new RegExp(query, 'i');
+  const safeQuery = escapeRegExp(query);
+  const regex = new RegExp(safeQuery, 'i');
   filters.$or = [
     { filename: regex },
     { originalname: regex },
