@@ -2,6 +2,7 @@
 import { IDocument } from '../models/document.model';
 import Document from '../models/document.model';
 import HttpError from '../models/error.model';
+import _ from 'lodash';
 
 /**
  * Interfaz para par├ímetros de b├║squeda
@@ -267,8 +268,9 @@ async function getAutocompleteSuggestionsFromMongoDB(
     filters.uploadedBy = userId;
   }
 
-  // Búsqueda por regex en nombre del archivo
-  const regex = new RegExp(query, 'i');
+  // Búsqueda por regex en nombre del archivo (escapando la entrada del usuario)
+  const safeQuery = _.escapeRegExp(query);
+  const regex = new RegExp(safeQuery, 'i');
   filters.$or = [
     { filename: regex },
     { originalname: regex }
