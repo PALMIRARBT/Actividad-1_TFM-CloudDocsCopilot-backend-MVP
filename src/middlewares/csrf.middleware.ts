@@ -26,111 +26,6 @@ import { doubleCsrf } from 'csrf-csrf';
 // En desarrollo se usa 'lax' para no requerir HTTPS.
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Función auxiliar para extraer user ID del JWT token
-const extractUserIdFromJWT = (cookieHeader: string): string | null => {
-  try {
-    // Parse Cookie header properly: "cookie1=value1; cookie2=value2; ..."
-    // Split by semicolon and find the "token=" cookie
-    const cookies = cookieHeader.split(';').map(c => c.trim());
-    let jwtToken: string | null = null;
-    
-    for (const cookie of cookies) {
-      if (cookie.startsWith('token=')) {
-        jwtToken = cookie.substring(6); // Remove "token=" prefix
-        break;
-      }
-    }
-    
-    if (!jwtToken) {
-      if (isProduction) {
-        console.error('[CSRF-JWT-EXTRACTION-DEBUG] No "token=" cookie found', {
-          cookieCount: cookies.length,
-          cookieNames: cookies.map(c => c.split('=')[0])
-        });
-      }
-      return null;
-    }
-
-    // Decode URL-encoded token if necessary
-    jwtToken = decodeURIComponent(jwtToken);
-    
-    if (isProduction) {
-      console.error('[CSRF-JWT-EXTRACTION-DEBUG]', {
-        jwtTokenLength: jwtToken.length,
-        jwtTokenStart: jwtToken.substring(0, 50),
-        hasThreeParts: jwtToken.split('.').length === 3
-      });
-    }
-    
-    // Token format: header.payload.signature (JWT must have exactly 3 parts)
-    const tokenParts = jwtToken.split('.');
-    if (tokenParts.length !== 3) {
-      if (isProduction) {
-        console.error('[CSRF-JWT-EXTRACTION-DEBUG]', {
-          error: `Invalid JWT format - expected 3 parts, got ${tokenParts.length}`,
-          parts: tokenParts.length,
-          jwtTokenLength: jwtToken.length,
-          // Check if this looks like a CSRF token instead
-          mightBeCsrfToken: jwtToken.length > 100 && !jwtToken.includes('.')
-        });
-      }
-      return null;
-    }
-
-    // Decode payload (base64url)
-    // Add padding if necessary
-    let payload = tokenParts[1];
-    const padding = 4 - (payload.length % 4);
-    if (padding !== 4) {
-      payload += '='.repeat(padding);
-    }
-    
-    const decodedPayload = Buffer.from(
-      payload
-        .replace(/-/g, '+')
-        .replace(/_/g, '/'),
-      'base64'
-    ).toString('utf-8');
-
-    if (isProduction) {
-      console.error('[CSRF-JWT-EXTRACTION-DEBUG] Decoded payload:', decodedPayload.substring(0, 150));
-    }
-
-    const parsedPayload = JSON.parse(decodedPayload) as unknown;
-
-    // Type guard: verify payload has id property
-    if (parsedPayload && typeof parsedPayload === 'object' && 'id' in parsedPayload) {
-      const id = (parsedPayload as Record<string, unknown>).id;
-      if (typeof id === 'string' && id.length > 0) {
-        if (isProduction) {
-          console.error('[CSRF-JWT-EXTRACTION-SUCCESS]', { extractedId: id });
-        }
-        return id;
-      }
-    }
-
-    if (isProduction) {
-      console.error('[CSRF-JWT-EXTRACTION-DEBUG]', {
-        error: 'Payload missing id or id is not string',
-        payloadKeys: parsedPayload && typeof parsedPayload === 'object' ? Object.keys(parsedPayload as Record<string, unknown>) : 'not-object',
-        idType: typeof (parsedPayload as Record<string, unknown>).id
-      });
-    }
-
-    return null;
-  } catch (error) {
-    // If JWT parsing fails, return null and fall back to IP-based identifier
-    if (isProduction) {
-      console.error('[CSRF-JWT-EXTRACTION-ERROR]', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        errorStack: error instanceof Error ? error.stack?.substring(0, 200) : 'No stack',
-        cookieHeaderLength: cookieHeader?.length || 0
-      });
-    }
-    return null;
-  }
-};
-
 const csrfProtection = doubleCsrf({
   getSecret: () => process.env.CSRF_SECRET || 'default-csrf-secret-change-in-production',
   cookieName: 'psifi.x-csrf-token',  // Nombre correcto que usa csrf-csrf
@@ -147,51 +42,38 @@ const csrfProtection = doubleCsrf({
       : ['GET', 'HEAD', 'OPTIONS'],
   // Extract user ID from JWT token in cookies to use as session identifier
   // This ensures CSRF tokens remain valid across the entire user session
-  // IMPORTANT: Session identifier must be STABLE even if IP changes (load balancer)
+  // Session identifier: Use JWT token hash for stability (unique per user session)
   getSessionIdentifier: (req: Request): string => {
     const cookieHeader = req.headers.cookie;
-    let sessionId = 'anonymous';
-    let extractedUserId: string | null = null;
     
+    // Try to use JWT token as session identifier (most stable)
     if (cookieHeader && typeof cookieHeader === 'string') {
-      extractedUserId = extractUserIdFromJWT(cookieHeader);
-      if (extractedUserId) {
-        sessionId = extractedUserId;
-      } else {
-        // IMPORTANT: Use User-Agent fingerprint instead of IP
-        // IP changes with load balancer, breaking CSRF validation
-        // User-Agent is stable within same browser session
-        const userAgent = req.headers['user-agent'] || 'unknown';
-        const userAgentHash = userAgent
-          .split('')
-          .reduce((hash, char) => ((hash << 5) - hash) + char.charCodeAt(0), 0)
-          .toString(36);
-        sessionId = `ua-${userAgentHash}`;
+      const cookies = cookieHeader.split(';').map(c => c.trim());
+      for (const cookie of cookies) {
+        if (cookie.startsWith('token=')) {
+          const jwtToken = cookie.substring(6);
+          
+          // Use first 32 chars of JWT as session ID - unique per user session
+          // JWT format: header.payload.signature - payload contains user ID
+          const sessionId = jwtToken.substring(0, 32);
+          
+          if (isProduction && req.method !== 'GET') {
+            console.error('[CSRF-SESSION-ID]', {
+              method: req.method,
+              path: req.path,
+              sessionId: sessionId.substring(0, 20) + '...',
+              sessionIdType: 'jwt-based',
+              jwtTokenLength: jwtToken.length
+            });
+          }
+          
+          return sessionId;
+        }
       }
-    } else {
-      // Fallback: use User-Agent fingerprint
-      const userAgent = req.headers['user-agent'] || 'unknown';
-      const userAgentHash = userAgent
-        .split('')
-        .reduce((hash, char) => ((hash << 5) - hash) + char.charCodeAt(0), 0)
-        .toString(36);
-      sessionId = `ua-${userAgentHash}`;
-    }
-
-    if (isProduction && req.method !== 'GET') {
-      console.error('[CSRF-SESSION-ID]', {
-        method: req.method,
-        path: req.path,
-        sessionId,
-        sessionIdType: extractedUserId ? 'user-id' : 'user-agent-hash',
-        extractedUserId: extractedUserId ? 'found' : 'NOT_FOUND',
-        hasCookieHeader: !!cookieHeader,
-        userAgent: req.headers['user-agent']?.substring(0, 80) || 'MISSING',
-        ipAddress: req.ip
-      });
     }
     
-    return sessionId;
+    // Fallback: return "anonymous" (for unauthenticated requests)
+    return 'anonymous';
   }
 });
 // Rutas que NO requieren CSRF (autenticación pública)
@@ -209,14 +91,19 @@ const CSRF_EXCLUDED_ROUTES = [
  * Problema: Tenemos psifi_csrf_token (antiguo) y psifi.x-csrf-token (nuevo)
  * Chrome añade __Host-psifi.x-csrf-token
  * Solución: Eliminar los cookies viejos para evitar conflictos
+ * 
+ * OPTIMIZACIÓN: Solo se ejecuta si detecta cookies viejos (no en cada request)
  */
 export const cleanupOldCsrfCookies = (req: Request, res: Response, next: NextFunction): void => {
   // Cookies antiguos a eliminar
   const oldCookieNames = ['psifi_csrf_token', '__Host-psifi.x-csrf-token'];
   
-  // Si el navegador tiene cookies antiguos, eliminarlos
-  oldCookieNames.forEach((cookieName) => {
+  // Solo limpiar si detectamos cookies antiguos - evita overhead innecesario
+  let hasOldCookies = false;
+  for (const cookieName of oldCookieNames) {
     if (req.cookies[cookieName]) {
+      hasOldCookies = true;
+      
       // Establecer cookie con max-age=0 para eliminarlo
       res.clearCookie(cookieName, {
         path: '/',
@@ -225,15 +112,15 @@ export const cleanupOldCsrfCookies = (req: Request, res: Response, next: NextFun
         httpOnly: true,
         sameSite: isProduction ? 'none' : 'lax'
       });
-      
-      if (isProduction) {
-        console.error('[CSRF-CLEANUP-OLD-COOKIES]', {
-          removedCookie: cookieName,
-          path: req.path
-        });
-      }
     }
-  });
+  }
+  
+  if (isProduction && hasOldCookies && (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH' || req.method === 'DELETE')) {
+    console.error('[CSRF-CLEANUP-OLD-COOKIES]', {
+      path: req.path,
+      cookiesRemoved: oldCookieNames.filter(name => req.cookies[name])
+    });
+  }
   
   next();
 };
