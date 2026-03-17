@@ -170,6 +170,41 @@ const CSRF_EXCLUDED_ROUTES = [
   '/api/auth/forgot-password',
   '/api/auth/reset-password'
 ];
+
+/**
+ * Middleware para limpiar cookies CSRF antiguos/duplicados
+ * Problema: Tenemos psifi_csrf_token (antiguo) y psifi.x-csrf-token (nuevo)
+ * Chrome añade __Host-psifi.x-csrf-token
+ * Solución: Eliminar los cookies viejos para evitar conflictos
+ */
+export const cleanupOldCsrfCookies = (req: Request, res: Response, next: NextFunction): void => {
+  // Cookies antiguos a eliminar
+  const oldCookieNames = ['psifi_csrf_token', '__Host-psifi.x-csrf-token'];
+  
+  // Si el navegador tiene cookies antiguos, eliminarlos
+  oldCookieNames.forEach((cookieName) => {
+    if (req.cookies[cookieName]) {
+      // Establecer cookie con max-age=0 para eliminarlo
+      res.clearCookie(cookieName, {
+        path: '/',
+        domain: isProduction ? '.onrender.com' : undefined,
+        secure: isProduction,
+        httpOnly: true,
+        sameSite: isProduction ? 'none' : 'lax'
+      });
+      
+      if (isProduction) {
+        console.error('[CSRF-CLEANUP-OLD-COOKIES]', {
+          removedCookie: cookieName,
+          path: req.path
+        });
+      }
+    }
+  });
+  
+  next();
+};
+
 // Exportar el middleware de protección CSRF
 export const csrfProtectionMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   if (CSRF_EXCLUDED_ROUTES.includes(req.path)) {
