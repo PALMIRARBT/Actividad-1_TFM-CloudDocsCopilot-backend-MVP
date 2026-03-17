@@ -1,14 +1,28 @@
+// IMPORTANT: These mocks must be set up BEFORE importing search.service
+// We unmock search.service since it's auto-mocked in jest.unit.setup.ts
+jest.unmock('../../../src/services/search.service');
+
+// Mock Elasticsearch with a proper factory function  
+jest.mock('../../../src/configurations/elasticsearch-config', () => ({
+  __esModule: true,
+  default: {
+    getInstance: jest.fn()
+  }
+}));
+
+// Mock Document model
+jest.mock('../../../src/models/document.model');
+
+// NOW import after mocks are configured
 import { searchDocuments, getAutocompleteSuggestions, SearchParams } from '../../../src/services/search.service';
 import Document from '../../../src/models/document.model';
 import ElasticsearchClient from '../../../src/configurations/elasticsearch-config';
 
-/**
- * Tests para verificar el fallback a MongoDB cuando Elasticsearch no está disponible
- */
-jest.mock('../../../src/configurations/elasticsearch-config');
-jest.mock('../../../src/models/document.model');
-
 describe('Search Service - Fallback to MongoDB', () => {
+  const VALID_OBJECT_ID = '507f1f77bcf86cd799439011';
+  const VALID_ORG_ID = '507f1f77bcf86cd799439012';
+  const VALID_FOLDER_ID = '507f1f77bcf86cd799439013';
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -40,8 +54,8 @@ describe('Search Service - Fallback to MongoDB', () => {
 
       const params: SearchParams = {
         query: 'test',
-        userId: 'user123',
-        organizationId: 'org123'
+        userId: VALID_OBJECT_ID,
+        organizationId: VALID_ORG_ID
       };
 
       // Act
@@ -64,15 +78,16 @@ describe('Search Service - Fallback to MongoDB', () => {
 
       const mockMongoDocs = [
         {
-          _id: { toString: () => '123' },
+          _id: { toString: () => VALID_OBJECT_ID },
           filename: 'test.pdf',
           originalname: 'test.pdf',
           mimeType: 'application/pdf',
           size: 1000,
-          uploadedBy: { toString: () => 'user123' },
-          organization: { toString: () => 'org123' },
-          folder: { toString: () => 'folder123' },
-          uploadedAt: new Date()
+          uploadedBy: { toString: () => VALID_OBJECT_ID },
+          organization: { toString: () => VALID_ORG_ID },
+          folder: { toString: () => VALID_FOLDER_ID },
+          uploadedAt: new Date(),
+          isDeleted: false
         }
       ];
 
@@ -86,8 +101,8 @@ describe('Search Service - Fallback to MongoDB', () => {
 
       const params: SearchParams = {
         query: 'test',
-        userId: 'user123',
-        organizationId: 'org123'
+        userId: VALID_OBJECT_ID,
+        organizationId: VALID_ORG_ID
       };
 
       // Act
@@ -110,7 +125,7 @@ describe('Search Service - Fallback to MongoDB', () => {
 
       const params: SearchParams = {
         query: 'test',
-        userId: 'user123'
+        userId: VALID_OBJECT_ID
       };
 
       // Act & Assert
@@ -140,7 +155,7 @@ describe('Search Service - Fallback to MongoDB', () => {
       (ElasticsearchClient.getInstance as jest.Mock).mockReturnValue(mockEsClient);
 
       // Act
-      const result = await getAutocompleteSuggestions('report', 'user123', 'org123', 5);
+      const result = await getAutocompleteSuggestions('report', VALID_OBJECT_ID, VALID_ORG_ID, 5);
 
       // Assert
       expect(result).toHaveLength(1);
@@ -171,7 +186,7 @@ describe('Search Service - Fallback to MongoDB', () => {
       });
 
       // Act
-      const result = await getAutocompleteSuggestions('report', 'user123', 'org123', 5);
+      const result = await getAutocompleteSuggestions('report', VALID_OBJECT_ID, VALID_ORG_ID, 5);
 
       // Assert
       expect(result).toHaveLength(1);
@@ -192,7 +207,7 @@ describe('Search Service - Fallback to MongoDB', () => {
       });
 
       // Act
-      const result = await getAutocompleteSuggestions('report', 'user123');
+      const result = await getAutocompleteSuggestions('report', VALID_OBJECT_ID);
 
       // Assert
       expect(result).toEqual([]);
