@@ -1,42 +1,70 @@
-# Claude Agent Instructions
+# Claude Instructions
 
-This file contains instructions for AI coding agents (Claude) working on the CloudDocs API Service.
+Backend API Service for CloudDocs - Minimalist Quick Reference
 
-## Primary Rules Document
+## 🎯 Project Context
 
-**READ AND FOLLOW ALL RULES IN `AGENTS.md`**
+- **Type:** Backend REST API Service
+- **Stack:** Node.js 20+, Express.js, TypeScript 5.x, MongoDB (Mongoose), Elasticsearch
+- **Architecture:** Layered (Routes → Controllers → Services → Models)
 
-The `AGENTS.md` file contains the complete set of coding standards, patterns, and requirements for this project. All rules defined there are mandatory.
+## ⚠️ Critical Rules (Zero Tolerance)
 
-## Key Reminders for Claude
+1. **NO `any` types** - Use `unknown` with type guards
+2. **Business logic in services only** - Controllers delegate to services
+3. **Use HttpError** for all API errors
+4. **All code must have tests** - Minimum 70% coverage
 
-1. **Type Safety**: Never use `any` type - use `unknown` with type guards or specific types
-2. **Linting**: Run `npm run lint` - all `any` usage will fail linting
-3. **Architecture**: Follow layered architecture (Routes → Controllers → Services → Models)
-4. **Error Handling**: Always use `HttpError` for API errors with proper status codes
-5. **Testing**: All code changes must include tests and pass `npm test`
-6. **Security**: Validate all inputs, sanitize paths, never trust user data
-7. **Async/Await**: Use proper try-catch blocks, no sync operations in request handlers
-8. **Naming**: Follow conventions in AGENTS.md (kebab-case files, camelCase functions, etc.)
-9. **Business Logic**: Keep it in services, not controllers
+## 📚 Available Skills
 
-## Before Committing
+Run these to load specific documentation in context:
 
-- [ ] Linting passes: `npm run lint` (NO `any` types allowed)
-- [ ] All tests pass: `npm test`
-- [ ] Build succeeds: `npm run build`
-- [ ] No `any` types in code
-- [ ] Error handling with HttpError
-- [ ] Following layered architecture
-- [ ] Code coverage maintained or increased
+```
+/coding-standards      # Code patterns, architecture, layered structure
+/testing-requirements  # Testing rules, patterns, coverage requirements
+/security-guidelines   # Security rules, input validation, file uploads
+/api-design-rules      # REST API design, status codes, responses
+/naming-conventions    # File, class, function, and variable naming
+/workflow-commands     # NPM commands, development workflow
+/pre-commit-checklist  # Pre-commit workflow and checklist
+/error-handling        # Error handling patterns and HttpError usage
+```
 
-## Reference
+## 🚀 Quick Commands
 
-See `AGENTS.md` for complete documentation of:
+```bash
+# Before ANY commit
+npm run lint          # Check code quality (fails on any types)
+npm test              # Run all tests
+npm run build         # Build project
 
-- Project structure
-- Code patterns and examples
-- Testing requirements
-- API design rules
-- Security guidelines
-- Pre-commit checklist
+# Development
+npm run dev           # Start dev server
+npm run test:watch    # Tests in watch mode
+npm run lint:fix      # Auto-fix linting issues
+```
+
+## 📁 Project Structure
+
+```
+src/
+├── configurations/    # External service configs
+├── controllers/       # HTTP handlers (validate & delegate)
+├── middlewares/       # Auth, CSRF, validation
+├── models/           # Mongoose schemas + TS interfaces
+├── routes/           # Express route definitions
+├── services/         # Business logic
+├── utils/            # Helper functions
+├── mail/             # Email service
+└── docs/             # OpenAPI specification
+```
+
+## 💾 Master Reference
+
+For complete rules and patterns, see:
+- **`AGENTS.md`** - Complete master reference (read this for details)
+- **Individual skills** - Load specific skills above as needed
+
+---
+
+**Note:** This file is kept minimal to reduce context overhead. Use skills to load specific documentation as needed.
