@@ -2,6 +2,10 @@
 
 Este documento define reglas y lineamientos para agentes de codificación con IA que trabajan en el servicio CloudDocs API.
 
+> **💡 Tip:** For quick reference on specific topics, use skills to load targeted documentation:
+> - `/coding-standards`, `/testing-requirements`, `/security-guidelines`, `/api-design-rules`
+> - `/naming-conventions`, `/workflow-commands`, `/pre-commit-checklist`, `/error-handling`
+
 ## Descripción general del proyecto
 
 - **Tipo:** Backend de API REST
